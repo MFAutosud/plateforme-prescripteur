@@ -35,16 +35,11 @@
   <div class="box">
     <h2>2️⃣ Créer une demande</h2>
 
-    <!-- ✅ SUPPRIMÉ : Nom du client -->
-
     <label>Véhicule</label>
     <input id="vehicle">
 
-    <label>Email prescripteur</label>
-    <input id="prescriberEmail">
-
     <label>Infos client (copier-coller)</label>
-    <textarea id="pasteBlock" placeholder="Colle ici les infos (adresse, SIRET, TVA, contact)…" style="height:160px;"></textarea>
+    <textarea id="pasteBlock" placeholder="Colle ici les infos (1ère ligne = nom client)…" style="height:160px;"></textarea>
     <div class="hint">Astuce : la 1ʳᵉ ligne du bloc devient automatiquement le nom du client. Le portail extrait adresse / SIRET / TVA / contact.</div>
 
     <button onclick="createRequest()">Créer la demande</button>
@@ -56,6 +51,7 @@
 ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
+const FIXED_PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
 
 /* =========================
    UTILS
@@ -83,10 +79,6 @@ function joinAddress(d){
 
 /* =========================
    PARSE "COPIER-COLLER"
-   - 1ère ligne = nom client
-   - ignore "Client", "Contacts", "Contact"
-   - ignore "Mandat..." et "Responsable MF Autosud"
-   - ignore "Ar" (initiales avatar)
 ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
@@ -107,7 +99,7 @@ function parsePaste(text){
 
   if (!lines.length) return out;
 
-  // ✅ 1) NOM CLIENT = 1ère ligne collée
+  // ✅ NOM CLIENT = 1ère ligne collée
   out.client_name = lines[0];
 
   const isTitleLine = (l) => {
@@ -204,21 +196,21 @@ if (rid && code) {
     const d = rows[0];
     const addr = joinAddress(d);
 
-   document.body.innerHTML = `
-  <div style="max-width:900px">
-    <h1 style="color:#4da3ff;margin:0">${d.client_name || "Client"}</h1>
-    <div class="pill">Client</div>
+    document.body.innerHTML = `
+      <div style="max-width:900px">
+        <h1 style="color:#4da3ff;margin:0">${d.client_name || "Client"}</h1>
+        <div class="pill">Client</div>
 
-    <p style="margin:14px 0 0;opacity:.9;">
-      <strong>Véhicule souhaité :</strong> ${d.vehicle || "-"}
-    </p>
+        <p style="margin:14px 0 0;opacity:.9;">
+          <strong>Véhicule souhaité :</strong> ${d.vehicle || "-"}
+        </p>
 
-    <p style="margin:6px 0 0;opacity:.9;">
-      <strong>Email prescripteur :</strong>
-      <a href="mailto:courtier@mfautosud.fr" style="color:#7cc0ff;text-decoration:none;">
-        courtier@mfautosud.fr
-      </a>
-    </p>
+        <p style="margin:6px 0 0;opacity:.9;">
+          <strong>Email prescripteur :</strong>
+          <a href="mailto:${FIXED_PRESCRIBER_EMAIL}" style="color:#7cc0ff;text-decoration:none;">
+            ${FIXED_PRESCRIBER_EMAIL}
+          </a>
+        </p>
 
         ${addr ? `<hr><p>📍 ${addr}</p>` : ""}
 
@@ -313,12 +305,12 @@ if (rid && code) {
 
   window.createRequest = async function(){
     const vehicle = document.getElementById("vehicle").value.trim();
-    const email = document.getElementById("prescriberEmail").value.trim();
+    const email = FIXED_PRESCRIBER_EMAIL;
     const pasted = document.getElementById("pasteBlock").value || "";
     const parsed = parsePaste(pasted);
 
-    if(!vehicle || !email || !pasted){
-      setResult("❌ Remplis Véhicule, Email prescripteur et colle le bloc client.", false);
+    if(!vehicle || !pasted){
+      setResult("❌ Remplis le véhicule et colle le bloc client.", false);
       return;
     }
 
@@ -331,14 +323,13 @@ if (rid && code) {
 
     const payload = {
       prescriber_email: email,
-      client_name: parsed.client_name,    // ✅ vient du copier-coller
+      client_name: parsed.client_name,
       vehicle: vehicle,
       fin_type: "LLD",
       recipients: [email],
       access_code,
       status: "sent",
 
-      // champs optionnels extraits du copier-coller
       address: parsed.address,
       postcode: parsed.postcode,
       city: parsed.city,
