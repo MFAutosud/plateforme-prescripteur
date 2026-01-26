@@ -208,6 +208,7 @@ if (rid && code) {
       <div style="max-width:900px">
         <h1 style="color:#4da3ff;margin:0">${d.client_name || "Client"}</h1>
         <div class="pill">Client</div>
+            <p style="margin:14px 0 0;opacity:.9;"><strong>Véhicule souhaité :</strong> ${d.vehicle || "-"}</p>
 
         ${addr ? `<hr><p>📍 ${addr}</p>` : ""}
 
