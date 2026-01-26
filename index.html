@@ -5,16 +5,16 @@
   <title>Plateforme prescripteur – MF Auto Sud</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
-    body { font-family: Arial, sans-serif; background:#0b1220; color:#fff; padding:40px; }
-    h1 { color:#4da3ff; }
-    .box{ background:#111c34; padding:20px; border-radius:10px; margin-bottom:20px; }
-    label{ display:block; margin-top:12px; }
-    input{ width:100%; padding:10px; margin-top:6px; }
-    button{ width:100%; padding:12px; margin-top:14px; background:#4da3ff; border:0; font-weight:700; cursor:pointer; }
-    #result{ margin-top:12px; word-break:break-all; }
+    body{font-family:Arial,sans-serif;background:#0b1220;color:#fff;padding:28px}
+    h1{color:#4da3ff;margin:0 0 18px}
+    .box{background:#111c34;padding:18px;border-radius:10px;margin-bottom:18px}
+    label{display:block;margin-top:12px}
+    input,textarea{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff}
+    button{width:100%;padding:12px;margin-top:14px;background:#4da3ff;border:0;font-weight:700;cursor:pointer;border-radius:10px}
+    #result{margin-top:12px;word-break:break-all}
+    hr{margin:18px 0;opacity:.25}
+    .pill{display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;margin-top:8px}
   </style>
 </head>
 
@@ -24,50 +24,54 @@
   <div class="box">
     <h2>1️⃣ Configuration Supabase</h2>
     <label>Project URL</label>
-    <input id="sbUrl" placeholder="https://xxxx.supabase.co">
+    <input id="sbUrl" placeholder="(optionnel)"/>
     <label>Publishable key</label>
-    <input id="sbKey" placeholder="sb_publishable_...">
+    <input id="sbKey" placeholder="(optionnel)"/>
     <button onclick="saveConfig()">Enregistrer</button>
     <div id="result"></div>
   </div>
 
   <div class="box">
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 700px;">
+    <h2>2️⃣ Créer une demande</h2>
+    <label>Nom du client</label>
+    <input id="clientName">
+    <label>Véhicule</label>
+    <input id="vehicle">
+    <label>Email prescripteur</label>
+    <input id="prescriberEmail">
+    <button onclick="createRequest()">Créer la demande</button>
+  </div>
 
-  <h2 style="margin-bottom:4px;">
-    ${d.client_name || ""}
-  </h2>
+<script>
+/* =========================
+   CONFIG
+========================= */
+const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
 
-  <span style="display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;">
-    Client
-  </span>
-
-  ${(d.address || d.postcode || d.city || d.country) ? `
-    <hr style="margin:20px 0;opacity:0.3;">
-    <p>
-      📍 ${[d.address, [d.postcode, d.city].filter(Boolean).join(" "), d.country].filter(Boolean).join("<br>")}
-    </p>
-  ` : ""}
-
-  ${(d.siret || d.vat) ? `
-    <hr style="margin:20px 0;opacity:0.3;">
-    <p>
-      ${d.siret ? `🏢 N° SIRET : ${d.siret}<br>` : ""}
-      ${d.vat ? `🏛️ N° TVA : ${d.vat}` : ""}
-    </p>
-  ` : ""}
-
-  ${(d.contact_name || d.contact_email || d.contact_phone) ? `
-    <hr style="margin:20px 0;opacity:0.3;">
-    <h3>Contact</h3>
-    <p>
-      ${d.contact_name ? `<strong>${d.contact_name}</strong><br>` : ""}
-      ${d.contact_email ? `📧 ${d.contact_email}<br>` : ""}
-      ${d.contact_phone ? `📞 ${d.contact_phone}` : ""}
-    </p>
-  ` : ""}
-
-</div>
+/* =========================
+   UTILS
+========================= */
+function getHashParams(){
+  const p = new URLSearchParams(window.location.hash.replace("#",""));
+  return { rid: p.get("rid"), code: p.get("code") };
+}
+function randomCode(){
+  const a = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function setResult(html, ok=true){
+  const el = document.getElementById("result");
+  if(!el) return;
+  el.style.color = ok ? "#9dffb3" : "#ff9d9d";
+  el.innerHTML = html;
+}
+function joinAddress(d){
+  const line1 = d.address || "";
+  const line2 = [d.postcode, d.city].filter(Boolean).join(" ");
+  const line3 = d.country || "";
+  return [line1, line2, line3].filter(Boolean).join("<br>");
+}
 
 /* =========================
    MODE INTERLOCUTEUR
@@ -75,93 +79,69 @@
 const { rid, code } = getHashParams();
 
 if (rid && code) {
-  console.log("MODE INTERLOCUTEUR", rid, code);
+  document.body.innerHTML = `<h1>Demande reçue</h1><p>Chargement…</p>`;
 
-  document.body.innerHTML = `
-    <h1>Demande reçue</h1>
-    <p>Chargement de la demande en cours…</p>
-  `;
-
-  // Charger la demande
   fetch(`${SUPABASE_URL}/rest/v1/requests?select=*&id=eq.${rid}&access_code=eq.${code}`, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY
-    }
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY }
   })
-  .then(res => {
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
-  })
+  .then(res => { if(!res.ok) throw new Error("HTTP "+res.status); return res.json(); })
   .then(rows => {
-    if (!rows.length) {
-      document.body.innerHTML = `<h1>Accès refusé</h1><p>Cette demande est invalide ou expirée.</p>`;
+    if(!rows.length){
+      document.body.innerHTML = `<h1>Accès refusé</h1><p>Demande invalide ou expirée.</p>`;
       return;
     }
 
     const d = rows[0];
+    const addr = joinAddress(d);
 
+    // bloc pro (sans undefined)
     document.body.innerHTML = `
-     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 700px;">
+      <div style="max-width:900px">
+        <h1 style="color:#4da3ff;margin:0">${d.client_name || "Client"}</h1>
+        <div class="pill">Client</div>
 
-  <h2 style="margin-bottom:4px;">
-    ${d.client_name}
-  </h2>
+        ${addr ? `<hr><p>📍 ${addr}</p>` : ""}
 
-  <span style="display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;">
-    Client
-  </span>
+        ${(d.siret || d.vat) ? `
+          <hr>
+          <p>
+            ${d.siret ? `🏢 N° SIRET : ${d.siret}<br>` : ""}
+            ${d.vat ? `🏛️ N° TVA : ${d.vat}` : ""}
+          </p>
+        ` : ""}
 
-  <hr style="margin:20px 0;opacity:0.3;">
+        ${(d.contact_name || d.contact_email || d.contact_phone) ? `
+          <hr>
+          <h2>Contact</h2>
+          <p>
+            ${d.contact_name ? `<strong>${d.contact_name}</strong><br>` : ""}
+            ${d.contact_email ? `📧 ${d.contact_email}<br>` : ""}
+            ${d.contact_phone ? `📞 ${d.contact_phone}` : ""}
+          </p>
+        ` : ""}
 
-  <p>
-    📍 ${d.address}
-  </p>
+        <hr>
 
-  <hr style="margin:20px 0;opacity:0.3;">
+        <h2>Votre réponse</h2>
+        <label>Message</label>
+        <textarea id="responseMessage" style="height:110px;"></textarea>
 
-  <p>
-    🏢 N° SIRET : ${d.siret}<br>
-    🏛️ N° TVA : ${d.vat}
-  </p>
+        <label>Documents (PDF, images, etc.)</label>
+        <input type="file" id="responseFiles" multiple>
 
-  <hr style="margin:20px 0;opacity:0.3;">
-
-  <h3>Contact</h3>
-
-  <p>
-    <strong>${d.contact_name}</strong><br>
-    📧 ${d.contact_email}<br>
-    📞 ${d.contact_phone}
-  </p>
-
-</div>
-
-      <h2>Votre réponse</h2>
-
-      <label>Message</label><br>
-      <textarea id="responseMessage" style="width:100%;height:110px;"></textarea>
-
-      <br><br>
-
-      <label>Documents (PDF, images, etc.)</label><br>
-      <input type="file" id="responseFiles" multiple>
-
-      <br><br>
-
-      <button id="sendResponse">Envoyer la réponse</button>
-      <p id="responseStatus"></p>
+        <button id="sendResponse">Envoyer la réponse</button>
+        <p id="responseStatus"></p>
+      </div>
     `;
 
-    // Envoi via Edge Function submit-response (upload + insert côté serveur)
+    // envoi via Edge Function (email + upload + insert côté serveur)
     document.getElementById("sendResponse").addEventListener("click", async () => {
-      const message = document.getElementById("responseMessage").value || "";
-      const filesInput = document.getElementById("responseFiles");
       const status = document.getElementById("responseStatus");
-
       status.innerText = "Envoi en cours…";
 
-      // Convertir fichiers en base64 (dataUrl)
+      const message = document.getElementById("responseMessage").value || "";
+      const filesInput = document.getElementById("responseFiles");
+
       const files = [];
       for (const file of filesInput.files) {
         const dataUrl = await new Promise((resolve, reject) => {
@@ -170,12 +150,7 @@ if (rid && code) {
           r.onerror = reject;
           r.readAsDataURL(file);
         });
-
-        files.push({
-          name: file.name,
-          type: file.type || "application/octet-stream",
-          dataUrl
-        });
+        files.push({ name: file.name, type: file.type || "application/octet-stream", dataUrl });
       }
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-response`, {
@@ -195,10 +170,10 @@ if (rid && code) {
         })
       });
 
-      if (!res.ok) {
+      if(!res.ok){
         const txt = await res.text();
-        status.innerText = "❌ Erreur envoi (HTTP " + res.status + ")";
-        console.log("DETAIL ERREUR submit-response:", txt);
+        status.innerText = "❌ Erreur envoi (HTTP "+res.status+")";
+        console.log("DETAIL submit-response:", txt);
         return;
       }
 
@@ -213,19 +188,16 @@ if (rid && code) {
   /* =========================
      MODE PRESCRIPTEUR
   ========================= */
-
-  // Bouton "Enregistrer" : purement informatif (tu peux garder tes champs)
-  window.saveConfig = function() {
-    setResult("✅ Configuration OK (clé anon intégrée).");
+  window.saveConfig = function(){
+    setResult("✅ OK (hébergé sur GitHub Pages).");
   };
 
-  // Création de demande via REST (requests)
-  window.createRequest = async function() {
+  window.createRequest = async function(){
     const name = document.getElementById("clientName").value.trim();
     const vehicle = document.getElementById("vehicle").value.trim();
     const email = document.getElementById("prescriberEmail").value.trim();
 
-    if (!name || !vehicle || !email) {
+    if(!name || !vehicle || !email){
       setResult("❌ Remplis Nom du client, Véhicule, Email prescripteur.", false);
       return;
     }
@@ -238,7 +210,7 @@ if (rid && code) {
       vehicle: vehicle,
       fin_type: "LLD",
       recipients: [email],
-      access_code: access_code,
+      access_code,
       status: "sent"
     };
 
@@ -253,10 +225,10 @@ if (rid && code) {
       body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
+    if(!res.ok){
       const txt = await res.text();
-      setResult("❌ Erreur création demande (HTTP " + res.status + ")", false);
-      console.log("DETAIL ERREUR createRequest:", txt);
+      setResult("❌ Erreur création (HTTP "+res.status+")", false);
+      console.log("DETAIL createRequest:", txt);
       return;
     }
 
@@ -264,7 +236,7 @@ if (rid && code) {
     const id = rows[0].id;
 
     const link = `${location.href.split("#")[0]}#rid=${id}&code=${access_code}`;
-    setResult(`✅ Lien généré :<br><a href="${link}" target="_blank" style="color:#7cc0ff">${link}</a>`, true);
+    setResult(`✅ Lien généré :<br><a href="${link}" target="_blank" style="color:#7cc0ff">${link}</a>`);
   };
 }
 </script>
