@@ -204,11 +204,21 @@ if (rid && code) {
     const d = rows[0];
     const addr = joinAddress(d);
 
-    document.body.innerHTML = `
-      <div style="max-width:900px">
-        <h1 style="color:#4da3ff;margin:0">${d.client_name || "Client"}</h1>
-        <div class="pill">Client</div>
-            <p style="margin:14px 0 0;opacity:.9;"><strong>Véhicule souhaité :</strong> ${d.vehicle || "-"}</p>
+   document.body.innerHTML = `
+  <div style="max-width:900px">
+    <h1 style="color:#4da3ff;margin:0">${d.client_name || "Client"}</h1>
+    <div class="pill">Client</div>
+
+    <p style="margin:14px 0 0;opacity:.9;">
+      <strong>Véhicule souhaité :</strong> ${d.vehicle || "-"}
+    </p>
+
+    <p style="margin:6px 0 0;opacity:.9;">
+      <strong>Email prescripteur :</strong>
+      <a href="mailto:courtier@mfautosud.fr" style="color:#7cc0ff;text-decoration:none;">
+        courtier@mfautosud.fr
+      </a>
+    </p>
 
         ${addr ? `<hr><p>📍 ${addr}</p>` : ""}
 
