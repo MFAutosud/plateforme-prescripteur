@@ -15,6 +15,7 @@
     #result{margin-top:12px;word-break:break-all}
     hr{margin:18px 0;opacity:.25}
     .pill{display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;margin-top:8px}
+    .hint{opacity:.7;font-size:12px;margin-top:6px}
   </style>
 </head>
 
@@ -33,12 +34,20 @@
 
   <div class="box">
     <h2>2️⃣ Créer une demande</h2>
+
     <label>Nom du client</label>
     <input id="clientName">
+
     <label>Véhicule</label>
     <input id="vehicle">
+
     <label>Email prescripteur</label>
     <input id="prescriberEmail">
+
+    <label>Infos client (copier-coller)</label>
+    <textarea id="pasteBlock" placeholder="Colle ici les infos (adresse, SIRET, TVA, contact)…" style="height:160px;"></textarea>
+    <div class="hint">Astuce : colle le bloc tel quel. Le portail extrait automatiquement adresse / SIRET / TVA / contact.</div>
+
     <button onclick="createRequest()">Créer la demande</button>
   </div>
 
@@ -74,6 +83,76 @@ function joinAddress(d){
 }
 
 /* =========================
+   PARSE "COPIER-COLLER"
+   (pas de théorie : ça extrait automatiquement ce qu'on peut)
+========================= */
+function parsePaste(text){
+  const t = (text || "").replace(/\r/g, "").trim();
+  const lines = t.split("\n").map(l => l.trim()).filter(Boolean);
+
+  const out = {
+    address: "",
+    postcode: "",
+    city: "",
+    country: "",
+    siret: "",
+    vat: "",
+    contact_name: "",
+    contact_email: "",
+    contact_phone: ""
+  };
+
+  // SIRET
+  const siretMatch = t.match(/siret\s*[:\-]?\s*([0-9 ]{10,20})/i);
+  if (siretMatch) out.siret = siretMatch[1].replace(/\s+/g, " ").trim();
+
+  // TVA
+  const vatMatch = t.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{5,})/i);
+  if (vatMatch) out.vat = vatMatch[1].replace(/\s+/g, " ").trim();
+
+  // Email
+  const emailMatch = t.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if (emailMatch) out.contact_email = emailMatch[0];
+
+  // Téléphone FR
+  const phoneMatch = t.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
+  if (phoneMatch) out.contact_phone = phoneMatch[0].replace(/\s+/g, " ").trim();
+
+  // Nom contact : première ligne "probable nom" (2 mots min) sans chiffres/email
+  const isNoise = (l) =>
+    /siret|tva|client|adresse|contact|responsable|mandat/i.test(l) ||
+    l.includes("@") ||
+    /\d{2}/.test(l);
+
+  const nameLine = lines.find(l => !isNoise(l) && l.split(" ").length >= 2);
+  if (nameLine) out.contact_name = nameLine;
+
+  // Adresse : une ligne avec numéro + rue/chemin/avenue/bd/route + (souvent) la suivante
+  const addrIndex = lines.findIndex(l =>
+    /\d+\s+/.test(l) && /(rue|chemin|avenue|bd|boulevard|route|impasse|allee|allée)/i.test(l)
+  );
+  if (addrIndex >= 0) {
+    out.address = lines[addrIndex];
+    // Ligne suivante potentiellement code postal + ville + pays
+    const next = lines[addrIndex + 1] || "";
+    const cpCity = next.match(/(\d{5})\s+(.+)/);
+    if (cpCity) {
+      out.postcode = cpCity[1];
+      out.city = cpCity[2].replace(/\s+France$/i, "").trim();
+      if (/France$/i.test(next)) out.country = "France";
+    } else if (next) {
+      // Si pas de CP, on la colle en complément d'adresse
+      out.address = out.address + "\n" + next;
+    }
+  }
+
+  // Country si on trouve "France"
+  if (!out.country && /France/i.test(t)) out.country = "France";
+
+  return out;
+}
+
+/* =========================
    MODE INTERLOCUTEUR
 ========================= */
 const { rid, code } = getHashParams();
@@ -94,7 +173,7 @@ if (rid && code) {
     const d = rows[0];
     const addr = joinAddress(d);
 
-    // bloc pro (sans undefined)
+    // bloc pro (sans undefined) - et sans tes 2 lignes interdites
     document.body.innerHTML = `
       <div style="max-width:900px">
         <h1 style="color:#4da3ff;margin:0">${d.client_name || "Client"}</h1>
@@ -196,6 +275,8 @@ if (rid && code) {
     const name = document.getElementById("clientName").value.trim();
     const vehicle = document.getElementById("vehicle").value.trim();
     const email = document.getElementById("prescriberEmail").value.trim();
+    const pasted = document.getElementById("pasteBlock").value || "";
+    const parsed = parsePaste(pasted);
 
     if(!name || !vehicle || !email){
       setResult("❌ Remplis Nom du client, Véhicule, Email prescripteur.", false);
@@ -211,7 +292,18 @@ if (rid && code) {
       fin_type: "LLD",
       recipients: [email],
       access_code,
-      status: "sent"
+      status: "sent",
+
+      // champs optionnels extraits du copier-coller
+      address: parsed.address,
+      postcode: parsed.postcode,
+      city: parsed.city,
+      country: parsed.country,
+      siret: parsed.siret,
+      vat: parsed.vat,
+      contact_name: parsed.contact_name,
+      contact_email: parsed.contact_email,
+      contact_phone: parsed.contact_phone
     };
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
