@@ -35,8 +35,7 @@
   <div class="box">
     <h2>2️⃣ Créer une demande</h2>
 
-    <label>Nom du client</label>
-    <input id="clientName">
+    <!-- ✅ SUPPRIMÉ : Nom du client -->
 
     <label>Véhicule</label>
     <input id="vehicle">
@@ -46,7 +45,7 @@
 
     <label>Infos client (copier-coller)</label>
     <textarea id="pasteBlock" placeholder="Colle ici les infos (adresse, SIRET, TVA, contact)…" style="height:160px;"></textarea>
-    <div class="hint">Astuce : colle le bloc tel quel. Le portail extrait automatiquement adresse / SIRET / TVA / contact.</div>
+    <div class="hint">Astuce : la 1ʳᵉ ligne du bloc devient automatiquement le nom du client. Le portail extrait adresse / SIRET / TVA / contact.</div>
 
     <button onclick="createRequest()">Créer la demande</button>
   </div>
@@ -84,13 +83,17 @@ function joinAddress(d){
 
 /* =========================
    PARSE "COPIER-COLLER"
-   (pas de théorie : ça extrait automatiquement ce qu'on peut)
+   - 1ère ligne = nom client
+   - ignore "Client", "Contacts", "Contact"
+   - ignore "Mandat..." et "Responsable MF Autosud"
+   - ignore "Ar" (initiales avatar)
 ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
   const lines = t.split("\n").map(l => l.trim()).filter(Boolean);
 
   const out = {
+    client_name: "",
     address: "",
     postcode: "",
     city: "",
@@ -107,7 +110,6 @@ function parsePaste(text){
   // ✅ 1) NOM CLIENT = 1ère ligne collée
   out.client_name = lines[0];
 
-  // ✅ 2) Nettoyage : on ignore certaines lignes “titre”
   const isTitleLine = (l) => {
     const x = l.toLowerCase();
     return x === "client" || x === "contacts" || x === "contact";
@@ -118,7 +120,6 @@ function parsePaste(text){
     return x.includes("mandat d'autorisation") || x.includes("responsable mf autosud");
   };
 
-  // ✅ 3) Lecture des lignes restantes
   for (let i = 1; i < lines.length; i++) {
     const l = lines[i];
 
@@ -156,7 +157,6 @@ function parsePaste(text){
     // Adresse (ligne contenant un CP 5 chiffres)
     if (!out.address && /\d{5}/.test(l)) {
       out.address = l;
-      // essayer d’extraire CP + ville + pays
       const cpCity = l.match(/(\d{5})\s+(.+)/);
       if (cpCity) {
         out.postcode = cpCity[1];
@@ -166,7 +166,7 @@ function parsePaste(text){
       continue;
     }
 
-    // ✅ Contact name : ignorer "Ar" (initiales avatar)
+    // Contact name : ignorer "Ar" / initiales (1 à 3 lettres)
     if (!out.contact_name) {
       const looksLikeInitials = /^[A-Za-z]{1,3}$/.test(l);
       const hasDigits = /\d/.test(l);
@@ -178,7 +178,6 @@ function parsePaste(text){
     }
   }
 
-  // Country si présent
   if (!out.country && /France/i.test(t)) out.country = "France";
 
   return out;
@@ -205,7 +204,6 @@ if (rid && code) {
     const d = rows[0];
     const addr = joinAddress(d);
 
-    // bloc pro (sans undefined) - et sans tes 2 lignes interdites
     document.body.innerHTML = `
       <div style="max-width:900px">
         <h1 style="color:#4da3ff;margin:0">${d.client_name || "Client"}</h1>
@@ -245,7 +243,6 @@ if (rid && code) {
       </div>
     `;
 
-    // envoi via Edge Function (email + upload + insert côté serveur)
     document.getElementById("sendResponse").addEventListener("click", async () => {
       const status = document.getElementById("responseStatus");
       status.innerText = "Envoi en cours…";
@@ -304,14 +301,18 @@ if (rid && code) {
   };
 
   window.createRequest = async function(){
-    const name = document.getElementById("clientName").value.trim();
     const vehicle = document.getElementById("vehicle").value.trim();
     const email = document.getElementById("prescriberEmail").value.trim();
     const pasted = document.getElementById("pasteBlock").value || "";
     const parsed = parsePaste(pasted);
 
-    if(!name || !vehicle || !email){
-      setResult("❌ Remplis Nom du client, Véhicule, Email prescripteur.", false);
+    if(!vehicle || !email || !pasted){
+      setResult("❌ Remplis Véhicule, Email prescripteur et colle le bloc client.", false);
+      return;
+    }
+
+    if(!parsed.client_name){
+      setResult("❌ Impossible de détecter le nom du client (1ʳᵉ ligne).", false);
       return;
     }
 
@@ -319,7 +320,7 @@ if (rid && code) {
 
     const payload = {
       prescriber_email: email,
-      client_name: name,
+      client_name: parsed.client_name,    // ✅ vient du copier-coller
       vehicle: vehicle,
       fin_type: "LLD",
       recipients: [email],
