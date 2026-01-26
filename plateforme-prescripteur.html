@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Plateforme prescripteur – MF Auto Sud</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; background:#0b1220; color:#fff; padding:40px; }
+    h1 { color:#4da3ff; }
+    .box{ background:#111c34; padding:20px; border-radius:10px; margin-bottom:20px; }
+    label{ display:block; margin-top:12px; }
+    input{ width:100%; padding:10px; margin-top:6px; }
+    button{ width:100%; padding:12px; margin-top:14px; background:#4da3ff; border:0; font-weight:700; cursor:pointer; }
+    #result{ margin-top:12px; word-break:break-all; }
+  </style>
+</head>
+
+<body>
+  <h1>Plateforme prescripteur – MF Auto Sud</h1>
+
+  <div class="box">
+    <h2>1️⃣ Configuration Supabase</h2>
+    <label>Project URL</label>
+    <input id="sbUrl" placeholder="https://xxxx.supabase.co">
+    <label>Publishable key</label>
+    <input id="sbKey" placeholder="sb_publishable_...">
+    <button onclick="saveConfig()">Enregistrer</button>
+    <div id="result"></div>
+  </div>
+
+  <div class="box">
+    <h2>2️⃣ Créer une demande</h2>
+    <label>Nom du client</label>
+    <input id="clientName">
+    <label>Véhicule</label>
+    <input id="vehicle">
+    <label>Email prescripteur</label>
+    <input id="prescriberEmail">
+    <button onclick="createRequest()">Créer la demande</button>
+  </div>
+
+
+<script>
+/* =========================
+   CONFIG FIXE
+========================= */
+const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
+
+/* =========================
+   OUTILS
+========================= */
+function getHashParams() {
+  const params = new URLSearchParams(window.location.hash.replace("#", ""));
+  return { rid: params.get("rid"), code: params.get("code") };
+}
+
+function randomCode() {
+  const arr = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(arr).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function setResult(html, ok = true) {
+  const el = document.getElementById("result");
+  if (!el) return;
+  el.style.color = ok ? "#9dffb3" : "#ff9d9d";
+  el.innerHTML = html;
+}
+
+/* =========================
+   MODE INTERLOCUTEUR
+========================= */
+const { rid, code } = getHashParams();
+
+if (rid && code) {
+  console.log("MODE INTERLOCUTEUR", rid, code);
+
+  document.body.innerHTML = `
+    <h1>Demande reçue</h1>
+    <p>Chargement de la demande en cours…</p>
+  `;
+
+  // Charger la demande
+  fetch(`${SUPABASE_URL}/rest/v1/requests?select=*&id=eq.${rid}&access_code=eq.${code}`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY
+    }
+  })
+  .then(res => {
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  })
+  .then(rows => {
+    if (!rows.length) {
+      document.body.innerHTML = `<h1>Accès refusé</h1><p>Cette demande est invalide ou expirée.</p>`;
+      return;
+    }
+
+    const d = rows[0];
+
+    document.body.innerHTML = `
+      <h1>Demande client</h1>
+      <p><strong>Client :</strong> ${d.client_name}</p>
+      <p><strong>Véhicule :</strong> ${d.vehicle}</p>
+      <p><strong>Type de financement :</strong> ${d.fin_type}</p>
+      <p><strong>Email prescripteur :</strong> ${d.prescriber_email}</p>
+      <hr>
+
+      <h2>Votre réponse</h2>
+
+      <label>Message</label><br>
+      <textarea id="responseMessage" style="width:100%;height:110px;"></textarea>
+
+      <br><br>
+
+      <label>Documents (PDF, images, etc.)</label><br>
+      <input type="file" id="responseFiles" multiple>
+
+      <br><br>
+
+      <button id="sendResponse">Envoyer la réponse</button>
+      <p id="responseStatus"></p>
+    `;
+
+    // Envoi via Edge Function submit-response (upload + insert côté serveur)
+    document.getElementById("sendResponse").addEventListener("click", async () => {
+      const message = document.getElementById("responseMessage").value || "";
+      const filesInput = document.getElementById("responseFiles");
+      const status = document.getElementById("responseStatus");
+
+      status.innerText = "Envoi en cours…";
+
+      // Convertir fichiers en base64 (dataUrl)
+      const files = [];
+      for (const file of filesInput.files) {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = reject;
+          r.readAsDataURL(file);
+        });
+
+        files.push({
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          dataUrl
+        });
+      }
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-response`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: "Bearer " + SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          request_id: rid,
+          access_code: code,
+          responder_name: "Interlocuteur",
+          responder_email: "",
+          message,
+          files
+        })
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        status.innerText = "❌ Erreur envoi (HTTP " + res.status + ")";
+        console.log("DETAIL ERREUR submit-response:", txt);
+        return;
+      }
+
+      status.innerText = "✅ Réponse envoyée avec succès";
+    });
+  })
+  .catch(err => {
+    document.body.innerHTML = `<h1>Erreur</h1><p>${err.message}</p>`;
+  });
+
+} else {
+  /* =========================
+     MODE PRESCRIPTEUR
+  ========================= */
+
+  // Bouton "Enregistrer" : purement informatif (tu peux garder tes champs)
+  window.saveConfig = function() {
+    setResult("✅ Configuration OK (clé anon intégrée).");
+  };
+
+  // Création de demande via REST (requests)
+  window.createRequest = async function() {
+    const name = document.getElementById("clientName").value.trim();
+    const vehicle = document.getElementById("vehicle").value.trim();
+    const email = document.getElementById("prescriberEmail").value.trim();
+
+    if (!name || !vehicle || !email) {
+      setResult("❌ Remplis Nom du client, Véhicule, Email prescripteur.", false);
+      return;
+    }
+
+    const access_code = randomCode();
+
+    const payload = {
+      prescriber_email: email,
+      client_name: name,
+      vehicle: vehicle,
+      fin_type: "LLD",
+      recipients: [email],
+      access_code: access_code,
+      status: "sent"
+    };
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      setResult("❌ Erreur création demande (HTTP " + res.status + ")", false);
+      console.log("DETAIL ERREUR createRequest:", txt);
+      return;
+    }
+
+    const rows = await res.json();
+    const id = rows[0].id;
+
+    const link = `${location.href.split("#")[0]}#rid=${id}&code=${access_code}`;
+    setResult(`✅ Lien généré :<br><a href="${link}" target="_blank" style="color:#7cc0ff">${link}</a>`, true);
+  };
+}
+</script>
+
+</body>
+</html>
