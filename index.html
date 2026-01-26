@@ -103,12 +103,40 @@ if (rid && code) {
     const d = rows[0];
 
     document.body.innerHTML = `
-      <h1>Demande client</h1>
-      <p><strong>Client :</strong> ${d.client_name}</p>
-      <p><strong>Véhicule :</strong> ${d.vehicle}</p>
-      <p><strong>Type de financement :</strong> ${d.fin_type}</p>
-      <p><strong>Email prescripteur :</strong> ${d.prescriber_email}</p>
-      <hr>
+     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 700px;">
+
+  <h2 style="margin-bottom:4px;">
+    ${d.client_name}
+  </h2>
+
+  <span style="display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;">
+    Client
+  </span>
+
+  <hr style="margin:20px 0;opacity:0.3;">
+
+  <p>
+    📍 ${d.address}
+  </p>
+
+  <hr style="margin:20px 0;opacity:0.3;">
+
+  <p>
+    🏢 N° SIRET : ${d.siret}<br>
+    🏛️ N° TVA : ${d.vat}
+  </p>
+
+  <hr style="margin:20px 0;opacity:0.3;">
+
+  <h3>Contact</h3>
+
+  <p>
+    <strong>${d.contact_name}</strong><br>
+    📧 ${d.contact_email}<br>
+    📞 ${d.contact_phone}
+  </p>
+
+</div>
 
       <h2>Votre réponse</h2>
 
