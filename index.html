@@ -8,14 +8,22 @@
   <style>
     body{font-family:Arial,sans-serif;background:#0b1220;color:#fff;padding:28px}
     h1{color:#4da3ff;margin:0 0 18px}
+    h2{margin:0 0 10px}
+    h3{margin:0}
     .box{background:#111c34;padding:18px;border-radius:10px;margin-bottom:18px}
     label{display:block;margin-top:12px}
     input,textarea{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff}
     button{width:100%;padding:12px;margin-top:14px;background:#4da3ff;border:0;font-weight:700;cursor:pointer;border-radius:10px}
+    button.secondary{background:#334155}
+    button.small{width:auto;padding:8px 10px;margin-top:0}
     #result{margin-top:12px;word-break:break-all}
     hr{margin:18px 0;opacity:.25}
     .pill{display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;margin-top:8px}
     .hint{opacity:.7;font-size:12px;margin-top:6px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .providerRow{display:flex;align-items:center;gap:10px;margin:10px 0}
+    .providerRow span{flex:1}
+    a{color:#7cc0ff}
   </style>
 </head>
 
@@ -36,13 +44,41 @@
     <h2>2️⃣ Créer une demande</h2>
 
     <label>Véhicule</label>
-    <input id="vehicle">
+    <input id="vehicle" placeholder="Ex : Renault Clio / Cupra Formentor...">
 
     <label>Infos client (copier-coller)</label>
-    <textarea id="pasteBlock" placeholder="Colle ici les infos (1ère ligne = nom client)…" style="height:160px;"></textarea>
+    <textarea id="pasteBlock" placeholder="Colle ici le bloc complet (1ère ligne = nom client)…" style="height:160px;"></textarea>
     <div class="hint">Astuce : la 1ʳᵉ ligne du bloc devient automatiquement le nom du client. Le portail extrait adresse / SIRET / TVA / contact.</div>
 
     <button onclick="createRequest()">Créer la demande</button>
+  </div>
+
+  <!-- ✅ Envoi prestataires -->
+  <div class="box" id="sendBox" style="display:none;">
+    <h2>3️⃣ Envoyer la demande</h2>
+
+    <div id="sendLinkBox" style="margin-bottom:12px;"></div>
+
+    <h3 style="margin:16px 0 8px;">Prestataires enregistrés</h3>
+    <div id="providersList"></div>
+
+    <h3 style="margin:16px 0 8px;">Ajouter un prestataire</h3>
+    <label>Nom (optionnel)</label>
+    <input id="newProviderName" placeholder="Ex : Banque X / Loueur Y">
+
+    <label>Email</label>
+    <input id="newProviderEmail" placeholder="exemple@domaine.com">
+
+    <button onclick="addProvider()">Ajouter</button>
+
+    <hr>
+
+    <div class="row">
+      <button class="secondary" onclick="openEmailToSelected()">Ouvrir email avec les destinataires sélectionnés</button>
+      <button class="secondary" onclick="copyLink()">Copier le lien</button>
+    </div>
+
+    <p class="hint">Astuce : coche un ou plusieurs prestataires, puis “Ouvrir email…”.</p>
   </div>
 
 <script>
@@ -99,7 +135,6 @@ function parsePaste(text){
 
   if (!lines.length) return out;
 
-  // ✅ NOM CLIENT = 1ère ligne collée
   out.client_name = lines[0];
 
   const isTitleLine = (l) => {
@@ -118,35 +153,18 @@ function parsePaste(text){
     if (isTitleLine(l)) continue;
     if (isUselessLine(l)) continue;
 
-    // SIRET
     const siretMatch = l.match(/siret\s*[:\-]?\s*([0-9 ]{10,20})/i);
-    if (siretMatch) {
-      out.siret = siretMatch[1].replace(/\s+/g, "").trim();
-      continue;
-    }
+    if (siretMatch) { out.siret = siretMatch[1].replace(/\s+/g, "").trim(); continue; }
 
-    // TVA
     const vatMatch = l.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{5,})/i);
-    if (vatMatch) {
-      out.vat = vatMatch[1].replace(/\s+/g, "").trim();
-      continue;
-    }
+    if (vatMatch) { out.vat = vatMatch[1].replace(/\s+/g, "").trim(); continue; }
 
-    // Email
     const emailMatch = l.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-    if (emailMatch && !out.contact_email) {
-      out.contact_email = emailMatch[0];
-      continue;
-    }
+    if (emailMatch && !out.contact_email) { out.contact_email = emailMatch[0]; continue; }
 
-    // Téléphone FR
     const phoneMatch = l.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
-    if (phoneMatch && !out.contact_phone) {
-      out.contact_phone = phoneMatch[0].replace(/\s+/g, "").trim();
-      continue;
-    }
+    if (phoneMatch && !out.contact_phone) { out.contact_phone = phoneMatch[0].replace(/\s+/g, "").trim(); continue; }
 
-    // Adresse (ligne contenant un CP 5 chiffres)
     if (!out.address && /\d{5}/.test(l)) {
       out.address = l;
       const cpCity = l.match(/(\d{5})\s+(.+)/);
@@ -158,7 +176,6 @@ function parsePaste(text){
       continue;
     }
 
-    // Contact name : ignorer "Ar" / initiales (1 à 3 lettres)
     if (!out.contact_name) {
       const looksLikeInitials = /^[A-Za-z]{1,3}$/.test(l);
       const hasDigits = /\d/.test(l);
@@ -171,12 +188,140 @@ function parsePaste(text){
   }
 
   if (!out.country && /France/i.test(t)) out.country = "France";
-
   return out;
 }
 
 /* =========================
-   MODE INTERLOCUTEUR
+   PRESTATAIRES (localStorage)
+========================= */
+const PROVIDERS_KEY = "mfautosud_providers_v1";
+
+function loadProviders(){
+  try{
+    const raw = localStorage.getItem(PROVIDERS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch{ return []; }
+}
+function saveProviders(arr){ localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr)); }
+function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
+
+function renderProviders(){
+  const listEl = document.getElementById("providersList");
+  if(!listEl) return;
+
+  const providers = loadProviders();
+  if(providers.length === 0){
+    listEl.innerHTML = `<p class="hint">Aucun prestataire enregistré pour l’instant.</p>`;
+    return;
+  }
+
+  listEl.innerHTML = providers.map((p, idx) => {
+    const label = p.name ? `${p.name} — ${p.email}` : p.email;
+    return `
+      <div class="providerRow">
+        <input type="checkbox" class="providerCheck" data-email="${p.email}">
+        <span>${label}</span>
+        <button class="small" onclick="openEmailToOne('${p.email}')">Envoyer</button>
+        <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
+      </div>
+    `;
+  }).join("");
+}
+
+window.addProvider = function(){
+  const name = (document.getElementById("newProviderName")?.value || "").trim();
+  const email = normalizeEmail(document.getElementById("newProviderEmail")?.value);
+
+  if(!email || !email.includes("@")){
+    alert("Email invalide.");
+    return;
+  }
+
+  const providers = loadProviders();
+  if(providers.some(p => normalizeEmail(p.email) === email)){
+    alert("Ce prestataire est déjà enregistré.");
+    return;
+  }
+
+  providers.push({ name, email });
+  saveProviders(providers);
+
+  document.getElementById("newProviderName").value = "";
+  document.getElementById("newProviderEmail").value = "";
+  renderProviders();
+};
+
+window.removeProvider = function(index){
+  const providers = loadProviders();
+  providers.splice(index, 1);
+  saveProviders(providers);
+  renderProviders();
+};
+
+/* =========================
+   ENVOI : lien + mailto
+========================= */
+let LAST_REQUEST_LINK = "";
+let LAST_CLIENT_NAME = "";
+let LAST_VEHICLE = "";
+
+function showSendBox(link, clientName, vehicle){
+  LAST_REQUEST_LINK = link;
+  LAST_CLIENT_NAME = clientName || "";
+  LAST_VEHICLE = vehicle || "";
+
+  const box = document.getElementById("sendBox");
+  const sendLinkBox = document.getElementById("sendLinkBox");
+  if(!box || !sendLinkBox) return;
+
+  sendLinkBox.innerHTML = `
+    <p><strong>Lien de la demande :</strong><br>
+    <a href="${link}" target="_blank">${link}</a></p>
+    <p class="hint">Client : ${LAST_CLIENT_NAME || "-"} — Véhicule : ${LAST_VEHICLE || "-"}</p>
+  `;
+
+  box.style.display = "block";
+  renderProviders();
+}
+
+window.copyLink = async function(){
+  if(!LAST_REQUEST_LINK){ alert("Aucun lien à copier."); return; }
+  await navigator.clipboard.writeText(LAST_REQUEST_LINK);
+  alert("Lien copié.");
+};
+
+function buildMailto(toList){
+  const subject = encodeURIComponent(`Demande véhicule - ${LAST_CLIENT_NAME || "Client"} - ${LAST_VEHICLE || ""}`.trim());
+  const body = encodeURIComponent(
+`Bonjour,
+
+Veuillez consulter la demande via le lien ci-dessous et déposer votre proposition (documents + message) :
+${LAST_REQUEST_LINK}
+
+Merci,
+MF Auto Sud
+${FIXED_PRESCRIBER_EMAIL}`
+  );
+  const to = encodeURIComponent(toList.join(","));
+  return `mailto:${to}?subject=${subject}&body=${body}`;
+}
+
+window.openEmailToOne = function(email){
+  if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande (lien manquant)."); return; }
+  window.location.href = buildMailto([email]);
+};
+
+window.openEmailToSelected = function(){
+  if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande (lien manquant)."); return; }
+  const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
+  const emails = checks.map(c => c.getAttribute("data-email")).filter(Boolean);
+  if(emails.length === 0){ alert("Sélectionne au moins un prestataire."); return; }
+  window.location.href = buildMailto(emails);
+};
+
+/* =========================
+   MODE INTERLOCUTEUR / PRESCRIPTEUR
 ========================= */
 const { rid, code } = getHashParams();
 
@@ -296,12 +441,12 @@ if (rid && code) {
   });
 
 } else {
-  /* =========================
-     MODE PRESCRIPTEUR
-  ========================= */
   window.saveConfig = function(){
     setResult("✅ OK (hébergé sur GitHub Pages).");
   };
+
+  // Affiche la liste au chargement
+  renderProviders();
 
   window.createRequest = async function(){
     const vehicle = document.getElementById("vehicle").value.trim();
@@ -363,7 +508,10 @@ if (rid && code) {
     const id = rows[0].id;
 
     const link = `${location.href.split("#")[0]}#rid=${id}&code=${access_code}`;
-    setResult(`✅ Lien généré :<br><a href="${link}" target="_blank" style="color:#7cc0ff">${link}</a>`);
+    setResult(`✅ Lien généré :<br><a href="${link}" target="_blank">${link}</a>`);
+
+    // ✅ Affiche le module d’envoi + préremplit le contexte
+    showSendBox(link, parsed.client_name, vehicle);
   };
 }
 </script>
