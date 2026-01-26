@@ -32,43 +32,42 @@
   </div>
 
   <div class="box">
-    <h2>2️⃣ Créer une demande</h2>
-    <label>Nom du client</label>
-    <input id="clientName">
-    <label>Véhicule</label>
-    <input id="vehicle">
-    <label>Email prescripteur</label>
-    <input id="prescriberEmail">
-    <button onclick="createRequest()">Créer la demande</button>
-  </div>
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 700px;">
 
+  <h2 style="margin-bottom:4px;">
+    ${d.client_name || ""}
+  </h2>
 
-<script>
-/* =========================
-   CONFIG FIXE
-========================= */
-const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
+  <span style="display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;">
+    Client
+  </span>
 
-/* =========================
-   OUTILS
-========================= */
-function getHashParams() {
-  const params = new URLSearchParams(window.location.hash.replace("#", ""));
-  return { rid: params.get("rid"), code: params.get("code") };
-}
+  ${(d.address || d.postcode || d.city || d.country) ? `
+    <hr style="margin:20px 0;opacity:0.3;">
+    <p>
+      📍 ${[d.address, [d.postcode, d.city].filter(Boolean).join(" "), d.country].filter(Boolean).join("<br>")}
+    </p>
+  ` : ""}
 
-function randomCode() {
-  const arr = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(arr).map(b => b.toString(16).padStart(2, "0")).join("");
-}
+  ${(d.siret || d.vat) ? `
+    <hr style="margin:20px 0;opacity:0.3;">
+    <p>
+      ${d.siret ? `🏢 N° SIRET : ${d.siret}<br>` : ""}
+      ${d.vat ? `🏛️ N° TVA : ${d.vat}` : ""}
+    </p>
+  ` : ""}
 
-function setResult(html, ok = true) {
-  const el = document.getElementById("result");
-  if (!el) return;
-  el.style.color = ok ? "#9dffb3" : "#ff9d9d";
-  el.innerHTML = html;
-}
+  ${(d.contact_name || d.contact_email || d.contact_phone) ? `
+    <hr style="margin:20px 0;opacity:0.3;">
+    <h3>Contact</h3>
+    <p>
+      ${d.contact_name ? `<strong>${d.contact_name}</strong><br>` : ""}
+      ${d.contact_email ? `📧 ${d.contact_email}<br>` : ""}
+      ${d.contact_phone ? `📞 ${d.contact_phone}` : ""}
+    </p>
+  ` : ""}
+
+</div>
 
 /* =========================
    MODE INTERLOCUTEUR
