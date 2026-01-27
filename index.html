@@ -33,6 +33,7 @@
 <body>
   <h1>Plateforme prescripteur – MF Auto Sud</h1>
 
+  <!-- Prescripteur UI -->
   <div class="box" id="prescriberBox">
     <h2>1️⃣ Configuration</h2>
     <button onclick="saveConfig()">Enregistrer</button>
@@ -65,6 +66,7 @@
     <div id="historyTable" style="margin-top:12px;"></div>
   </div>
 
+  <!-- Envoi -->
   <div class="box" id="sendBox" style="display:none;">
     <h2>4️⃣ Envoyer la demande</h2>
 
@@ -84,13 +86,19 @@
 
     <hr>
 
+    <label>Message optionnel pour le prestataire</label>
+    <textarea id="providerMessage" placeholder="Texte optionnel (inclus dans l’email automatique)..." style="height:110px;"></textarea>
+    <div id="sendAutoStatus" class="hint"></div>
+
     <div class="row">
-      <button class="secondary" onclick="openEmailToSelected()">Ouvrir email avec les destinataires sélectionnés</button>
+      <button onclick="sendToSelectedAuto()">✅ Envoyer automatiquement (recommandé)</button>
+      <button class="secondary" onclick="openEmailToSelected()">Ouvrir email (manuel)</button>
       <button class="secondary" onclick="copyLink()">Copier le lien</button>
     </div>
 
     <p class="hint">
-      Objet : <strong>Courtier : NOM DU CLIENT</strong>. Le lien est ajouté au corps du mail.
+      Objet email auto : <strong>Courtier: NOM DU CLIENT</strong> (automatique).<br>
+      Le lien du portail est inclus, et l’historique relances se met à jour.
     </p>
   </div>
 
@@ -102,7 +110,7 @@ const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
 const FIXED_PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
 
-/* ✅ évite erreur sur bouton */
+/* ✅ évite erreur bouton */
 window.saveConfig = function(){
   setResult("✅ OK (hébergé sur GitHub Pages).");
 };
@@ -112,7 +120,7 @@ window.saveConfig = function(){
 ========================= */
 function getHashParams(){
   const p = new URLSearchParams(window.location.hash.replace("#",""));
-  return { rid: p.get("rid"), code: p.get("code") };
+  return { rid: p.get("rid"), code: p.get("code"), pe: p.get("pe") };
 }
 function randomCode(){
   const a = crypto.getRandomValues(new Uint8Array(16));
@@ -155,7 +163,6 @@ function parsePaste(text){
   };
   if (!lines.length) return out;
 
-  // 1ère ligne = client
   out.client_name = lines[0];
 
   const isTitleLine = (l) => {
@@ -241,7 +248,7 @@ function renderProviders(){
       <div class="providerRow">
         <input type="checkbox" class="providerCheck" data-email="${p.email}">
         <span>${label}</span>
-        <button class="small" onclick="openEmailToOne('${p.email}')">Envoyer</button>
+        <button class="small" onclick="openEmailToOne('${p.email}')">Email</button>
         <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
       </div>
     `;
@@ -279,7 +286,7 @@ window.removeProvider = function(index){
 };
 
 /* =========================
-   ENVOI : lien + mailto
+   LIEN + ENVOI
 ========================= */
 let LAST_REQUEST_LINK = "";
 let LAST_CLIENT_NAME = "";
@@ -344,6 +351,61 @@ window.openEmailToSelected = function(){
   const emails = checks.map(c => c.getAttribute("data-email")).filter(Boolean);
   if(emails.length === 0){ alert("Sélectionne au moins 1 prestataire."); return; }
   window.location.href = buildMailto(emails);
+};
+
+/* ✅ Envoi automatique via Edge Function send-request */
+window.sendToSelectedAuto = async function(){
+  if(!LAST_REQUEST_LINK){
+    alert("Crée d’abord une demande (lien manquant).");
+    return;
+  }
+
+  const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
+  const emails = checks.map(c => c.getAttribute("data-email")).filter(Boolean);
+  if(emails.length === 0){
+    alert("Sélectionne au moins 1 prestataire.");
+    return;
+  }
+
+  const statusEl = document.getElementById("sendAutoStatus");
+  const msg = (document.getElementById("providerMessage")?.value || "").trim();
+  if(statusEl) statusEl.textContent = "Envoi automatique en cours…";
+
+  // Extraire rid + code depuis le lien
+  const u = new URL(LAST_REQUEST_LINK);
+  const h = new URLSearchParams(u.hash.replace("#",""));
+  const request_id = h.get("rid");
+  const access_code = h.get("code");
+
+  if(!request_id || !access_code){
+    if(statusEl) statusEl.textContent = "❌ Impossible de lire rid/code dans le lien.";
+    return;
+  }
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-request`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify({
+      request_id,
+      access_code,
+      provider_emails: emails,
+      custom_message: msg
+    })
+  });
+
+  const txt = await res.text();
+  if(!res.ok){
+    console.log("send-request failed:", res.status, txt);
+    if(statusEl) statusEl.textContent = "❌ Erreur envoi (HTTP " + res.status + ")";
+    return;
+  }
+
+  if(statusEl) statusEl.textContent = "✅ Envoyé ! (emails + provider_invites enregistrés)";
+  if(typeof loadHistory === "function") loadHistory();
 };
 
 /* =========================
@@ -452,11 +514,10 @@ window.loadHistory = async function () {
 /* =========================
    MODE INTERLOCUTEUR / PRESCRIPTEUR
 ========================= */
-const { rid, code } = getHashParams();
+const { rid, code, pe } = getHashParams();
 
 if (rid && code) {
   // --- MODE PRESTATAIRE ---
-  // cache les blocs prescripteur
   document.getElementById("prescriberBox").style.display = "none";
   document.getElementById("createBox").style.display = "none";
   document.getElementById("historyBox").style.display = "none";
@@ -545,6 +606,8 @@ if (rid && code) {
         files.push({ name: file.name, type: file.type || "application/octet-stream", dataUrl });
       }
 
+      const providerEmail = (pe || "").trim().toLowerCase();
+
       const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-response`, {
         method: "POST",
         headers: {
@@ -556,7 +619,8 @@ if (rid && code) {
           request_id: rid,
           access_code: code,
           responder_name: "Prestataire",
-          responder_email: "",
+          responder_email: providerEmail,
+          provider_email: providerEmail,
           message,
           files
         })
