@@ -12,14 +12,14 @@
     h3{margin:0}
     .box{background:#111c34;padding:18px;border-radius:10px;margin-bottom:18px}
     label{display:block;margin-top:12px}
-    input,textarea{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff}
-    button{width:100%;padding:12px;margin-top:14px;background:#4da3ff;border:0;font-weight:700;cursor:pointer;border-radius:10px}
-    button.secondary{background:#334155}
-    button.small{width:auto;padding:8px 10px;margin-top:0}
+    input,textarea,select{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff}
+    button{width:100%;padding:12px;margin-top:14px;background:#4da3ff;border:0;font-weight:700;cursor:pointer;border-radius:10px;color:#001}
+    button.secondary{background:#334155;color:#fff}
+    button.small{width:auto;padding:8px 10px;margin-top:0;color:#fff}
     #result{margin-top:12px;word-break:break-all}
     hr{margin:18px 0;opacity:.25}
     .pill{display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;margin-top:8px}
-    .hint{opacity:.7;font-size:12px;margin-top:6px}
+    .hint{opacity:.75;font-size:12px;margin-top:6px}
     .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .providerRow{display:flex;align-items:center;gap:10px;margin:10px 0}
     .providerRow span{flex:1}
@@ -27,6 +27,11 @@
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}
     thead th{border-bottom:1px solid rgba(255,255,255,.15);text-align:left}
+    .chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;background:#334155;color:#fff}
+    .ok{color:#9dffb3;font-weight:700}
+    .warn{color:#ffd38a;font-weight:700}
+    .bad{color:#ff9d9d;font-weight:700}
+    .muted{opacity:.6}
   </style>
 </head>
 
@@ -49,8 +54,8 @@
     <label>Infos client (copier-coller)</label>
     <textarea id="pasteBlock" placeholder="Colle ici le bloc complet (1ère ligne = nom client)…" style="height:180px;"></textarea>
     <div class="hint">
-      Astuce : la 1ʳᵉ ligne du bloc devient automatiquement le nom du client.
-      Le portail ignore automatiquement : “Client”, “Contacts”, “Ar”, “Mandat…”, “Responsable MF Autosud”, “Obtenir un lien… SEPA”.
+      Astuce : la 1ʳᵉ ligne du bloc devient automatiquement le nom du client.<br>
+      Le portail ignore : “Client”, “Contacts”, “Ar”, “Mandat…”, “Responsable MF Autosud”, “Obtenir un lien… SEPA”.
     </div>
 
     <button onclick="createRequest()">Créer la demande</button>
@@ -116,7 +121,7 @@
     </div>
 
     <p class="hint">
-      Objet email auto : <strong>Courtier: NOM DU CLIENT</strong> (automatique).<br>
+      Objet email auto : <strong>Courtier : NOM DU CLIENT</strong>.<br>
       Le lien du portail est inclus, et l’historique relances se met à jour.
     </p>
   </div>
@@ -164,7 +169,7 @@ window.copyText = async function(t){
   alert("Copié.");
 };
 
-// ✅ Toujours "Prénom Nom" -> split simple
+// Prénom / Nom
 function splitPrenomNom(full){
   const s = (full || "").trim().replace(/\s+/g," ");
   if(!s) return { prenom:"", nom:"" };
@@ -176,7 +181,7 @@ function splitPrenomNom(full){
 
 /* =========================
    PARSE "COPIER-COLLER"
-   ✅ corrige SEPA + évite de prendre une phrase comme contact
+   ✅ exclut SEPA + évite phrases prises pour contact
 ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
@@ -203,7 +208,6 @@ function parsePaste(text){
     return x === "client" || x === "contacts" || x === "contact";
   };
 
-  // ✅ Ajout exclusions SEPA
   const isUselessLine = (l) => {
     const x = l.toLowerCase();
     return (
@@ -246,19 +250,16 @@ function parsePaste(text){
       continue;
     }
 
-    // ✅ Contact name robuste (évite phrases)
+    // Contact name robuste
     if (!out.contact_name) {
       const s = l.trim();
       const low = s.toLowerCase();
-
       if (isUselessLine(s)) continue;
 
-      const hasDigits = /\d/.test(s);
-      const hasAt = s.includes("@");
-      if (hasDigits || hasAt) continue;
-
-      if (["client", "contact", "contacts"].includes(low)) continue;
-      if (s.length > 45) continue; // évite les phrases
+      if (/\d/.test(s)) continue;
+      if (s.includes("@")) continue;
+      if (["client","contact","contacts"].includes(low)) continue;
+      if (s.length > 45) continue; // évite phrases
 
       const words = s.split(/\s+/).filter(Boolean);
       if (words.length >= 2 && words.length <= 5) {
@@ -303,6 +304,7 @@ function renderProviders(){
       <div class="providerRow">
         <input type="checkbox" class="providerCheck" data-email="${p.email}">
         <span>${label}</span>
+        <button class="small" onclick="openEmailToOne('${p.email.replaceAll("'","%27")}')">Envoyer (1)</button>
         <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
       </div>
     `;
@@ -436,11 +438,15 @@ window.clearProviders = function(){
 let LAST_REQUEST_LINK = "";
 let LAST_CLIENT_NAME = "";
 let LAST_VEHICLE = "";
+let LAST_REQUEST_ID = "";
+let LAST_ACCESS_CODE = "";
 
-function showSendBox(link, clientName, vehicle){
+function showSendBox(link, clientName, vehicle, request_id, access_code){
   LAST_REQUEST_LINK = link;
   LAST_CLIENT_NAME = clientName || "";
   LAST_VEHICLE = vehicle || "";
+  LAST_REQUEST_ID = request_id || "";
+  LAST_ACCESS_CODE = access_code || "";
 
   const box = document.getElementById("sendBox");
   const sendLinkBox = document.getElementById("sendLinkBox");
@@ -462,13 +468,13 @@ window.copyLink = async function(){
   alert("Lien copié.");
 };
 
-function buildMailto(toList){
+function buildMailto(toList, linkForBody){
   const subject = encodeURIComponent(`Courtier : ${LAST_CLIENT_NAME || "Client"}`);
   const body = encodeURIComponent(
 `Bonjour,
 
 Veuillez consulter la demande via le lien ci-dessous et déposer votre proposition (documents + message) :
-${LAST_REQUEST_LINK}
+${linkForBody}
 
 Véhicule souhaité : ${LAST_VEHICLE || "-"}
 
@@ -483,18 +489,26 @@ ${FIXED_PRESCRIBER_EMAIL} – www.mfautosud.fr`
   return `mailto:${to}?subject=${subject}&body=${body}`;
 }
 
+window.openEmailToOne = function(email){
+  if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande."); return; }
+  const clean = (email || "").trim().toLowerCase();
+  const linkOne = `${location.href.split("#")[0]}#rid=${encodeURIComponent(LAST_REQUEST_ID)}&code=${encodeURIComponent(LAST_ACCESS_CODE)}&pe=${encodeURIComponent(clean)}`;
+  window.location.href = buildMailto([clean], linkOne);
+};
+
 window.openEmailToSelected = function(){
   if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande."); return; }
   const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
   const emails = checks.map(c => c.getAttribute("data-email")).filter(Boolean);
   if(emails.length === 0){ alert("Sélectionne au moins 1 prestataire."); return; }
-  window.location.href = buildMailto(emails);
+  // ⚠️ Un seul lien commun (pas de pe spécifique). Recommandation : utiliser “Envoyer automatiquement”.
+  window.location.href = buildMailto(emails, LAST_REQUEST_LINK);
 };
 
 /* ✅ Envoi automatique via Edge Function send-request */
 window.sendToSelectedAuto = async function(){
-  if(!LAST_REQUEST_LINK){
-    alert("Crée d’abord une demande (lien manquant).");
+  if(!LAST_REQUEST_ID || !LAST_ACCESS_CODE){
+    alert("Crée d’abord une demande (rid/code manquants).");
     return;
   }
 
@@ -509,16 +523,6 @@ window.sendToSelectedAuto = async function(){
   const msg = (document.getElementById("providerMessage")?.value || "").trim();
   if(statusEl) statusEl.textContent = "Envoi automatique en cours…";
 
-  const u = new URL(LAST_REQUEST_LINK);
-  const h = new URLSearchParams(u.hash.replace("#",""));
-  const request_id = h.get("rid");
-  const access_code = h.get("code");
-
-  if(!request_id || !access_code){
-    if(statusEl) statusEl.textContent = "❌ Impossible de lire rid/code dans le lien.";
-    return;
-  }
-
   const res = await fetch(`${SUPABASE_URL}/functions/v1/send-request`, {
     method: "POST",
     headers: {
@@ -527,8 +531,8 @@ window.sendToSelectedAuto = async function(){
       Authorization: "Bearer " + SUPABASE_ANON_KEY
     },
     body: JSON.stringify({
-      request_id,
-      access_code,
+      request_id: LAST_REQUEST_ID,
+      access_code: LAST_ACCESS_CODE,
       provider_emails: emails,
       custom_message: msg
     })
@@ -673,12 +677,12 @@ window.loadHistory = async function () {
               <th>Actions</th>
             </tr>
             <tr>
-              <th><input id="f_client" placeholder="Filtrer..." style="width:100%"></th>
-              <th><input id="f_vehicle" placeholder="Filtrer..." style="width:100%"></th>
-              <th><input id="f_provider" placeholder="Filtrer..." style="width:100%"></th>
+              <th><input id="f_client" placeholder="Filtrer..." /></th>
+              <th><input id="f_vehicle" placeholder="Filtrer..." /></th>
+              <th><input id="f_provider" placeholder="Filtrer..." /></th>
               <th></th><th></th><th></th><th></th>
               <th>
-                <select id="f_status" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff">
+                <select id="f_status">
                   <option value="">Tous</option>
                   <option value="En attente">En attente</option>
                   <option value="Relancé">Relancé</option>
@@ -716,7 +720,7 @@ window.loadHistory = async function () {
         <tr>
           <td>
             <div style="font-weight:700;">${esc(r.client_name)}</div>
-            <div style="opacity:.7;font-size:12px;">Créée: ${fmtIso(r.created_at)}</div>
+            <div class="muted" style="font-size:12px;">Créée: ${fmtIso(r.created_at)}</div>
           </td>
           <td>${esc(r.vehicle)}</td>
           <td>${esc(r.provider_email)}</td>
@@ -752,12 +756,114 @@ window.loadHistory = async function () {
 };
 
 /* =========================
+   CREATE REQUEST (insère dans Supabase)
+========================= */
+window.createRequest = async function(){
+  const vehicle = document.getElementById("vehicle").value.trim();
+  const pasted = document.getElementById("pasteBlock").value || "";
+  const parsed = parsePaste(pasted);
+
+  if(!vehicle || !pasted){
+    setResult("❌ Remplis le véhicule et colle le bloc client.", false);
+    return;
+  }
+  if(!parsed.client_name){
+    setResult("❌ Nom client introuvable (1ère ligne).", false);
+    return;
+  }
+
+  const access_code = randomCode();
+
+  const payload = {
+    prescriber_email: FIXED_PRESCRIBER_EMAIL,
+    client_name: parsed.client_name,
+    vehicle: vehicle,
+    fin_type: "LLD",
+    recipients: [FIXED_PRESCRIBER_EMAIL],
+    access_code,
+    status: "draft", // on passera à "sent" via send-request
+
+    address: parsed.address,
+    postcode: parsed.postcode,
+    city: parsed.city,
+    country: parsed.country,
+    siret: parsed.siret,
+    vat: parsed.vat,
+    contact_name: parsed.contact_name,
+    contact_email: parsed.contact_email,
+    contact_phone: parsed.contact_phone
+  };
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if(!res.ok){
+    const txt = await res.text();
+    console.log("createRequest fail:", res.status, txt);
+    setResult("❌ Erreur création (HTTP "+res.status+")", false);
+    return;
+  }
+
+  const rows = await res.json();
+  const id = rows[0].id;
+
+  const link = `${location.href.split("#")[0]}#rid=${id}&code=${access_code}`;
+  setResult(`✅ Lien généré :<br><a href="${link}" target="_blank">${link}</a>`);
+
+  showSendBox(link, parsed.client_name, vehicle, id, access_code);
+};
+
+/* =========================
    MODE PRESTATAIRE / PRESCRIPTEUR
+   + historique des échanges côté prestataire (table responses)
 ========================= */
 const { rid, code, pe } = getHashParams();
 
+async function fetchResponses(request_id){
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/responses?select=created_at,responder_name,responder_email,message,files&request_id=eq.${encodeURIComponent(request_id)}&order=created_at.asc`,
+    { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } }
+  );
+  if(!r.ok) return [];
+  return await r.json();
+}
+
+function renderResponses(list){
+  if(!Array.isArray(list) || list.length === 0){
+    return `<p class="hint">Aucun échange pour l’instant.</p>`;
+  }
+  const esc = (s) => String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  return list.map(x => {
+    const who = [x.responder_name, x.responder_email].filter(Boolean).join(" — ");
+    const files = Array.isArray(x.files) ? x.files : [];
+    const filesHtml = files.length ? `
+      <div class="hint" style="margin-top:6px;">
+        ${files.map(f => `📎 ${esc(f.name || f.path || "fichier")}`).join("<br>")}
+      </div>
+    ` : "";
+    return `
+      <div style="border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px;margin:10px 0;background:#0b1220;">
+        <div class="row" style="justify-content:space-between;">
+          <span class="chip">${esc(who || "Réponse")}</span>
+          <span class="hint">${fmt(x.created_at)}</span>
+        </div>
+        <div style="margin-top:8px;white-space:pre-wrap;">${esc(x.message || "")}</div>
+        ${filesHtml}
+      </div>
+    `;
+  }).join("");
+}
+
 if (rid && code) {
-  // Mode prestataire : cacher UI prescripteur
+  // Mode prestataire
   document.getElementById("prescriberBox").style.display = "none";
   document.getElementById("createBox").style.display = "none";
   document.getElementById("historyBox").style.display = "none";
@@ -769,7 +875,7 @@ if (rid && code) {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY }
   })
   .then(res => { if(!res.ok) throw new Error("HTTP "+res.status); return res.json(); })
-  .then(rows => {
+  .then(async rows => {
     if(!rows.length){
       document.body.innerHTML = `<h1>Accès refusé</h1><p>Demande invalide ou expirée.</p>`;
       return;
@@ -780,6 +886,8 @@ if (rid && code) {
 
     const fullName = (d.contact_name || "").trim();
     const n = splitPrenomNom(fullName);
+
+    const exchanges = await fetchResponses(rid);
 
     document.body.innerHTML = `
       <div style="max-width:900px">
@@ -820,8 +928,11 @@ if (rid && code) {
         ` : ""}
 
         <hr>
+        <h2>Historique des échanges</h2>
+        <div id="exchangeBox">${renderResponses(exchanges)}</div>
 
-        <h2>Votre réponse</h2>
+        <hr>
+        <h2>Ajouter une réponse</h2>
         <label>Message</label>
         <textarea id="responseMessage" style="height:110px;"></textarea>
 
@@ -829,7 +940,7 @@ if (rid && code) {
         <input type="file" id="responseFiles" multiple>
 
         <button id="sendResponse">Envoyer la réponse</button>
-        <p id="responseStatus"></p>
+        <p id="responseStatus" class="hint"></p>
       </div>
     `;
 
@@ -871,15 +982,22 @@ if (rid && code) {
         })
       });
 
+      const txt = await res.text();
       if(!res.ok){
-        const txt = await res.text();
+        console.log("submit-response fail:", res.status, txt);
         status.innerText = "❌ Erreur envoi (HTTP "+res.status+")";
-        console.log("DETAIL submit-response:", txt);
         return;
       }
 
       status.innerText = "✅ Réponse envoyée avec succès";
+
+      // refresh échanges
+      const exchanges2 = await fetchResponses(rid);
+      document.getElementById("exchangeBox").innerHTML = renderResponses(exchanges2);
+      document.getElementById("responseMessage").value = "";
+      document.getElementById("responseFiles").value = "";
     });
+
   })
   .catch(err => {
     document.body.innerHTML = `<h1>Erreur</h1><p>${err.message}</p>`;
@@ -889,69 +1007,6 @@ if (rid && code) {
   // Mode prescripteur
   renderProviders();
   setTimeout(() => { if (typeof loadHistory === "function") loadHistory(); }, 600);
-
-  window.createRequest = async function(){
-    const vehicle = document.getElementById("vehicle").value.trim();
-    const pasted = document.getElementById("pasteBlock").value || "";
-    const parsed = parsePaste(pasted);
-
-    if(!vehicle || !pasted){
-      setResult("❌ Remplis le véhicule et colle le bloc client.", false);
-      return;
-    }
-    if(!parsed.client_name){
-      setResult("❌ Nom client introuvable (1ère ligne).", false);
-      return;
-    }
-
-    const access_code = randomCode();
-
-    const payload = {
-      prescriber_email: FIXED_PRESCRIBER_EMAIL,
-      client_name: parsed.client_name,
-      vehicle: vehicle,
-      fin_type: "LLD",
-      recipients: [FIXED_PRESCRIBER_EMAIL],
-      access_code,
-      status: "sent",
-
-      address: parsed.address,
-      postcode: parsed.postcode,
-      city: parsed.city,
-      country: parsed.country,
-      siret: parsed.siret,
-      vat: parsed.vat,
-      contact_name: parsed.contact_name,
-      contact_email: parsed.contact_email,
-      contact_phone: parsed.contact_phone
-    };
-
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: "Bearer " + SUPABASE_ANON_KEY,
-        "Content-Type": "application/json",
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if(!res.ok){
-      const txt = await res.text();
-      setResult("❌ Erreur création (HTTP "+res.status+")", false);
-      console.log("DETAIL createRequest:", txt);
-      return;
-    }
-
-    const rows = await res.json();
-    const id = rows[0].id;
-
-    const link = `${location.href.split("#")[0]}#rid=${id}&code=${access_code}`;
-    setResult(`✅ Lien généré :<br><a href="${link}" target="_blank">${link}</a>`);
-
-    showSendBox(link, parsed.client_name, vehicle);
-  };
 }
 </script>
 
