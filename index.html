@@ -68,7 +68,7 @@
 </div>
   <!-- ✅ Envoi prestataires -->
   <div class="box" id="sendBox" style="display:none;">
-    <h2>3️⃣ Envoyer la demande</h2>
+    <h2>4️⃣ Envoyer la demande</h2>
 
     <div id="sendLinkBox" style="margin-bottom:12px;"></div>
 
@@ -104,7 +104,10 @@
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
 const FIXED_PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
-
+// ✅ évite une erreur si on clique sur "Enregistrer"
+window.saveConfig = function(){
+  setResult("✅ OK (hébergé sur GitHub Pages).");
+};
 /* =========================
    UTILS
 ========================= */
@@ -603,8 +606,7 @@ if (rid && code) {
   });
 
 } else {
-  window.saveConfig = function(){
-    setResult("✅ OK (hébergé sur GitHub Pages).");
+ 
   };
 
   // Affiche la liste au chargement
