@@ -42,17 +42,7 @@
 
   <div class="box">
     <h2>2️⃣ Créer une demande</h2>
-<div class="box">
-  <h2>3️⃣ Historique relances</h2>
-  <div class="row">
-    <button class="secondary" onclick="loadHistory()">🔄 Rafraîchir</button>
-  </div>
-  <div class="hint">
-    Historique des relances prestataires (sent_at / last_reminder_at / reminder_count / responded_at).
-  </div>
-  <div id="historyStatus" class="hint"></div>
-  <div id="historyTable" style="margin-top:12px;"></div>
-</div>
+
     <label>Véhicule</label>
     <input id="vehicle" placeholder="Ex : Renault Clio / Cupra Formentor...">
 
@@ -65,7 +55,17 @@
 
     <button onclick="createRequest()">Créer la demande</button>
   </div>
-
+<div class="box">
+  <h2>3️⃣ Historique relances</h2>
+  <div class="row">
+    <button class="secondary" onclick="loadHistory()">🔄 Rafraîchir</button>
+  </div>
+  <div class="hint">
+    Historique des relances prestataires (sent_at / last_reminder_at / reminder_count / responded_at).
+  </div>
+  <div id="historyStatus" class="hint"></div>
+  <div id="historyTable" style="margin-top:12px;"></div>
+</div>
   <!-- ✅ Envoi prestataires -->
   <div class="box" id="sendBox" style="display:none;">
     <h2>3️⃣ Envoyer la demande</h2>
