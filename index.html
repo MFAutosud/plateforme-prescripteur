@@ -73,6 +73,10 @@
     <div id="sendLinkBox" style="margin-bottom:12px;"></div>
 
     <h3 style="margin:16px 0 8px;">Prestataires enregistrés</h3>
+    <div class="row">
+      <button class="secondary" onclick="checkAllProviders()">Tout cocher</button>
+      <button class="secondary" onclick="uncheckAllProviders()">Tout décocher</button>
+    </div>
     <div id="providersList"></div>
 
     <h3 style="margin:16px 0 8px;">Ajouter un prestataire</h3>
@@ -83,6 +87,18 @@
     <input id="newProviderEmail" placeholder="exemple@domaine.com">
 
     <button onclick="addProvider()">Ajouter</button>
+
+    <hr>
+
+    <h3 style="margin:16px 0 8px;">Importer une liste</h3>
+    <label>Colle une liste (Nom &lt;email&gt; ou email seul)</label>
+    <textarea id="importProviders" placeholder="Ex : Nom <email@domaine.com>" style="height:140px;"></textarea>
+    <div class="row">
+      <button class="secondary" onclick="importProviders()">Importer</button>
+      <button class="secondary" onclick="exportProviders()">Exporter</button>
+      <button class="secondary" onclick="clearProviders()">Tout effacer</button>
+    </div>
+    <div class="hint" id="importStatus"></div>
 
     <hr>
 
@@ -248,7 +264,6 @@ function renderProviders(){
       <div class="providerRow">
         <input type="checkbox" class="providerCheck" data-email="${p.email}">
         <span>${label}</span>
-        <button class="small" onclick="openEmailToOne('${p.email}')">Email</button>
         <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
       </div>
     `;
@@ -283,6 +298,97 @@ window.removeProvider = function(index){
   providers.splice(index, 1);
   saveProviders(providers);
   renderProviders();
+};
+
+window.checkAllProviders = function(){
+  document.querySelectorAll(".providerCheck").forEach(c => c.checked = true);
+};
+window.uncheckAllProviders = function(){
+  document.querySelectorAll(".providerCheck").forEach(c => c.checked = false);
+};
+
+/* ===== Import / Export / Clear ===== */
+function emailLooksValid(e){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+function extractEmailAndName(line){
+  const s = (line || "").trim();
+  if(!s) return null;
+
+  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
+  if(m){
+    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
+    const email = (m[2] || "").trim().toLowerCase();
+    return { name, email };
+  }
+
+  const only = s.replace(/^['"]|['"]$/g,"").trim();
+  if(emailLooksValid(only.toLowerCase())){
+    return { name: "", email: only.toLowerCase() };
+  }
+
+  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if(em){
+    return { name: "", email: em[0].toLowerCase() };
+  }
+
+  return null;
+}
+
+window.importProviders = function(){
+  const ta = document.getElementById("importProviders");
+  const st = document.getElementById("importStatus");
+  const raw = (ta?.value || "").replace(/\r/g,"").trim();
+  if(!raw){ if(st) st.textContent = "❌ Colle une liste d’emails."; return; }
+
+  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
+
+  const providers = loadProviders();
+  const existing = new Set(providers.map(p => (p.email || "").toLowerCase()));
+
+  let added = 0, ignored = 0;
+
+  for(const line of lines){
+    const parsed = extractEmailAndName(line);
+    if(!parsed || !emailLooksValid(parsed.email)){
+      ignored++;
+      continue;
+    }
+    if(existing.has(parsed.email)){
+      ignored++;
+      continue;
+    }
+    providers.push({ name: parsed.name || "", email: parsed.email });
+    existing.add(parsed.email);
+    added++;
+  }
+
+  saveProviders(providers);
+  renderProviders();
+
+  if(st){
+    st.textContent = `✅ Import terminé : +${added} ajoutés / ${ignored} ignorés`;
+  }
+};
+
+window.exportProviders = async function(){
+  const st = document.getElementById("importStatus");
+  const providers = loadProviders();
+  const lines = providers
+    .map(p => (p.name ? `${p.name} <${p.email}>` : p.email))
+    .filter(Boolean)
+    .join("\n");
+
+  await navigator.clipboard.writeText(lines || "");
+  if(st) st.textContent = "✅ Liste copiée dans le presse-papiers.";
+};
+
+window.clearProviders = function(){
+  const st = document.getElementById("importStatus");
+  if(!confirm("Supprimer tous les prestataires enregistrés sur cet ordinateur ?")) return;
+  saveProviders([]);
+  renderProviders();
+  if(st) st.textContent = "✅ Liste prestataires effacée.";
 };
 
 /* =========================
@@ -340,11 +446,6 @@ ${FIXED_PRESCRIBER_EMAIL} – www.mfautosud.fr`
   return `mailto:${to}?subject=${subject}&body=${body}`;
 }
 
-window.openEmailToOne = function(email){
-  if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande."); return; }
-  window.location.href = buildMailto([email]);
-};
-
 window.openEmailToSelected = function(){
   if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande."); return; }
   const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
@@ -371,7 +472,6 @@ window.sendToSelectedAuto = async function(){
   const msg = (document.getElementById("providerMessage")?.value || "").trim();
   if(statusEl) statusEl.textContent = "Envoi automatique en cours…";
 
-  // Extraire rid + code depuis le lien
   const u = new URL(LAST_REQUEST_LINK);
   const h = new URLSearchParams(u.hash.replace("#",""));
   const request_id = h.get("rid");
@@ -512,12 +612,12 @@ window.loadHistory = async function () {
 };
 
 /* =========================
-   MODE INTERLOCUTEUR / PRESCRIPTEUR
+   MODE PRESTATAIRE / PRESCRIPTEUR
 ========================= */
 const { rid, code, pe } = getHashParams();
 
 if (rid && code) {
-  // --- MODE PRESTATAIRE ---
+  // Mode prestataire : cacher UI prescripteur
   document.getElementById("prescriberBox").style.display = "none";
   document.getElementById("createBox").style.display = "none";
   document.getElementById("historyBox").style.display = "none";
@@ -641,7 +741,7 @@ if (rid && code) {
   });
 
 } else {
-  // --- MODE PRESCRIPTEUR ---
+  // Mode prescripteur
   renderProviders();
   setTimeout(() => { if (typeof loadHistory === "function") loadHistory(); }, 600);
 
