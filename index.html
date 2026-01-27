@@ -24,23 +24,22 @@
     .providerRow{display:flex;align-items:center;gap:10px;margin:10px 0}
     .providerRow span{flex:1}
     a{color:#7cc0ff}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}
+    thead th{border-bottom:1px solid rgba(255,255,255,.15);text-align:left}
   </style>
 </head>
 
 <body>
   <h1>Plateforme prescripteur – MF Auto Sud</h1>
 
-  <div class="box">
-    <h2>1️⃣ Configuration Supabase</h2>
-    <label>Project URL</label>
-    <input id="sbUrl" placeholder="(optionnel)"/>
-    <label>Publishable key</label>
-    <input id="sbKey" placeholder="(optionnel)"/>
+  <div class="box" id="prescriberBox">
+    <h2>1️⃣ Configuration</h2>
     <button onclick="saveConfig()">Enregistrer</button>
     <div id="result"></div>
   </div>
 
-  <div class="box">
+  <div class="box" id="createBox">
     <h2>2️⃣ Créer une demande</h2>
 
     <label>Véhicule</label>
@@ -55,18 +54,17 @@
 
     <button onclick="createRequest()">Créer la demande</button>
   </div>
-<div class="box">
-  <h2>3️⃣ Historique relances</h2>
-  <div class="row">
-    <button class="secondary" onclick="loadHistory()">🔄 Rafraîchir</button>
+
+  <div class="box" id="historyBox">
+    <h2>3️⃣ Historique relances</h2>
+    <div class="row">
+      <button class="secondary" onclick="loadHistory()">🔄 Rafraîchir</button>
+    </div>
+    <div class="hint">Affiche sent_at / last_reminder_at / reminder_count / responded_at (table provider_invites).</div>
+    <div id="historyStatus" class="hint"></div>
+    <div id="historyTable" style="margin-top:12px;"></div>
   </div>
-  <div class="hint">
-    Historique des relances prestataires (sent_at / last_reminder_at / reminder_count / responded_at).
-  </div>
-  <div id="historyStatus" class="hint"></div>
-  <div id="historyTable" style="margin-top:12px;"></div>
-</div>
-  <!-- ✅ Envoi prestataires -->
+
   <div class="box" id="sendBox" style="display:none;">
     <h2>4️⃣ Envoyer la demande</h2>
 
@@ -92,8 +90,7 @@
     </div>
 
     <p class="hint">
-      L’objet sera toujours : <strong>Courtier : NOM DU CLIENT</strong>.
-      Le lien sera automatiquement ajouté au corps du mail.
+      Objet : <strong>Courtier : NOM DU CLIENT</strong>. Le lien est ajouté au corps du mail.
     </p>
   </div>
 
@@ -104,10 +101,12 @@
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
 const FIXED_PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
-// ✅ évite une erreur si on clique sur "Enregistrer"
+
+/* ✅ évite erreur sur bouton */
 window.saveConfig = function(){
   setResult("✅ OK (hébergé sur GitHub Pages).");
 };
+
 /* =========================
    UTILS
 ========================= */
@@ -131,6 +130,9 @@ function joinAddress(d){
   const line3 = d.country || "";
   return [line1, line2, line3].filter(Boolean).join("<br>");
 }
+function fmt(iso){
+  return iso ? new Date(iso).toLocaleString("fr-FR") : "—";
+}
 
 /* =========================
    PARSE "COPIER-COLLER"
@@ -151,7 +153,6 @@ function parsePaste(text){
     contact_email: "",
     contact_phone: ""
   };
-
   if (!lines.length) return out;
 
   // 1ère ligne = client
@@ -161,7 +162,6 @@ function parsePaste(text){
     const x = l.toLowerCase();
     return x === "client" || x === "contacts" || x === "contact";
   };
-
   const isUselessLine = (l) => {
     const x = l.toLowerCase();
     return x.includes("mandat d'autorisation") || x.includes("responsable mf autosud");
@@ -169,27 +169,21 @@ function parsePaste(text){
 
   for (let i = 1; i < lines.length; i++) {
     const l = lines[i];
-
     if (isTitleLine(l)) continue;
     if (isUselessLine(l)) continue;
 
-    // SIRET
     const siretMatch = l.match(/siret\s*[:\-]?\s*([0-9 ]{10,20})/i);
     if (siretMatch) { out.siret = siretMatch[1].replace(/\s+/g, "").trim(); continue; }
 
-    // TVA
     const vatMatch = l.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{5,})/i);
     if (vatMatch) { out.vat = vatMatch[1].replace(/\s+/g, "").trim(); continue; }
 
-    // Email
     const emailMatch = l.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     if (emailMatch && !out.contact_email) { out.contact_email = emailMatch[0]; continue; }
 
-    // Téléphone FR
     const phoneMatch = l.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
     if (phoneMatch && !out.contact_phone) { out.contact_phone = phoneMatch[0].replace(/\s+/g, "").trim(); continue; }
 
-    // Adresse (si CP)
     if (!out.address && /\d{5}/.test(l)) {
       out.address = l;
       const cpCity = l.match(/(\d{5})\s+(.+)/);
@@ -201,7 +195,6 @@ function parsePaste(text){
       continue;
     }
 
-    // Nom contact : ignorer "Ar" ou initiales
     if (!out.contact_name) {
       const looksLikeInitials = /^[A-Za-z]{1,3}$/.test(l);
       const hasDigits = /\d/.test(l);
@@ -238,7 +231,7 @@ function renderProviders(){
 
   const providers = loadProviders();
   if(providers.length === 0){
-    listEl.innerHTML = `<p class="hint">Aucun prestataire enregistré pour l’instant.</p>`;
+    listEl.innerHTML = `<p class="hint">Aucun prestataire enregistré.</p>`;
     return;
   }
 
@@ -266,7 +259,7 @@ window.addProvider = function(){
 
   const providers = loadProviders();
   if(providers.some(p => normalizeEmail(p.email) === email)){
-    alert("Ce prestataire est déjà enregistré.");
+    alert("Déjà enregistré.");
     return;
   }
 
@@ -312,13 +305,12 @@ function showSendBox(link, clientName, vehicle){
 }
 
 window.copyLink = async function(){
-  if(!LAST_REQUEST_LINK){ alert("Aucun lien à copier."); return; }
+  if(!LAST_REQUEST_LINK){ alert("Aucun lien."); return; }
   await navigator.clipboard.writeText(LAST_REQUEST_LINK);
   alert("Lien copié.");
 };
 
 function buildMailto(toList){
-  // ✅ Objet fixe : "Courtier : NOM DU CLIENT"
   const subject = encodeURIComponent(`Courtier : ${LAST_CLIENT_NAME || "Client"}`);
 
   const body = encodeURIComponent(
@@ -342,19 +334,20 @@ ${FIXED_PRESCRIBER_EMAIL} – www.mfautosud.fr`
 }
 
 window.openEmailToOne = function(email){
-  if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande (lien manquant)."); return; }
+  if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande."); return; }
   window.location.href = buildMailto([email]);
 };
 
 window.openEmailToSelected = function(){
-  if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande (lien manquant)."); return; }
+  if(!LAST_REQUEST_LINK){ alert("Crée d’abord une demande."); return; }
   const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
   const emails = checks.map(c => c.getAttribute("data-email")).filter(Boolean);
-  if(emails.length === 0){ alert("Sélectionne au moins un prestataire."); return; }
+  if(emails.length === 0){ alert("Sélectionne au moins 1 prestataire."); return; }
   window.location.href = buildMailto(emails);
 };
+
 /* =========================
-   HISTORIQUE RELANCES (requests + provider_invites)
+   HISTORIQUE RELANCES
 ========================= */
 window.loadHistory = async function () {
   const statusEl = document.getElementById("historyStatus");
@@ -365,49 +358,24 @@ window.loadHistory = async function () {
   tableEl.innerHTML = "";
 
   try {
-    // 1) Dernières demandes
     const reqRes = await fetch(
       `${SUPABASE_URL}/rest/v1/requests?select=id,client_name,vehicle,status,created_at&order=created_at.desc&limit=25`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: "Bearer " + SUPABASE_ANON_KEY,
-        },
-      }
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } }
     );
-
-    if (!reqRes.ok) {
-      const t = await reqRes.text();
-      throw new Error(`requests HTTP ${reqRes.status}: ${t}`);
-    }
-
+    if (!reqRes.ok) throw new Error(`requests HTTP ${reqRes.status}: ${await reqRes.text()}`);
     const requests = await reqRes.json();
-    if (!requests.length) {
-      statusEl.textContent = "Aucune demande.";
-      return;
-    }
+    if (!requests.length) { statusEl.textContent = "Aucune demande."; return; }
 
-    // 2) Charger toutes les invites pour ces demandes
     const ids = requests.map(r => r.id);
     const inList = ids.map(id => `"${id}"`).join(",");
+
     const invRes = await fetch(
       `${SUPABASE_URL}/rest/v1/provider_invites?select=request_id,provider_email,sent_at,responded_at,last_reminder_at,reminder_count&request_id=in.(${inList})&order=sent_at.desc`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: "Bearer " + SUPABASE_ANON_KEY,
-        },
-      }
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } }
     );
-
-    if (!invRes.ok) {
-      const t = await invRes.text();
-      throw new Error(`provider_invites HTTP ${invRes.status}: ${t}`);
-    }
-
+    if (!invRes.ok) throw new Error(`provider_invites HTTP ${invRes.status}: ${await invRes.text()}`);
     const invites = await invRes.json();
 
-    // index par request_id
     const byReq = new Map();
     for (const inv of invites) {
       const k = inv.request_id;
@@ -415,7 +383,6 @@ window.loadHistory = async function () {
       byReq.get(k).push(inv);
     }
 
-    const fmt = (iso) => iso ? new Date(iso).toLocaleString("fr-FR") : "—";
     const badge = (inv) => {
       if (inv.responded_at) return `<span style="color:#9dffb3;font-weight:700;">✅ Répondu</span>`;
       if ((inv.reminder_count || 0) > 0) return `<span style="color:#ffd38a;font-weight:700;">⏳ Relancé (${inv.reminder_count})</span>`;
@@ -424,16 +391,16 @@ window.loadHistory = async function () {
 
     let html = `
       <div style="overflow:auto;">
-        <table style="width:100%;border-collapse:collapse;">
+        <table>
           <thead>
-            <tr style="text-align:left;border-bottom:1px solid rgba(255,255,255,.15);">
-              <th style="padding:10px;">Demande</th>
-              <th style="padding:10px;">Prestataire</th>
-              <th style="padding:10px;">Envoyé</th>
-              <th style="padding:10px;">Dernière relance</th>
-              <th style="padding:10px;">Nb</th>
-              <th style="padding:10px;">Répondu</th>
-              <th style="padding:10px;">Statut</th>
+            <tr>
+              <th>Demande</th>
+              <th>Prestataire</th>
+              <th>Envoyé</th>
+              <th>Dernière relance</th>
+              <th>Nb</th>
+              <th>Répondu</th>
+              <th>Statut</th>
             </tr>
           </thead>
           <tbody>
@@ -444,36 +411,32 @@ window.loadHistory = async function () {
 
       if (!invs.length) {
         html += `
-          <tr style="border-bottom:1px solid rgba(255,255,255,.08);">
-            <td style="padding:10px;min-width:260px;">
+          <tr>
+            <td>
               <div style="font-weight:700;">${r.client_name || "—"}</div>
               <div style="opacity:.8;">${r.vehicle || "—"}</div>
               <div style="opacity:.6;font-size:12px;">Créée: ${fmt(r.created_at)}</div>
             </td>
-            <td style="padding:10px;" colspan="6" class="hint">
-              Aucun prestataire (provider_invites vide)
-            </td>
-          </tr>
-        `;
+            <td colspan="6" class="hint">Aucun prestataire (provider_invites vide)</td>
+          </tr>`;
         continue;
       }
 
       for (const inv of invs) {
         html += `
-          <tr style="border-bottom:1px solid rgba(255,255,255,.08);">
-            <td style="padding:10px;min-width:260px;">
+          <tr>
+            <td>
               <div style="font-weight:700;">${r.client_name || "—"}</div>
               <div style="opacity:.8;">${r.vehicle || "—"}</div>
               <div style="opacity:.6;font-size:12px;">Créée: ${fmt(r.created_at)}</div>
             </td>
-            <td style="padding:10px;min-width:220px;">${inv.provider_email || "—"}</td>
-            <td style="padding:10px;min-width:170px;">${fmt(inv.sent_at)}</td>
-            <td style="padding:10px;min-width:170px;">${fmt(inv.last_reminder_at)}</td>
-            <td style="padding:10px;min-width:60px;text-align:center;">${inv.reminder_count ?? 0}</td>
-            <td style="padding:10px;min-width:170px;">${fmt(inv.responded_at)}</td>
-            <td style="padding:10px;min-width:120px;">${badge(inv)}</td>
-          </tr>
-        `;
+            <td>${inv.provider_email || "—"}</td>
+            <td>${fmt(inv.sent_at)}</td>
+            <td>${fmt(inv.last_reminder_at)}</td>
+            <td style="text-align:center;">${inv.reminder_count ?? 0}</td>
+            <td>${fmt(inv.responded_at)}</td>
+            <td>${badge(inv)}</td>
+          </tr>`;
       }
     }
 
@@ -485,12 +448,20 @@ window.loadHistory = async function () {
     statusEl.textContent = "❌ " + String(e);
   }
 };
+
 /* =========================
    MODE INTERLOCUTEUR / PRESCRIPTEUR
 ========================= */
 const { rid, code } = getHashParams();
 
 if (rid && code) {
+  // --- MODE PRESTATAIRE ---
+  // cache les blocs prescripteur
+  document.getElementById("prescriberBox").style.display = "none";
+  document.getElementById("createBox").style.display = "none";
+  document.getElementById("historyBox").style.display = "none";
+  document.getElementById("sendBox").style.display = "none";
+
   document.body.innerHTML = `<h1>Demande reçue</h1><p>Chargement…</p>`;
 
   fetch(`${SUPABASE_URL}/rest/v1/requests?select=*&id=eq.${rid}&access_code=eq.${code}`, {
@@ -584,7 +555,7 @@ if (rid && code) {
         body: JSON.stringify({
           request_id: rid,
           access_code: code,
-          responder_name: "Interlocuteur",
+          responder_name: "Prestataire",
           responder_email: "",
           message,
           files
@@ -606,21 +577,12 @@ if (rid && code) {
   });
 
 } else {
- 
-  };
-
-  // Affiche la liste au chargement
+  // --- MODE PRESCRIPTEUR ---
   renderProviders();
-  
-// 🔄 Charger automatiquement l’historique des relances au chargement
-setTimeout(() => {
-  if (typeof loadHistory === "function") {
-    loadHistory();
-  }
-}, 600);
+  setTimeout(() => { if (typeof loadHistory === "function") loadHistory(); }, 600);
+
   window.createRequest = async function(){
     const vehicle = document.getElementById("vehicle").value.trim();
-    const email = FIXED_PRESCRIBER_EMAIL;
     const pasted = document.getElementById("pasteBlock").value || "";
     const parsed = parsePaste(pasted);
 
@@ -628,20 +590,19 @@ setTimeout(() => {
       setResult("❌ Remplis le véhicule et colle le bloc client.", false);
       return;
     }
-
     if(!parsed.client_name){
-      setResult("❌ Impossible de détecter le nom du client (1ʳᵉ ligne).", false);
+      setResult("❌ Nom client introuvable (1ère ligne).", false);
       return;
     }
 
     const access_code = randomCode();
 
     const payload = {
-      prescriber_email: email,
+      prescriber_email: FIXED_PRESCRIBER_EMAIL,
       client_name: parsed.client_name,
       vehicle: vehicle,
       fin_type: "LLD",
-      recipients: [email],
+      recipients: [FIXED_PRESCRIBER_EMAIL],
       access_code,
       status: "sent",
 
