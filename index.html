@@ -16,6 +16,7 @@
     button{width:100%;padding:12px;margin-top:14px;background:#4da3ff;border:0;font-weight:700;cursor:pointer;border-radius:10px}
     button.secondary{background:#334155}
     button.small{width:auto;padding:8px 10px;margin-top:0}
+    .row button{width:auto} /* ✅ important : évite d’écraser les boutons dans les lignes */
     #result{margin-top:12px;word-break:break-all}
     hr{margin:18px 0;opacity:.25}
     .pill{display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;margin-top:8px}
@@ -109,10 +110,11 @@
     <textarea id="providerMessage" placeholder="Texte optionnel (inclus dans l’email automatique)..." style="height:110px;"></textarea>
     <div id="sendAutoStatus" class="hint"></div>
 
-    <div class="row">
-      <button onclick="sendToSelectedAuto()">✅ Envoyer automatiquement (recommandé)</button>
-      <button class="secondary" onclick="openEmailToSelected()">Ouvrir email (manuel)</button>
-      <button class="secondary" onclick="copyLink()">Copier le lien</button>
+    <!-- ✅ BOUTONS D’ENVOI (AUTO / MANUEL / COPIE) -->
+    <div class="row" style="margin-top:10px;">
+      <button type="button" onclick="sendToSelectedAuto()">✅ Envoyer automatiquement</button>
+      <button type="button" class="secondary" onclick="openEmailToSelected()">✉️ Ouvrir email (manuel)</button>
+      <button type="button" class="secondary" onclick="copyLink()">📋 Copier le lien</button>
     </div>
 
     <p class="hint">
@@ -321,7 +323,6 @@ function extractEmailAndName(line){
   const s = (line || "").trim();
   if(!s) return null;
 
-  // "Nom <email@...>"
   const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
   if(m){
     const name = m[1].replace(/^['"]|['"]$/g,"").trim();
@@ -329,13 +330,11 @@ function extractEmailAndName(line){
     return { name, email };
   }
 
-  // "email@..."
   const only = s.replace(/^['"]|['"]$/g,"").trim();
   if(emailLooksValid(only.toLowerCase())){
     return { name: "", email: only.toLowerCase() };
   }
 
-  // email somewhere in line
   const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   if(em){
     return { name: "", email: em[0].toLowerCase() };
@@ -543,7 +542,7 @@ window.deleteRequest = async function(request_id, access_code){
 };
 
 /* =========================
-   HISTORIQUE (TRI + DATES + RESET + EXPORT CSV)
+   HISTORIQUE + FILTRES PAR COLONNE
 ========================= */
 window.loadHistory = async function () {
   const statusEl = document.getElementById("historyStatus");
@@ -554,18 +553,17 @@ window.loadHistory = async function () {
   tableEl.innerHTML = "";
 
   try {
-    // 1) Dernières demandes
     const reqRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/requests?select=id,client_name,vehicle,status,created_at,access_code&order=created_at.desc&limit=100`,
+      `${SUPABASE_URL}/rest/v1/requests?select=id,client_name,vehicle,status,created_at,access_code&order=created_at.desc&limit=50`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } }
     );
     if (!reqRes.ok) throw new Error(`requests HTTP ${reqRes.status}: ${await reqRes.text()}`);
     const requests = await reqRes.json();
     if (!requests.length) { statusEl.textContent = "Aucune demande."; return; }
 
-    // 2) Charger invites prestataires
     const ids = requests.map(r => r.id);
     const inList = ids.map(id => `"${id}"`).join(",");
+
     const invRes = await fetch(
       `${SUPABASE_URL}/rest/v1/provider_invites?select=request_id,provider_email,sent_at,responded_at,last_reminder_at,reminder_count&request_id=in.(${inList})&order=sent_at.desc`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } }
@@ -625,61 +623,30 @@ window.loadHistory = async function () {
       }
     }
 
-    // helpers
-    const esc = (s) => String(s ?? "")
-      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
-
+    const esc = (s) => String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
     const fmtIso = (iso) => iso ? new Date(iso).toLocaleString("fr-FR") : "—";
 
-    const toDateInputValue = (iso) => {
-      if (!iso) return "";
-      const d = new Date(iso);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth()+1).padStart(2,"0");
-      const dd = String(d.getDate()).padStart(2,"0");
-      return `${yyyy}-${mm}-${dd}`;
-    };
-
-    let sortKey = "created_at";
-    let sortDir = "desc";
-
     tableEl.innerHTML = `
-      <div class="row" style="margin-bottom:10px;">
-        <button class="secondary" id="btnResetFilters" type="button">Réinitialiser filtres</button>
-        <button class="secondary" id="btnExportCsv" type="button">Exporter CSV (résultat filtré)</button>
-        <div class="hint" id="historyCount" style="margin-left:auto;"></div>
-      </div>
-
       <div style="overflow:auto;">
         <table id="historyTbl">
           <thead>
             <tr>
-              <th data-sort="client_name" style="cursor:pointer;">Client ⬍</th>
-              <th data-sort="vehicle" style="cursor:pointer;">Véhicule ⬍</th>
-              <th data-sort="provider_email" style="cursor:pointer;">Prestataire ⬍</th>
-              <th data-sort="sent_at" style="cursor:pointer;">Envoyé ⬍</th>
-              <th data-sort="last_reminder_at" style="cursor:pointer;">Dernière relance ⬍</th>
-              <th data-sort="reminder_count" style="cursor:pointer;">Nb ⬍</th>
-              <th data-sort="responded_at" style="cursor:pointer;">Répondu ⬍</th>
-              <th data-sort="statusLabel" style="cursor:pointer;">Statut ⬍</th>
+              <th>Client</th>
+              <th>Véhicule</th>
+              <th>Prestataire</th>
+              <th>Envoyé</th>
+              <th>Dernière relance</th>
+              <th>Nb</th>
+              <th>Répondu</th>
+              <th>Statut</th>
               <th>Actions</th>
             </tr>
             <tr>
               <th><input id="f_client" placeholder="Filtrer..." style="width:100%"></th>
               <th><input id="f_vehicle" placeholder="Filtrer..." style="width:100%"></th>
               <th><input id="f_provider" placeholder="Filtrer..." style="width:100%"></th>
-              <th colspan="2">
-                <div class="row" style="gap:8px;">
-                  <div style="flex:1;">
-                    <div class="hint">Du</div>
-                    <input id="f_from" type="date" style="width:100%">
-                  </div>
-                  <div style="flex:1;">
-                    <div class="hint">Au</div>
-                    <input id="f_to" type="date" style="width:100%">
-                  </div>
-                </div>
-              </th>
+              <th></th>
+              <th></th>
               <th></th>
               <th></th>
               <th>
@@ -697,81 +664,25 @@ window.loadHistory = async function () {
           <tbody id="historyBody"></tbody>
         </table>
       </div>
+      <div class="hint" id="historyCount" style="margin-top:8px;"></div>
     `;
 
     const bodyEl = document.getElementById("historyBody");
     const countEl = document.getElementById("historyCount");
 
-    const getFilters = () => {
+    function renderFiltered() {
       const qClient = (document.getElementById("f_client").value || "").trim().toLowerCase();
       const qVeh = (document.getElementById("f_vehicle").value || "").trim().toLowerCase();
       const qProv = (document.getElementById("f_provider").value || "").trim().toLowerCase();
       const qStatus = (document.getElementById("f_status").value || "").trim();
-      const from = (document.getElementById("f_from").value || "").trim();
-      const to = (document.getElementById("f_to").value || "").trim();
-      return { qClient, qVeh, qProv, qStatus, from, to };
-    };
-
-    const inDateRange = (createdAtIso, from, to) => {
-      if (!from && !to) return true;
-      const d = new Date(createdAtIso);
-      const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-
-      if (from) {
-        const [fy,fm,fd] = from.split("-").map(Number);
-        const f = new Date(fy, fm-1, fd).getTime();
-        if (day < f) return false;
-      }
-      if (to) {
-        const [ty,tm,td] = to.split("-").map(Number);
-        const t = new Date(ty, tm-1, td).getTime();
-        if (day > t) return false;
-      }
-      return true;
-    };
-
-    const compare = (a, b) => {
-      const va = a?.[sortKey];
-      const vb = b?.[sortKey];
-
-      const isDateKey = ["created_at","sent_at","last_reminder_at","responded_at"].includes(sortKey);
-      if (isDateKey) {
-        const ta = va ? new Date(va).getTime() : -Infinity;
-        const tb = vb ? new Date(vb).getTime() : -Infinity;
-        return sortDir === "asc" ? ta - tb : tb - ta;
-      }
-
-      if (typeof va === "number" || typeof vb === "number") {
-        const na = Number(va ?? 0);
-        const nb = Number(vb ?? 0);
-        return sortDir === "asc" ? na - nb : nb - na;
-      }
-
-      const sa = String(va ?? "").toLowerCase();
-      const sb = String(vb ?? "").toLowerCase();
-      if (sa < sb) return sortDir === "asc" ? -1 : 1;
-      if (sa > sb) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    };
-
-    const getFilteredSorted = () => {
-      const { qClient, qVeh, qProv, qStatus, from, to } = getFilters();
 
       const filtered = rows.filter(r => {
         if (qClient && !String(r.client_name).toLowerCase().includes(qClient)) return false;
         if (qVeh && !String(r.vehicle).toLowerCase().includes(qVeh)) return false;
         if (qProv && !String(r.provider_email).toLowerCase().includes(qProv)) return false;
         if (qStatus && r.statusLabel !== qStatus) return false;
-        if (!inDateRange(r.created_at, from, to)) return false;
         return true;
       });
-
-      filtered.sort(compare);
-      return filtered;
-    };
-
-    const render = () => {
-      const filtered = getFilteredSorted();
 
       bodyEl.innerHTML = filtered.map(r => `
         <tr>
@@ -790,95 +701,21 @@ window.loadHistory = async function () {
             <div class="row">
               <button class="small secondary" onclick="copyText('${r.link.replaceAll("'", "%27")}')">Copier lien</button>
               <button class="small secondary" onclick="deleteRequest('${r.request_id}','${r.access_code}')">Supprimer</button>
-              <a href="${r.link}" target="_blank"
-                 style="padding:8px 10px;background:#334155;border-radius:10px;text-decoration:none;color:#fff;">
-                 Ouvrir
-              </a>
+              <a href="${r.link}" target="_blank" style="padding:8px 10px;background:#334155;border-radius:10px;text-decoration:none;color:#fff;">Ouvrir</a>
             </div>
           </td>
         </tr>
       `).join("");
 
-      if (countEl) countEl.textContent = `✅ ${filtered.length} lignes (sur ${rows.length}) — Tri: ${sortKey} (${sortDir})`;
-    };
+      if (countEl) countEl.textContent = `✅ ${filtered.length} lignes affichées (sur ${rows.length})`;
+    }
 
-    // listeners filtres
-    ["f_client","f_vehicle","f_provider","f_from","f_to"].forEach(id => {
-      document.getElementById(id).addEventListener("input", render);
-      document.getElementById(id).addEventListener("change", render);
+    ["f_client","f_vehicle","f_provider"].forEach(id => {
+      document.getElementById(id).addEventListener("input", renderFiltered);
     });
-    document.getElementById("f_status").addEventListener("change", render);
+    document.getElementById("f_status").addEventListener("change", renderFiltered);
 
-    // tri
-    document.querySelectorAll("#historyTbl thead tr:first-child th[data-sort]").forEach(th => {
-      th.addEventListener("click", () => {
-        const key = th.getAttribute("data-sort");
-        if (!key) return;
-        if (sortKey === key) {
-          sortDir = (sortDir === "asc") ? "desc" : "asc";
-        } else {
-          sortKey = key;
-          sortDir = ["created_at","sent_at","last_reminder_at","responded_at"].includes(key) ? "desc" : "asc";
-        }
-        render();
-      });
-    });
-
-    // reset filtres
-    document.getElementById("btnResetFilters").addEventListener("click", () => {
-      document.getElementById("f_client").value = "";
-      document.getElementById("f_vehicle").value = "";
-      document.getElementById("f_provider").value = "";
-      document.getElementById("f_status").value = "";
-      document.getElementById("f_from").value = "";
-      document.getElementById("f_to").value = "";
-      sortKey = "created_at";
-      sortDir = "desc";
-      render();
-    });
-
-    // export CSV
-    document.getElementById("btnExportCsv").addEventListener("click", () => {
-      const filtered = getFilteredSorted();
-      const headers = [
-        "Client","Vehicule","Prestataire","Creee_le","Envoye_le","Derniere_relance","Nb_relances","Repondu_le","Statut","Lien"
-      ];
-
-      const csvEscape = (v) => {
-        const s = String(v ?? "");
-        const needs = /[",\n;]/.test(s);
-        const out = s.replaceAll('"','""');
-        return needs ? `"${out}"` : out;
-      };
-
-      const lines = [
-        headers.join(";"),
-        ...filtered.map(r => [
-          r.client_name,
-          r.vehicle,
-          r.provider_email,
-          fmtIso(r.created_at),
-          fmtIso(r.sent_at),
-          fmtIso(r.last_reminder_at),
-          r.reminder_count ?? 0,
-          fmtIso(r.responded_at),
-          r.statusLabel,
-          r.link
-        ].map(csvEscape).join(";"))
-      ];
-
-      const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `historique-demandes_${toDateInputValue(new Date().toISOString())}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    });
-
-    render();
+    renderFiltered();
     statusEl.textContent = `✅ ${requests.length} demandes chargées / ${invites.length} invites`;
 
   } catch (e) {
@@ -892,7 +729,6 @@ window.loadHistory = async function () {
 const { rid, code, pe } = getHashParams();
 
 if (rid && code) {
-  // Mode prestataire : cacher UI prescripteur
   document.getElementById("prescriberBox").style.display = "none";
   document.getElementById("createBox").style.display = "none";
   document.getElementById("historyBox").style.display = "none";
@@ -1016,7 +852,6 @@ if (rid && code) {
   });
 
 } else {
-  // Mode prescripteur
   renderProviders();
   setTimeout(() => { if (typeof loadHistory === "function") loadHistory(); }, 600);
 
