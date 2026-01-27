@@ -16,7 +16,6 @@
     button{width:100%;padding:12px;margin-top:14px;background:#4da3ff;border:0;font-weight:700;cursor:pointer;border-radius:10px}
     button.secondary{background:#334155}
     button.small{width:auto;padding:8px 10px;margin-top:0}
-    .row button{width:auto} /* ✅ important : évite d’écraser les boutons dans les lignes */
     #result{margin-top:12px;word-break:break-all}
     hr{margin:18px 0;opacity:.25}
     .pill{display:inline-block;background:#2563eb;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;margin-top:8px}
@@ -51,7 +50,7 @@
     <textarea id="pasteBlock" placeholder="Colle ici le bloc complet (1ère ligne = nom client)…" style="height:180px;"></textarea>
     <div class="hint">
       Astuce : la 1ʳᵉ ligne du bloc devient automatiquement le nom du client.
-      Le portail ignore automatiquement : “Client”, “Contacts”, “Ar”, “Mandat…”, “Responsable MF Autosud”.
+      Le portail ignore automatiquement : “Client”, “Contacts”, “Ar”, “Mandat…”, “Responsable MF Autosud”, “Obtenir un lien… SEPA”.
     </div>
 
     <button onclick="createRequest()">Créer la demande</button>
@@ -110,11 +109,10 @@
     <textarea id="providerMessage" placeholder="Texte optionnel (inclus dans l’email automatique)..." style="height:110px;"></textarea>
     <div id="sendAutoStatus" class="hint"></div>
 
-    <!-- ✅ BOUTONS D’ENVOI (AUTO / MANUEL / COPIE) -->
-    <div class="row" style="margin-top:10px;">
-      <button type="button" onclick="sendToSelectedAuto()">✅ Envoyer automatiquement</button>
-      <button type="button" class="secondary" onclick="openEmailToSelected()">✉️ Ouvrir email (manuel)</button>
-      <button type="button" class="secondary" onclick="copyLink()">📋 Copier le lien</button>
+    <div class="row">
+      <button onclick="sendToSelectedAuto()">✅ Envoyer automatiquement (recommandé)</button>
+      <button class="secondary" onclick="openEmailToSelected()">Ouvrir email (manuel)</button>
+      <button class="secondary" onclick="copyLink()">Copier le lien</button>
     </div>
 
     <p class="hint">
@@ -166,8 +164,19 @@ window.copyText = async function(t){
   alert("Copié.");
 };
 
+// ✅ Toujours "Prénom Nom" -> split simple
+function splitPrenomNom(full){
+  const s = (full || "").trim().replace(/\s+/g," ");
+  if(!s) return { prenom:"", nom:"" };
+  const parts = s.split(" ");
+  const prenom = parts.shift() || "";
+  const nom = parts.join(" ").trim();
+  return { prenom, nom };
+}
+
 /* =========================
    PARSE "COPIER-COLLER"
+   ✅ corrige SEPA + évite de prendre une phrase comme contact
 ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
@@ -193,13 +202,24 @@ function parsePaste(text){
     const x = l.toLowerCase();
     return x === "client" || x === "contacts" || x === "contact";
   };
+
+  // ✅ Ajout exclusions SEPA
   const isUselessLine = (l) => {
     const x = l.toLowerCase();
-    return x.includes("mandat d'autorisation") || x.includes("responsable mf autosud");
+    return (
+      x.includes("mandat d'autorisation") ||
+      x.includes("responsable mf autosud") ||
+      x.includes("obtenir un lien") ||
+      x.includes("mandat de prélèvement sepa") ||
+      x.includes("mandat de prelevement sepa") ||
+      x.includes("prelevement sepa") ||
+      x.includes("prélèvement sepa")
+    );
   };
 
   for (let i = 1; i < lines.length; i++) {
     const l = lines[i];
+
     if (isTitleLine(l)) continue;
     if (isUselessLine(l)) continue;
 
@@ -226,12 +246,23 @@ function parsePaste(text){
       continue;
     }
 
+    // ✅ Contact name robuste (évite phrases)
     if (!out.contact_name) {
-      const looksLikeInitials = /^[A-Za-z]{1,3}$/.test(l);
-      const hasDigits = /\d/.test(l);
-      const hasAt = l.includes("@");
-      if (!looksLikeInitials && !hasDigits && !hasAt && l.split(" ").length >= 2) {
-        out.contact_name = l;
+      const s = l.trim();
+      const low = s.toLowerCase();
+
+      if (isUselessLine(s)) continue;
+
+      const hasDigits = /\d/.test(s);
+      const hasAt = s.includes("@");
+      if (hasDigits || hasAt) continue;
+
+      if (["client", "contact", "contacts"].includes(low)) continue;
+      if (s.length > 45) continue; // évite les phrases
+
+      const words = s.split(/\s+/).filter(Boolean);
+      if (words.length >= 2 && words.length <= 5) {
+        out.contact_name = s;
         continue;
       }
     }
@@ -645,10 +676,7 @@ window.loadHistory = async function () {
               <th><input id="f_client" placeholder="Filtrer..." style="width:100%"></th>
               <th><input id="f_vehicle" placeholder="Filtrer..." style="width:100%"></th>
               <th><input id="f_provider" placeholder="Filtrer..." style="width:100%"></th>
-              <th></th>
-              <th></th>
-              <th></th>
-              <th></th>
+              <th></th><th></th><th></th><th></th>
               <th>
                 <select id="f_status" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:#fff">
                   <option value="">Tous</option>
@@ -729,6 +757,7 @@ window.loadHistory = async function () {
 const { rid, code, pe } = getHashParams();
 
 if (rid && code) {
+  // Mode prestataire : cacher UI prescripteur
   document.getElementById("prescriberBox").style.display = "none";
   document.getElementById("createBox").style.display = "none";
   document.getElementById("historyBox").style.display = "none";
@@ -748,6 +777,9 @@ if (rid && code) {
 
     const d = rows[0];
     const addr = joinAddress(d);
+
+    const fullName = (d.contact_name || "").trim();
+    const n = splitPrenomNom(fullName);
 
     document.body.innerHTML = `
       <div style="max-width:900px">
@@ -775,11 +807,13 @@ if (rid && code) {
           </p>
         ` : ""}
 
-        ${(d.contact_name || d.contact_email || d.contact_phone) ? `
+        ${(fullName || d.contact_email || d.contact_phone) ? `
           <hr>
           <h2>Contact</h2>
           <p>
-            ${d.contact_name ? `<strong>${d.contact_name}</strong><br>` : ""}
+            ${fullName ? `<strong>${fullName}</strong><br>` : ""}
+            ${n.prenom ? `Prénom : ${n.prenom}<br>` : ""}
+            ${n.nom ? `Nom : ${n.nom}<br>` : ""}
             ${d.contact_email ? `📧 ${d.contact_email}<br>` : ""}
             ${d.contact_phone ? `📞 ${d.contact_phone}` : ""}
           </p>
@@ -852,6 +886,7 @@ if (rid && code) {
   });
 
 } else {
+  // Mode prescripteur
   renderProviders();
   setTimeout(() => { if (typeof loadHistory === "function") loadHistory(); }, 600);
 
