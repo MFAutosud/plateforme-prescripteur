@@ -1,79 +1,125 @@
-// supabase/functions/get-thread/index.ts
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Plateforme prescripteur – MF Auto Sud</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const BUCKET = "responses-files";
+<style>
+body{font-family:Arial;background:#0b1220;color:#fff;padding:24px}
+h1{color:#4da3ff}
+.box{background:#111c34;padding:16px;border-radius:10px;margin-bottom:18px}
+label{display:block;margin-top:12px}
+input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2b3a5a;background:#0b1220;color:#fff}
+button{margin-top:14px;padding:12px;border-radius:10px;border:0;background:#4da3ff;color:#000;font-weight:bold;cursor:pointer}
+button.secondary{background:#334155;color:#fff}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.hint{opacity:.7;font-size:12px;margin-top:6px}
+.msg{background:#0b1220;padding:10px;border-radius:8px;margin-top:8px}
+.msg.you{border-left:4px solid #4da3ff}
+.msg.them{border-left:4px solid #22c55e}
+</style>
+</head>
 
-const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+<body>
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+<h1>Plateforme prescripteur – MF Auto Sud</h1>
 
-function json(status: number, data: unknown) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+<div class="box">
+  <h2>Créer une demande</h2>
+  <label>Client</label>
+  <input id="client">
+  <label>Véhicule</label>
+  <input id="vehicle">
+  <button onclick="createRequest()">Créer</button>
+  <div id="link"></div>
+</div>
+
+<div class="box">
+  <h2>Envoyer à un prestataire</h2>
+  <label>Email prestataire</label>
+  <input id="provider">
+  <button onclick="send()">Envoyer</button>
+  <div id="sendStatus"></div>
+</div>
+
+<div class="box">
+  <h2>Conversation</h2>
+  <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
+  <div id="thread"></div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
+const SUPABASE_KEY = "TON_ANON_KEY_ICI";
+
+let RID="", CODE="";
+
+async function createRequest(){
+  const client=document.getElementById("client").value.trim();
+  const vehicle=document.getElementById("vehicle").value.trim();
+  if(!client||!vehicle){alert("Champs manquants");return;}
+
+  CODE=crypto.randomUUID();
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/requests`,{
+    method:"POST",
+    headers:{
+      apikey:SUPABASE_KEY,
+      Authorization:"Bearer "+SUPABASE_KEY,
+      "Content-Type":"application/json",
+      Prefer:"return=representation"
+    },
+    body:JSON.stringify({client_name:client,vehicle,access_code:CODE})
   });
+  const d=await r.json();
+  RID=d[0].id;
+  const link=location.href.split("#")[0]+`#rid=${RID}&code=${CODE}`;
+  document.getElementById("link").innerHTML=`Lien : <a href="${link}" target="_blank">${link}</a>`;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json(405, { error: "Method Not Allowed" });
+async function send(){
+  const email=document.getElementById("provider").value.trim();
+  if(!email||!RID)return;
+  document.getElementById("sendStatus").innerText="Envoi...";
+  const r=await fetch(`${SUPABASE_URL}/functions/v1/send-request`,{
+    method:"POST",
+    headers:{
+      apikey:SUPABASE_KEY,
+      Authorization:"Bearer "+SUPABASE_KEY,
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+      request_id:RID,
+      access_code:CODE,
+      provider_emails:[email]
+    })
+  });
+  document.getElementById("sendStatus").innerText=r.ok?"✅ Envoyé":"❌ Erreur";
+}
 
-  try {
-    const payload = await req.json();
-    const request_id = String(payload.request_id || "").trim();
-    const access_code = String(payload.access_code || "").trim();
+async function loadThread(){
+  if(!RID)return;
+  const r=await fetch(`${SUPABASE_URL}/functions/v1/get-thread`,{
+    method:"POST",
+    headers:{
+      apikey:SUPABASE_KEY,
+      Authorization:"Bearer "+SUPABASE_KEY,
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({request_id:RID,access_code:CODE})
+  });
+  const d=await r.json();
+  const el=document.getElementById("thread");
+  el.innerHTML="";
+  d.responses.forEach(x=>{
+    el.innerHTML+=`
+      <div class="msg ${x.responder_email?'them':'you'}">
+        <strong>${x.responder_email||"Vous"}</strong><br>
+        ${x.message||""}
+      </div>`;
+  });
+}
+</script>
 
-    if (!request_id || !access_code) return json(400, { error: "request_id + access_code requis" });
-
-    const { data: request, error: reqErr } = await admin
-      .from("requests")
-      .select("*")
-      .eq("id", request_id)
-      .single();
-
-    if (reqErr || !request) return json(404, { error: "Demande introuvable" });
-    if (String(request.access_code) !== access_code) return json(401, { error: "Accès refusé" });
-
-    const { data: responses, error: respErr } = await admin
-      .from("responses")
-      .select("id, request_id, responder_name, responder_email, message, files, created_at")
-      .eq("request_id", request_id)
-      .order("created_at", { ascending: true });
-
-    if (respErr) return json(400, { error: "Lecture responses échouée", detail: respErr.message });
-
-    // Signed URLs for files
-    const outResponses = [];
-    for (const r of responses || []) {
-      const files = Array.isArray(r.files) ? r.files : [];
-      const signedFiles = [];
-
-      for (const f of files) {
-        const path = String(f?.path || "");
-        const name = String(f?.name || "fichier");
-        if (!path) continue;
-
-        const { data, error } = await admin.storage.from(BUCKET).createSignedUrl(path, 60 * 60 * 24); // 24h
-        if (error || !data?.signedUrl) continue;
-
-        signedFiles.push({ name, url: data.signedUrl });
-      }
-
-      outResponses.push({
-        ...r,
-        files: signedFiles,
-      });
-    }
-
-    return json(200, { request, responses: outResponses });
-  } catch (e) {
-    return json(500, { error: String(e) });
-  }
-});
+</body>
+</html>
