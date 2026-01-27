@@ -42,7 +42,17 @@
 
   <div class="box">
     <h2>2️⃣ Créer une demande</h2>
-
+<div class="box">
+  <h2>3️⃣ Historique relances</h2>
+  <div class="row">
+    <button class="secondary" onclick="loadHistory()">🔄 Rafraîchir</button>
+  </div>
+  <div class="hint">
+    Historique des relances prestataires (sent_at / last_reminder_at / reminder_count / responded_at).
+  </div>
+  <div id="historyStatus" class="hint"></div>
+  <div id="historyTable" style="margin-top:12px;"></div>
+</div>
     <label>Véhicule</label>
     <input id="vehicle" placeholder="Ex : Renault Clio / Cupra Formentor...">
 
@@ -340,7 +350,138 @@ window.openEmailToSelected = function(){
   if(emails.length === 0){ alert("Sélectionne au moins un prestataire."); return; }
   window.location.href = buildMailto(emails);
 };
+/* =========================
+   HISTORIQUE RELANCES (requests + provider_invites)
+========================= */
+window.loadHistory = async function () {
+  const statusEl = document.getElementById("historyStatus");
+  const tableEl = document.getElementById("historyTable");
+  if (!statusEl || !tableEl) return;
 
+  statusEl.textContent = "Chargement…";
+  tableEl.innerHTML = "";
+
+  try {
+    // 1) Dernières demandes
+    const reqRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/requests?select=id,client_name,vehicle,status,created_at&order=created_at.desc&limit=25`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        },
+      }
+    );
+
+    if (!reqRes.ok) {
+      const t = await reqRes.text();
+      throw new Error(`requests HTTP ${reqRes.status}: ${t}`);
+    }
+
+    const requests = await reqRes.json();
+    if (!requests.length) {
+      statusEl.textContent = "Aucune demande.";
+      return;
+    }
+
+    // 2) Charger toutes les invites pour ces demandes
+    const ids = requests.map(r => r.id);
+    const inList = ids.map(id => `"${id}"`).join(",");
+    const invRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/provider_invites?select=request_id,provider_email,sent_at,responded_at,last_reminder_at,reminder_count&request_id=in.(${inList})&order=sent_at.desc`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        },
+      }
+    );
+
+    if (!invRes.ok) {
+      const t = await invRes.text();
+      throw new Error(`provider_invites HTTP ${invRes.status}: ${t}`);
+    }
+
+    const invites = await invRes.json();
+
+    // index par request_id
+    const byReq = new Map();
+    for (const inv of invites) {
+      const k = inv.request_id;
+      if (!byReq.has(k)) byReq.set(k, []);
+      byReq.get(k).push(inv);
+    }
+
+    const fmt = (iso) => iso ? new Date(iso).toLocaleString("fr-FR") : "—";
+    const badge = (inv) => {
+      if (inv.responded_at) return `<span style="color:#9dffb3;font-weight:700;">✅ Répondu</span>`;
+      if ((inv.reminder_count || 0) > 0) return `<span style="color:#ffd38a;font-weight:700;">⏳ Relancé (${inv.reminder_count})</span>`;
+      return `<span style="color:#ff9d9d;font-weight:700;">🕒 En attente</span>`;
+    };
+
+    let html = `
+      <div style="overflow:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="text-align:left;border-bottom:1px solid rgba(255,255,255,.15);">
+              <th style="padding:10px;">Demande</th>
+              <th style="padding:10px;">Prestataire</th>
+              <th style="padding:10px;">Envoyé</th>
+              <th style="padding:10px;">Dernière relance</th>
+              <th style="padding:10px;">Nb</th>
+              <th style="padding:10px;">Répondu</th>
+              <th style="padding:10px;">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    for (const r of requests) {
+      const invs = byReq.get(r.id) || [];
+
+      if (!invs.length) {
+        html += `
+          <tr style="border-bottom:1px solid rgba(255,255,255,.08);">
+            <td style="padding:10px;min-width:260px;">
+              <div style="font-weight:700;">${r.client_name || "—"}</div>
+              <div style="opacity:.8;">${r.vehicle || "—"}</div>
+              <div style="opacity:.6;font-size:12px;">Créée: ${fmt(r.created_at)}</div>
+            </td>
+            <td style="padding:10px;" colspan="6" class="hint">
+              Aucun prestataire (provider_invites vide)
+            </td>
+          </tr>
+        `;
+        continue;
+      }
+
+      for (const inv of invs) {
+        html += `
+          <tr style="border-bottom:1px solid rgba(255,255,255,.08);">
+            <td style="padding:10px;min-width:260px;">
+              <div style="font-weight:700;">${r.client_name || "—"}</div>
+              <div style="opacity:.8;">${r.vehicle || "—"}</div>
+              <div style="opacity:.6;font-size:12px;">Créée: ${fmt(r.created_at)}</div>
+            </td>
+            <td style="padding:10px;min-width:220px;">${inv.provider_email || "—"}</td>
+            <td style="padding:10px;min-width:170px;">${fmt(inv.sent_at)}</td>
+            <td style="padding:10px;min-width:170px;">${fmt(inv.last_reminder_at)}</td>
+            <td style="padding:10px;min-width:60px;text-align:center;">${inv.reminder_count ?? 0}</td>
+            <td style="padding:10px;min-width:170px;">${fmt(inv.responded_at)}</td>
+            <td style="padding:10px;min-width:120px;">${badge(inv)}</td>
+          </tr>
+        `;
+      }
+    }
+
+    html += `</tbody></table></div>`;
+    tableEl.innerHTML = html;
+    statusEl.textContent = `✅ ${requests.length} demandes / ${invites.length} lignes prestataires`;
+
+  } catch (e) {
+    statusEl.textContent = "❌ " + String(e);
+  }
+};
 /* =========================
    MODE INTERLOCUTEUR / PRESCRIPTEUR
 ========================= */
@@ -468,7 +609,13 @@ if (rid && code) {
 
   // Affiche la liste au chargement
   renderProviders();
-
+  
+// 🔄 Charger automatiquement l’historique des relances au chargement
+setTimeout(() => {
+  if (typeof loadHistory === "function") {
+    loadHistory();
+  }
+}, 600);
   window.createRequest = async function(){
     const vehicle = document.getElementById("vehicle").value.trim();
     const email = FIXED_PRESCRIBER_EMAIL;
