@@ -57,11 +57,14 @@
   </div>
 
   <div class="box" id="historyBox">
-    <h2>3️⃣ Historique relances</h2>
+    <h2>3️⃣ Historique relances + suppression</h2>
     <div class="row">
       <button class="secondary" onclick="loadHistory()">🔄 Rafraîchir</button>
     </div>
-    <div class="hint">Affiche sent_at / last_reminder_at / reminder_count / responded_at (table provider_invites).</div>
+    <div class="hint">
+      Affiche provider_invites (sent_at / last_reminder_at / reminder_count / responded_at).<br>
+      Tu peux aussi supprimer une demande (Edge Function: <strong>delete-request</strong>).
+    </div>
     <div id="historyStatus" class="hint"></div>
     <div id="historyTable" style="margin-top:12px;"></div>
   </div>
@@ -126,7 +129,6 @@ const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
 const FIXED_PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
 
-/* ✅ évite erreur bouton */
 window.saveConfig = function(){
   setResult("✅ OK (hébergé sur GitHub Pages).");
 };
@@ -157,6 +159,10 @@ function joinAddress(d){
 function fmt(iso){
   return iso ? new Date(iso).toLocaleString("fr-FR") : "—";
 }
+window.copyText = async function(t){
+  await navigator.clipboard.writeText(t);
+  alert("Copié.");
+};
 
 /* =========================
    PARSE "COPIER-COLLER"
@@ -315,6 +321,7 @@ function extractEmailAndName(line){
   const s = (line || "").trim();
   if(!s) return null;
 
+  // "Nom <email@...>"
   const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
   if(m){
     const name = m[1].replace(/^['"]|['"]$/g,"").trim();
@@ -322,11 +329,13 @@ function extractEmailAndName(line){
     return { name, email };
   }
 
+  // "email@..."
   const only = s.replace(/^['"]|['"]$/g,"").trim();
   if(emailLooksValid(only.toLowerCase())){
     return { name: "", email: only.toLowerCase() };
   }
 
+  // email somewhere in line
   const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   if(em){
     return { name: "", email: em[0].toLowerCase() };
@@ -425,7 +434,6 @@ window.copyLink = async function(){
 
 function buildMailto(toList){
   const subject = encodeURIComponent(`Courtier : ${LAST_CLIENT_NAME || "Client"}`);
-
   const body = encodeURIComponent(
 `Bonjour,
 
@@ -441,7 +449,6 @@ La Direction MF Autosud
 06 08 92 47 89 | 06 23 57 49 20
 ${FIXED_PRESCRIBER_EMAIL} – www.mfautosud.fr`
   );
-
   const to = encodeURIComponent(toList.join(","));
   return `mailto:${to}?subject=${subject}&body=${body}`;
 }
@@ -509,7 +516,34 @@ window.sendToSelectedAuto = async function(){
 };
 
 /* =========================
-   HISTORIQUE RELANCES
+   SUPPRESSION DEMANDE (Edge Function delete-request)
+========================= */
+window.deleteRequest = async function(request_id, access_code){
+  if(!confirm("Supprimer définitivement cette demande ?")) return;
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-request`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify({ request_id, access_code })
+  });
+
+  const txt = await res.text();
+  if(!res.ok){
+    console.log("delete-request failed:", res.status, txt);
+    alert("❌ Erreur suppression (HTTP " + res.status + ")");
+    return;
+  }
+
+  alert("✅ Demande supprimée");
+  if(typeof loadHistory === "function") loadHistory();
+};
+
+/* =========================
+   HISTORIQUE RELANCES (requests + provider_invites) + bouton supprimer
 ========================= */
 window.loadHistory = async function () {
   const statusEl = document.getElementById("historyStatus");
@@ -521,7 +555,7 @@ window.loadHistory = async function () {
 
   try {
     const reqRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/requests?select=id,client_name,vehicle,status,created_at&order=created_at.desc&limit=25`,
+      `${SUPABASE_URL}/rest/v1/requests?select=id,client_name,vehicle,status,created_at,access_code&order=created_at.desc&limit=25`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } }
     );
     if (!reqRes.ok) throw new Error(`requests HTTP ${reqRes.status}: ${await reqRes.text()}`);
@@ -563,6 +597,7 @@ window.loadHistory = async function () {
               <th>Nb</th>
               <th>Répondu</th>
               <th>Statut</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -570,7 +605,9 @@ window.loadHistory = async function () {
 
     for (const r of requests) {
       const invs = byReq.get(r.id) || [];
+      const link = `${location.href.split("#")[0]}#rid=${r.id}&code=${r.access_code}`;
 
+      // si aucune invite, on affiche quand même 1 ligne avec actions
       if (!invs.length) {
         html += `
           <tr>
@@ -578,19 +615,31 @@ window.loadHistory = async function () {
               <div style="font-weight:700;">${r.client_name || "—"}</div>
               <div style="opacity:.8;">${r.vehicle || "—"}</div>
               <div style="opacity:.6;font-size:12px;">Créée: ${fmt(r.created_at)}</div>
+              <div style="opacity:.7;font-size:12px;"><a href="${link}" target="_blank">Ouvrir</a></div>
             </td>
-            <td colspan="6" class="hint">Aucun prestataire (provider_invites vide)</td>
-          </tr>`;
+            <td class="hint" colspan="6">Aucun prestataire (provider_invites vide)</td>
+            <td>
+              <div class="row">
+                <button class="small secondary" onclick="copyText('${link.replaceAll("'", "%27")}')">Copier lien</button>
+                <button class="small secondary" onclick="deleteRequest('${r.id}','${r.access_code}')">Supprimer</button>
+              </div>
+            </td>
+          </tr>
+        `;
         continue;
       }
 
-      for (const inv of invs) {
+      // sinon, on affiche 1 ligne par invite, et les actions seulement sur la 1ère ligne du groupe
+      invs.forEach((inv, idx) => {
         html += `
           <tr>
             <td>
-              <div style="font-weight:700;">${r.client_name || "—"}</div>
-              <div style="opacity:.8;">${r.vehicle || "—"}</div>
-              <div style="opacity:.6;font-size:12px;">Créée: ${fmt(r.created_at)}</div>
+              ${idx === 0 ? `
+                <div style="font-weight:700;">${r.client_name || "—"}</div>
+                <div style="opacity:.8;">${r.vehicle || "—"}</div>
+                <div style="opacity:.6;font-size:12px;">Créée: ${fmt(r.created_at)}</div>
+                <div style="opacity:.7;font-size:12px;"><a href="${link}" target="_blank">Ouvrir</a></div>
+              ` : `<div style="opacity:.35;">(idem)</div>`}
             </td>
             <td>${inv.provider_email || "—"}</td>
             <td>${fmt(inv.sent_at)}</td>
@@ -598,8 +647,17 @@ window.loadHistory = async function () {
             <td style="text-align:center;">${inv.reminder_count ?? 0}</td>
             <td>${fmt(inv.responded_at)}</td>
             <td>${badge(inv)}</td>
-          </tr>`;
-      }
+            <td>
+              ${idx === 0 ? `
+                <div class="row">
+                  <button class="small secondary" onclick="copyText('${link.replaceAll("'", "%27")}')">Copier lien</button>
+                  <button class="small secondary" onclick="deleteRequest('${r.id}','${r.access_code}')">Supprimer</button>
+                </div>
+              ` : ""}
+            </td>
+          </tr>
+        `;
+      });
     }
 
     html += `</tbody></table></div>`;
@@ -799,7 +857,7 @@ if (rid && code) {
       return;
     }
 
-    const rows = await res.json();
+   const rows = await res.json();
     const id = rows[0].id;
 
     const link = `${location.href.split("#")[0]}#rid=${id}&code=${access_code}`;
