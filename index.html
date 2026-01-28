@@ -17,11 +17,12 @@
     button.small{padding:8px 10px;margin-top:0;border-radius:10px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .hint{opacity:.7;font-size:12px;margin-top:6px;white-space:pre-wrap}
-    .msg{background:#0b1220;padding:10px;border-radius:8px;margin-top:8px;border:1px solid rgba(255,255,255,.08)}
+    .msg{background:#0b1220;padding:10px;border-radius:8px;margin-top:10px;border:1px solid rgba(255,255,255,.08)}
     .msg.you{border-left:4px solid #4da3ff}
     .msg.them{border-left:4px solid #22c55e}
     a{color:#7cc0ff}
     .pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;background:#24365f;margin-left:6px}
+    .files a{display:inline-block;margin-top:6px}
   </style>
 </head>
 
@@ -29,108 +30,121 @@
 <h1>Plateforme prescripteur – MF Auto Sud</h1>
 
 <!-- =========================
-     MODE 1 : ACCUEIL PRESCRIPTEUR
+     PRESCRIPTEUR UI
 ========================= -->
-<div id="homeUI">
+<div id="prescriberUI">
   <div class="box">
     <h2>1) Créer une demande</h2>
-
-    <label>Client</label>
-    <input id="client" placeholder="Ex: COTE SANTE">
 
     <label>Véhicule</label>
     <input id="vehicle" placeholder="Ex: Ford Puma LLD 25 mois 30 000 km + entretien">
 
-    <label>Bloc client (optionnel : colle tout, on essaie d’extraire email/tel)</label>
-    <textarea id="pasteBlock" placeholder="Optionnel : colle le bloc complet ici…" style="height:120px"></textarea>
-    <div class="hint">Astuce : si tu colles un email ou un téléphone, on le stocke dans la demande.</div>
+    <label>Bloc client (copier-coller complet)</label>
+    <textarea id="pasteBlock" placeholder="Colle le bloc complet ici (1ère ligne = NOM CLIENT)…" style="height:180px"></textarea>
+
+    <div class="hint">
+- 1ère ligne = nom client (ex: COTE SANTE)
+- Lignes supprimées automatiquement :
+  • Obtenir un lien ... mandat de prélèvement SEPA
+  • Responsable MF Autosud
+    </div>
 
     <button onclick="createRequest()">Créer</button>
     <div id="link" class="hint"></div>
   </div>
 
   <div class="box">
-    <h2>2) Envoyer à un prestataire</h2>
-
-    <label>Email prestataire</label>
-    <input id="provider" placeholder="exemple@domaine.com">
+    <h2>2) Prestataires</h2>
 
     <div class="row">
-      <button onclick="send()">Envoyer (automatique)</button>
-      <button class="secondary" onclick="copyProviderLink()">Copier lien prestataire</button>
-      <button class="secondary" onclick="copyPrescriberThreadLink()">Copier lien dossier (prescripteur)</button>
+      <button class="secondary" onclick="checkAllProviders()">Tout cocher</button>
+      <button class="secondary" onclick="uncheckAllProviders()">Tout décocher</button>
+      <button class="secondary" onclick="exportProviders()">Exporter liste</button>
+      <button class="secondary" onclick="clearProviders()">Tout effacer</button>
+    </div>
+
+    <div id="providersList" style="margin-top:10px"></div>
+
+    <hr style="opacity:.2;margin:14px 0">
+
+    <label>Ajouter un prestataire (nom optionnel)</label>
+    <input id="newProviderName" placeholder="Ex: GROUPE GRIM">
+    <label>Email</label>
+    <input id="newProviderEmail" placeholder="exemple@domaine.com">
+    <button onclick="addProvider()">Ajouter</button>
+
+    <label style="margin-top:14px">Importer une liste (1 ligne = Nom &lt;email&gt; ou email)</label>
+    <textarea id="importProviders" style="height:120px" placeholder="Ex:
+Alain-Pierre Sion <alain-pierre.sion@groupe-grim.com>
+entreprise@leaseway.fr"></textarea>
+    <button class="secondary" onclick="importProviders()">Importer</button>
+    <div id="importStatus" class="hint"></div>
+  </div>
+
+  <div class="box">
+    <h2>3) Envoyer la demande</h2>
+
+    <label>Message optionnel</label>
+    <textarea id="customMessage" style="height:110px" placeholder="Message court pour accompagner la demande…"></textarea>
+
+    <div class="row">
+      <button onclick="sendToSelected()">Envoyer (automatique)</button>
+      <button class="secondary" onclick="copyPrescriberLink()">Copier lien dossier</button>
     </div>
 
     <div id="sendStatus" class="hint"></div>
   </div>
 
   <div class="box">
-    <h2>3) Conversation (dossier en cours)</h2>
+    <h2>4) Conversation</h2>
     <div class="row">
       <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
     </div>
-    <div id="threadHome" style="margin-top:10px"></div>
+    <div id="thread" style="margin-top:10px"></div>
+
+    <hr style="opacity:.2;margin:14px 0">
+
+    <h2>Répondre</h2>
+    <label>Votre message</label>
+    <textarea id="respMsgP" style="height:120px" placeholder="Votre réponse…"></textarea>
+    <label>Documents</label>
+    <input type="file" id="respFilesP" multiple>
+    <button onclick="submitResponsePrescriber()">Envoyer la réponse</button>
+    <div id="respStatusP" class="hint"></div>
+
+    <div class="hint">
+⚠️ Pour répondre à un prestataire, tu dois sélectionner <b>exactement 1 prestataire coché</b>
+(ça sert à savoir qui notifier).
+    </div>
   </div>
 </div>
 
 <!-- =========================
-     MODE 2 : DOSSIER PRESCRIPTEUR (rid+code, sans pe)
+     PRESTATAIRE UI
 ========================= -->
-<div id="prescriberThreadUI" style="display:none;">
+<div id="providerUI" style="display:none;">
   <div class="box">
-    <h2>Dossier <span class="pill">Prescripteur</span></h2>
-    <div id="requestInfoPrescriber" class="hint">Chargement…</div>
-    <div class="row" style="margin-top:10px">
+    <h2>Dossier <span class="pill">Prestataire</span></h2>
+    <div id="requestInfo" class="hint">Chargement…</div>
+    <div class="row">
       <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
-      <button class="secondary" onclick="copyCurrentLink()">Copier le lien</button>
+      <button class="secondary" onclick="copyProviderLink()">Copier le lien</button>
     </div>
   </div>
 
   <div class="box">
     <h2>Conversation</h2>
-    <div id="threadPrescriber" style="margin-top:10px"></div>
-  </div>
-
-  <div class="box">
-    <h2>Répondre</h2>
-
-    <label>Votre message</label>
-    <textarea id="respMsgPrescriber" style="height:120px" placeholder="Votre réponse…"></textarea>
-
-    <label>Documents (PDF, images, etc.)</label>
-    <input type="file" id="respFilesPrescriber" multiple>
-
-    <button onclick="submitResponsePrescriber()">Envoyer la réponse</button>
-    <div id="respStatusPrescriber" class="hint"></div>
-  </div>
-</div>
-
-<!-- =========================
-     MODE 3 : DOSSIER PRESTATAIRE (rid+code+pe)
-========================= -->
-<div id="providerUI" style="display:none;">
-  <div class="box">
-    <h2>Demande reçue <span class="pill">Prestataire</span></h2>
-    <div id="requestInfoProvider" class="hint">Chargement…</div>
-  </div>
-
-  <div class="box">
-    <h2>Conversation</h2>
-    <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
     <div id="threadProvider" style="margin-top:10px"></div>
   </div>
 
   <div class="box">
     <h2>Répondre</h2>
-
     <label>Votre message</label>
-    <textarea id="respMsgProvider" style="height:120px" placeholder="Texte d’accompagnement…"></textarea>
-
+    <textarea id="respMsg" style="height:120px" placeholder="Texte d’accompagnement…"></textarea>
     <label>Documents (PDF, images, etc.)</label>
-    <input type="file" id="respFilesProvider" multiple>
-
+    <input type="file" id="respFiles" multiple>
     <button onclick="submitResponseProvider()">Envoyer la réponse</button>
-    <div id="respStatusProvider" class="hint"></div>
+    <div id="respStatus" class="hint"></div>
   </div>
 </div>
 
@@ -147,8 +161,7 @@ const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
 ========================= */
 let RID = "";
 let CODE = "";
-let PROVIDER_EMAIL = ""; // seulement en mode prestataire
-let MODE = "home"; // home | prescriber_thread | provider
+let PROVIDER_EMAIL = ""; // en mode prestataire (param pe)
 
 /* =========================
    UTILS
@@ -165,20 +178,14 @@ function randomCode(){
   return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
-function emailFromText(t){
-  const m = String(t||"").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  return m ? m[0].toLowerCase() : "";
-}
-
-function phoneFromText(t){
-  const m = String(t||"").match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
-  return m ? m[0].replace(/\s+/g,"") : "";
+function baseUrl(){
+  return location.href.split("#")[0];
 }
 
 async function fetchJson(url, options){
   const res = await fetch(url, options);
   let data = null;
-  try { data = await res.json(); } catch { /* ignore */ }
+  try { data = await res.json(); } catch {}
   return { res, data };
 }
 
@@ -191,63 +198,224 @@ async function readFileAsDataURL(file){
   });
 }
 
-function baseUrl(){
-  return location.href.split("#")[0];
-}
-
-function safeText(s){
-  return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-}
-
-function showMode(mode){
-  MODE = mode;
-  $("homeUI").style.display = (mode === "home") ? "block" : "none";
-  $("prescriberThreadUI").style.display = (mode === "prescriber_thread") ? "block" : "none";
-  $("providerUI").style.display = (mode === "provider") ? "block" : "none";
-}
-
-function currentLink(){
-  const p = [];
-  if(RID) p.push(`rid=${encodeURIComponent(RID)}`);
-  if(CODE) p.push(`code=${encodeURIComponent(CODE)}`);
-  if(MODE === "provider" && PROVIDER_EMAIL) p.push(`pe=${encodeURIComponent(PROVIDER_EMAIL)}`);
-  return `${baseUrl()}#${p.join("&")}`;
-}
-
-function copyCurrentLink(){
-  navigator.clipboard.writeText(currentLink());
-  alert("Lien copié.");
+function escHtml(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
 }
 
 /* =========================
-   CREATE REQUEST (home)
+   PARSE BLOC CLIENT
 ========================= */
-async function createRequest(){
-  const client = $("client").value.trim();
-  const vehicle = $("vehicle").value.trim();
-  const paste = ($("pasteBlock").value || "").trim();
+function isUselessLine(line){
+  const x = (line || "").toLowerCase();
+  return (
+    x.includes("obtenir un lien") ||
+    x.includes("mandat de prélèvement sepa") ||
+    x.includes("mandat de prelevement sepa") ||
+    x.includes("prélèvement sepa") ||
+    x.includes("prelevement sepa") ||
+    x.includes("responsable mf autosud")
+  );
+}
 
-  if(!client || !vehicle){
-    alert("Client + Véhicule sont obligatoires.");
+function parseClientBlock(text){
+  const t = (text || "").replace(/\r/g,"").trim();
+  const lines = t.split("\n").map(l => l.trim()).filter(Boolean).filter(l => !isUselessLine(l));
+  const client_name = (lines[0] || "").trim();
+
+  const emailMatch = t.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  const phoneMatch = t.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
+
+  return {
+    client_name,
+    contact_email: emailMatch ? emailMatch[0].toLowerCase() : "",
+    contact_phone: phoneMatch ? phoneMatch[0].replace(/\s+/g,"") : "",
+  };
+}
+
+/* =========================
+   PROVIDERS (localStorage)
+========================= */
+const PROVIDERS_KEY = "mfautosud_providers_v2";
+
+function loadProviders(){
+  try{
+    const raw = localStorage.getItem(PROVIDERS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch{ return []; }
+}
+function saveProviders(arr){
+  localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr));
+}
+function normalizeEmail(email){
+  return (email || "").trim().toLowerCase();
+}
+function emailLooksValid(e){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+function extractEmailAndName(line){
+  const s = (line || "").trim();
+  if(!s) return null;
+
+  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
+  if(m){
+    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
+    const email = (m[2] || "").trim().toLowerCase();
+    return { name, email };
+  }
+
+  const only = s.replace(/^['"]|['"]$/g,"").trim();
+  if(emailLooksValid(only.toLowerCase())){
+    return { name: "", email: only.toLowerCase() };
+  }
+
+  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if(em){
+    return { name: "", email: em[0].toLowerCase() };
+  }
+
+  return null;
+}
+
+function renderProviders(){
+  const el = $("providersList");
+  if(!el) return;
+
+  const providers = loadProviders();
+  if(!providers.length){
+    el.innerHTML = `<div class="hint">Aucun prestataire enregistré.</div>`;
+    return;
+  }
+
+  el.innerHTML = providers.map((p, idx) => {
+    const label = p.name ? `${p.name} — ${p.email}` : p.email;
+    return `
+      <div class="row" style="justify-content:space-between;border:1px solid rgba(255,255,255,.08);padding:10px;border-radius:10px;margin-top:8px">
+        <label style="margin:0;display:flex;align-items:center;gap:10px;width:100%">
+          <input type="checkbox" class="providerCheck" data-email="${p.email}">
+          <span>${escHtml(label)}</span>
+        </label>
+        <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
+      </div>
+    `;
+  }).join("");
+}
+
+function getSelectedProviders(){
+  return Array.from(document.querySelectorAll(".providerCheck:checked"))
+    .map(x => x.getAttribute("data-email"))
+    .filter(Boolean)
+    .map(x => String(x).toLowerCase());
+}
+
+window.addProvider = function(){
+  const name = ($("newProviderName").value || "").trim();
+  const email = normalizeEmail($("newProviderEmail").value);
+
+  if(!emailLooksValid(email)){
+    alert("Email invalide.");
+    return;
+  }
+
+  const providers = loadProviders();
+  if(providers.some(p => normalizeEmail(p.email) === email)){
+    alert("Déjà enregistré.");
+    return;
+  }
+
+  providers.push({ name, email });
+  saveProviders(providers);
+
+  $("newProviderName").value = "";
+  $("newProviderEmail").value = "";
+  renderProviders();
+};
+
+window.removeProvider = function(idx){
+  const providers = loadProviders();
+  providers.splice(idx, 1);
+  saveProviders(providers);
+  renderProviders();
+};
+
+window.importProviders = function(){
+  const raw = ($("importProviders").value || "").replace(/\r/g,"").trim();
+  const st = $("importStatus");
+  if(!raw){ st.textContent = "❌ Colle une liste."; return; }
+
+  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
+
+  const providers = loadProviders();
+  const existing = new Set(providers.map(p => (p.email || "").toLowerCase()));
+
+  let added = 0, ignored = 0;
+  for(const line of lines){
+    const parsed = extractEmailAndName(line);
+    if(!parsed || !emailLooksValid(parsed.email)){ ignored++; continue; }
+    if(existing.has(parsed.email)){ ignored++; continue; }
+    providers.push({ name: parsed.name || "", email: parsed.email });
+    existing.add(parsed.email);
+    added++;
+  }
+
+  saveProviders(providers);
+  renderProviders();
+  st.textContent = `✅ Import : +${added} / ignorés: ${ignored}`;
+};
+
+window.exportProviders = async function(){
+  const providers = loadProviders();
+  const out = providers.map(p => p.name ? `${p.name} <${p.email}>` : p.email).join("\n");
+  await navigator.clipboard.writeText(out);
+  alert("Liste copiée.");
+};
+
+window.clearProviders = function(){
+  if(!confirm("Supprimer tous les prestataires enregistrés sur cet appareil ?")) return;
+  saveProviders([]);
+  renderProviders();
+};
+
+window.checkAllProviders = function(){
+  document.querySelectorAll(".providerCheck").forEach(c => c.checked = true);
+};
+window.uncheckAllProviders = function(){
+  document.querySelectorAll(".providerCheck").forEach(c => c.checked = false);
+};
+
+/* =========================
+   CREATE REQUEST (prescriber)
+========================= */
+window.createRequest = async function(){
+  const vehicle = ($("vehicle").value || "").trim();
+  const paste = ($("pasteBlock").value || "").trim();
+  const parsed = parseClientBlock(paste);
+
+  if(!parsed.client_name){
+    alert("Le bloc client est obligatoire : 1ère ligne = nom du client.");
+    return;
+  }
+  if(!vehicle){
+    alert("Véhicule obligatoire.");
     return;
   }
 
   RID = "";
   CODE = randomCode();
 
-  const contact_email = emailFromText(paste);
-  const contact_phone = phoneFromText(paste);
-
   const payload = {
     status: "sent",
     prescriber_email: PRESCRIBER_EMAIL,
-    client_name: client,
+    client_name: parsed.client_name,
     vehicle: vehicle,
     fin_type: "LLD",
     recipients: [PRESCRIBER_EMAIL],
     access_code: CODE,
-    contact_email: contact_email || null,
-    contact_phone: contact_phone || null,
+    contact_email: parsed.contact_email || null,
+    contact_phone: parsed.contact_phone || null,
   };
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
@@ -263,25 +431,37 @@ async function createRequest(){
 
   if(!res.ok){
     console.log("createRequest failed:", res.status, data);
-    alert("Erreur création demande (voir console).");
+    alert("Erreur création demande (console).");
     return;
   }
 
   RID = data[0].id;
 
   const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
-  $("link").textContent = `✅ Demande créée\nLien dossier prescripteur : ${link}`;
+  $("link").textContent = `✅ Demande créée\nLien dossier: ${link}`;
   await loadThread();
-}
+};
+
+window.copyPrescriberLink = async function(){
+  if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
+  const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
+  await navigator.clipboard.writeText(link);
+  alert("Lien dossier copié.");
+};
 
 /* =========================
    SEND REQUEST (send-request)
 ========================= */
-async function send(){
-  const email = $("provider").value.trim().toLowerCase();
-  if(!email){ alert("Email prestataire requis."); return; }
+window.sendToSelected = async function(){
   if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
 
+  const selected = getSelectedProviders();
+  if(!selected.length){
+    alert("Coche au moins 1 prestataire.");
+    return;
+  }
+
+  const msg = ($("customMessage").value || "").trim();
   $("sendStatus").textContent = "Envoi automatique…";
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
@@ -294,8 +474,8 @@ async function send(){
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
-      provider_emails: [email],
-      custom_message: ""
+      provider_emails: selected,
+      custom_message: msg
     })
   });
 
@@ -306,23 +486,8 @@ async function send(){
   }
 
   $("sendStatus").textContent = "✅ Envoyé\n" + JSON.stringify(data, null, 2);
-}
-
-function copyProviderLink(){
-  const email = $("provider").value.trim().toLowerCase();
-  if(!email){ alert("Renseigne l’email prestataire."); return; }
-  if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
-  const link = `${baseUrl()}#rid=${RID}&code=${CODE}&pe=${encodeURIComponent(email)}`;
-  navigator.clipboard.writeText(link);
-  alert("Lien prestataire copié.");
-}
-
-function copyPrescriberThreadLink(){
-  if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
-  const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
-  navigator.clipboard.writeText(link);
-  alert("Lien dossier prescripteur copié.");
-}
+  await loadThread();
+};
 
 /* =========================
    LOAD THREAD (get-request)
@@ -342,193 +507,179 @@ async function loadThread(){
 
   if(!res.ok){
     console.log("get-request failed:", res.status, data);
-    if(MODE === "provider") $("requestInfoProvider").textContent = "❌ Erreur chargement.";
-    if(MODE === "prescriber_thread") $("requestInfoPrescriber").textContent = "❌ Erreur chargement.";
+    if($("thread")) $("thread").innerHTML = `<div class="hint">❌ Erreur chargement conversation</div>`;
+    if($("threadProvider")) $("threadProvider").innerHTML = `<div class="hint">❌ Erreur chargement conversation</div>`;
+    if($("requestInfo")) $("requestInfo").textContent = "❌ Erreur chargement dossier.";
     return;
   }
 
-  // request info
-  const r = data.request || {};
-  const info =
-`Client: ${r.client_name || "-"}
-Véhicule: ${r.vehicle || "-"}
-Contact email: ${r.contact_email || "-"}
-Contact tel: ${r.contact_phone || "-"}`;
+  // Infos dossier (prestataire)
+  if($("requestInfo") && data.request){
+    const r = data.request;
+    $("requestInfo").textContent =
+      `Client: ${r.client_name || "-"}\nVéhicule: ${r.vehicle || "-"}\nContact email: ${r.contact_email || "-"}\nContact tel: ${r.contact_phone || "-"}`;
+  }
 
-  if(MODE === "provider") $("requestInfoProvider").textContent = info;
-  if(MODE === "prescriber_thread") $("requestInfoPrescriber").textContent = info;
+  // Render messages
+  function renderMessage(x, mode){
+    // mode: "prescriber" or "provider"
+    const created = x.created_at ? new Date(x.created_at).toLocaleString("fr-FR") : "";
+    const email = (x.responder_email || "").trim();
+    const isPrescriberMsg = !email || email.toLowerCase() === PRESCRIBER_EMAIL.toLowerCase();
 
-  // render messages
-  const msgs = (data.responses || []);
-  const render = (containerId, youEmailLower) => {
-    const el = $(containerId);
-    if(!el) return;
+    let cls = "them";
+    let who = email || "MF Auto Sud";
+
+    if(mode === "prescriber"){
+      cls = isPrescriberMsg ? "you" : "them";
+      who = isPrescriberMsg ? "Vous" : (email || "Prestataire");
+    } else {
+      // provider mode
+      const isYou = PROVIDER_EMAIL && email.toLowerCase() === PROVIDER_EMAIL;
+      cls = isYou ? "you" : "them";
+      who = isYou ? (email || "Vous") : "MF Auto Sud";
+    }
+
+    const safeMsg = escHtml(x.message || "").replaceAll("\n","<br>");
+    const files = Array.isArray(x.files) ? x.files : [];
+
+    const filesHtml = files.length ? `
+      <div class="files hint">
+        <b>Fichiers :</b><br>
+        ${files.map(f => {
+          const name = escHtml(f.name || "fichier");
+          const url = f.url ? String(f.url) : "";
+          if(!url) return `• ${name} (lien indisponible)`;
+          return `• <a href="${url}" target="_blank" rel="noopener">${name}</a>`;
+        }).join("<br>")}
+      </div>
+    ` : "";
+
+    return `
+      <div class="msg ${cls}">
+        <div class="hint">${created}</div>
+        <strong>${escHtml(who)}</strong><br>
+        ${safeMsg || "<span class='hint'>(sans message)</span>"}
+        ${filesHtml}
+      </div>
+    `;
+  }
+
+  // Prescriber view
+  if($("thread")){
+    const el = $("thread");
     el.innerHTML = "";
-    msgs.forEach(x=>{
-      const email = String(x.responder_email || "").toLowerCase();
-      const isYou = youEmailLower ? (email === youEmailLower) : false;
+    (data.responses || []).forEach(x => el.innerHTML += renderMessage(x, "prescriber"));
+  }
 
-      // si prescripteur : "vous" = PRESCRIBER_EMAIL OU responder_email vide
-      let who = x.responder_email || "MF Auto Sud";
-      if(containerId.includes("Home") || containerId.includes("Prescriber")){
-        if(!x.responder_email || email === PRESCRIBER_EMAIL.toLowerCase()) who = "Vous";
-      } else {
-        // côté prestataire : "vous" = PROVIDER_EMAIL
-        if(youEmailLower && email === youEmailLower) who = "Vous";
-      }
-
-      const css = (containerId.includes("Provider"))
-        ? (isYou ? "you" : "them")
-        : ((!x.responder_email || email === PRESCRIBER_EMAIL.toLowerCase()) ? "you" : "them");
-
-      el.innerHTML += `
-        <div class="msg ${css}">
-          <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          <strong>${safeText(who)}</strong><br>
-          ${safeText(x.message || "").replaceAll("\n","<br>")}
-        </div>`;
-    });
-  };
-
-  render("threadHome", null);
-  render("threadPrescriber", null);
-  render("threadProvider", (PROVIDER_EMAIL || "").toLowerCase());
+  // Provider view
+  if($("threadProvider")){
+    const el = $("threadProvider");
+    el.innerHTML = "";
+    (data.responses || []).forEach(x => el.innerHTML += renderMessage(x, "provider"));
+  }
 }
+window.loadThread = loadThread;
 
 /* =========================
-   SUBMIT RESPONSE : PROVIDER
+   SUBMIT RESPONSE
 ========================= */
-async function submitResponseProvider(){
-  const statusEl = $("respStatusProvider");
+async function submitResponseCommon(author_role, provider_email){
+  const statusEl = author_role === "prescriber" ? $("respStatusP") : $("respStatus");
+  const msgEl = author_role === "prescriber" ? $("respMsgP") : $("respMsg");
+  const filesEl = author_role === "prescriber" ? $("respFilesP") : $("respFiles");
 
-  if(!RID || !CODE){
-    statusEl.textContent = "❌ Lien invalide (rid/code manquants).";
+  const message = (msgEl.value || "").trim();
+  const files = [];
+
+  for(const file of (filesEl.files || [])){
+    const dataUrl = await readFileAsDataURL(file);
+    files.push({ name: file.name, type: file.type || "application/octet-stream", dataUrl });
+  }
+
+  statusEl.textContent = "Envoi en cours…";
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/submit-response`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      author_role,
+      provider_email: provider_email || "",       // qui notifier côté prestataire
+      responder_email: author_role === "prescriber" ? PRESCRIBER_EMAIL : (PROVIDER_EMAIL || provider_email || ""),
+      responder_name: author_role === "prescriber" ? "Prescripteur" : "Prestataire",
+      message,
+      files
+    })
+  });
+
+  if(!res.ok){
+    console.log("submit-response failed:", res.status, data);
+    statusEl.textContent = "❌ Erreur\n" + JSON.stringify(data, null, 2);
     return;
   }
+
+  statusEl.textContent = "✅ Envoyé";
+  msgEl.value = "";
+  filesEl.value = "";
+  await loadThread();
+}
+
+window.submitResponseProvider = async function(){
   if(!PROVIDER_EMAIL){
-    statusEl.textContent = "❌ Lien prestataire incomplet : pe manquant.";
+    $("respStatus").textContent = "❌ Lien incomplet : paramètre pe (email prestataire) manquant. Demande au prescripteur de renvoyer le lien.";
     return;
   }
+  await submitResponseCommon("provider", PROVIDER_EMAIL);
+};
 
-  statusEl.textContent = "Envoi en cours…";
-
-  const msg = ($("respMsgProvider").value || "").trim();
-  const filesInput = $("respFilesProvider");
-
-  const files = [];
-  for(const file of (filesInput.files || [])){
-    const dataUrl = await readFileAsDataURL(file);
-    files.push({ name: file.name, type: file.type || "application/octet-stream", dataUrl });
-  }
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/submit-response`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      request_id: RID,
-      access_code: CODE,
-      author_role: "provider",
-      responder_name: "Prestataire",
-      responder_email: PROVIDER_EMAIL,
-      provider_email: PROVIDER_EMAIL,
-      message: msg,
-      files
-    })
-  });
-
-  if(!res.ok){
-    console.log("submit-response (provider) failed:", res.status, data);
-    statusEl.textContent = "❌ Erreur\n" + JSON.stringify(data, null, 2);
+window.submitResponsePrescriber = async function(){
+  const selected = getSelectedProviders();
+  if(selected.length !== 1){
+    $("respStatusP").textContent = "❌ Pour répondre, coche 1 prestataire (exactement) pour le notifier.";
     return;
   }
-
-  statusEl.textContent = "✅ Envoyé";
-  $("respMsgProvider").value = "";
-  $("respFilesProvider").value = "";
-  await loadThread();
-}
+  await submitResponseCommon("prescriber", selected[0]);
+};
 
 /* =========================
-   SUBMIT RESPONSE : PRESCRIBER
+   COPY PROVIDER LINK (provider mode)
 ========================= */
-async function submitResponsePrescriber(){
-  const statusEl = $("respStatusPrescriber");
-
-  if(!RID || !CODE){
-    statusEl.textContent = "❌ Lien invalide (rid/code manquants).";
-    return;
-  }
-
-  statusEl.textContent = "Envoi en cours…";
-
-  const msg = ($("respMsgPrescriber").value || "").trim();
-  const filesInput = $("respFilesPrescriber");
-
-  const files = [];
-  for(const file of (filesInput.files || [])){
-    const dataUrl = await readFileAsDataURL(file);
-    files.push({ name: file.name, type: file.type || "application/octet-stream", dataUrl });
-  }
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/submit-response`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      request_id: RID,
-      access_code: CODE,
-      author_role: "prescriber",
-      responder_name: "MF Auto Sud",
-      responder_email: PRESCRIBER_EMAIL,
-      message: msg,
-      files
-    })
-  });
-
-  if(!res.ok){
-    console.log("submit-response (prescriber) failed:", res.status, data);
-    statusEl.textContent = "❌ Erreur\n" + JSON.stringify(data, null, 2);
-    return;
-  }
-
-  statusEl.textContent = "✅ Envoyé";
-  $("respMsgPrescriber").value = "";
-  $("respFilesPrescriber").value = "";
-  await loadThread();
-}
+window.copyProviderLink = async function(){
+  if(!RID || !CODE || !PROVIDER_EMAIL) return;
+  const link = `${baseUrl()}#rid=${RID}&code=${CODE}&pe=${encodeURIComponent(PROVIDER_EMAIL)}`;
+  await navigator.clipboard.writeText(link);
+  alert("Lien copié.");
+};
 
 /* =========================
    INIT
 ========================= */
-(async function init(){
-  const { rid, code, pe } = getHashParams();
+(function init(){
+  // hydrate providers list in prescriber mode
+  renderProviders();
 
+  const { rid, code, pe } = getHashParams();
   if(rid && code){
+    // Provider mode
     RID = rid;
     CODE = code;
+    PROVIDER_EMAIL = (pe || "").trim().toLowerCase();
 
-    // ✅ Prestataire seulement si pe est présent
-    if(pe){
-      PROVIDER_EMAIL = (pe || "").trim().toLowerCase();
-      showMode("provider");
-    } else {
-      // ✅ sinon : prescripteur dossier
-      showMode("prescriber_thread");
-    }
-
-    await loadThread();
+    $("prescriberUI").style.display = "none";
+    $("providerUI").style.display = "block";
+    loadThread();
     return;
   }
 
-  // Accueil
-  showMode("home");
+  // Prescriber mode
+  $("prescriberUI").style.display = "block";
+  $("providerUI").style.display = "none";
 })();
 </script>
 
