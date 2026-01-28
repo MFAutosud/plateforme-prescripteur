@@ -21,7 +21,6 @@
     .msg.you{border-left:4px solid #4da3ff}
     .msg.them{border-left:4px solid #22c55e}
     a{color:#7cc0ff}
-    code{background:#0b1220;padding:2px 6px;border-radius:6px}
     .pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;background:#24365f;margin-left:6px}
   </style>
 </head>
@@ -30,9 +29,9 @@
 <h1>Plateforme prescripteur – MF Auto Sud</h1>
 
 <!-- =========================
-     PRESCRIPTEUR UI
+     MODE 1 : ACCUEIL PRESCRIPTEUR
 ========================= -->
-<div id="prescriberUI">
+<div id="homeUI">
   <div class="box">
     <h2>1) Créer une demande</h2>
 
@@ -59,28 +58,60 @@
     <div class="row">
       <button onclick="send()">Envoyer (automatique)</button>
       <button class="secondary" onclick="copyProviderLink()">Copier lien prestataire</button>
+      <button class="secondary" onclick="copyPrescriberThreadLink()">Copier lien dossier (prescripteur)</button>
     </div>
 
     <div id="sendStatus" class="hint"></div>
   </div>
 
   <div class="box">
-    <h2>3) Conversation</h2>
+    <h2>3) Conversation (dossier en cours)</h2>
     <div class="row">
       <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
-      <button class="secondary" onclick="copyThreadLink()">Copier lien demande</button>
     </div>
-    <div id="thread" style="margin-top:10px"></div>
+    <div id="threadHome" style="margin-top:10px"></div>
   </div>
 </div>
 
 <!-- =========================
-     PRESTATAIRE UI
+     MODE 2 : DOSSIER PRESCRIPTEUR (rid+code, sans pe)
+========================= -->
+<div id="prescriberThreadUI" style="display:none;">
+  <div class="box">
+    <h2>Dossier <span class="pill">Prescripteur</span></h2>
+    <div id="requestInfoPrescriber" class="hint">Chargement…</div>
+    <div class="row" style="margin-top:10px">
+      <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
+      <button class="secondary" onclick="copyCurrentLink()">Copier le lien</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>Conversation</h2>
+    <div id="threadPrescriber" style="margin-top:10px"></div>
+  </div>
+
+  <div class="box">
+    <h2>Répondre</h2>
+
+    <label>Votre message</label>
+    <textarea id="respMsgPrescriber" style="height:120px" placeholder="Votre réponse…"></textarea>
+
+    <label>Documents (PDF, images, etc.)</label>
+    <input type="file" id="respFilesPrescriber" multiple>
+
+    <button onclick="submitResponsePrescriber()">Envoyer la réponse</button>
+    <div id="respStatusPrescriber" class="hint"></div>
+  </div>
+</div>
+
+<!-- =========================
+     MODE 3 : DOSSIER PRESTATAIRE (rid+code+pe)
 ========================= -->
 <div id="providerUI" style="display:none;">
   <div class="box">
     <h2>Demande reçue <span class="pill">Prestataire</span></h2>
-    <div id="requestInfo" class="hint">Chargement…</div>
+    <div id="requestInfoProvider" class="hint">Chargement…</div>
   </div>
 
   <div class="box">
@@ -93,13 +124,13 @@
     <h2>Répondre</h2>
 
     <label>Votre message</label>
-    <textarea id="respMsg" style="height:120px" placeholder="Texte d’accompagnement…"></textarea>
+    <textarea id="respMsgProvider" style="height:120px" placeholder="Texte d’accompagnement…"></textarea>
 
     <label>Documents (PDF, images, etc.)</label>
-    <input type="file" id="respFiles" multiple>
+    <input type="file" id="respFilesProvider" multiple>
 
-    <button onclick="submitResponse()">Envoyer la réponse</button>
-    <div id="respStatus" class="hint"></div>
+    <button onclick="submitResponseProvider()">Envoyer la réponse</button>
+    <div id="respStatusProvider" class="hint"></div>
   </div>
 </div>
 
@@ -116,7 +147,8 @@ const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
 ========================= */
 let RID = "";
 let CODE = "";
-let PROVIDER_EMAIL = "";
+let PROVIDER_EMAIL = ""; // seulement en mode prestataire
+let MODE = "home"; // home | prescriber_thread | provider
 
 /* =========================
    UTILS
@@ -167,8 +199,28 @@ function safeText(s){
   return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
 }
 
+function showMode(mode){
+  MODE = mode;
+  $("homeUI").style.display = (mode === "home") ? "block" : "none";
+  $("prescriberThreadUI").style.display = (mode === "prescriber_thread") ? "block" : "none";
+  $("providerUI").style.display = (mode === "provider") ? "block" : "none";
+}
+
+function currentLink(){
+  const p = [];
+  if(RID) p.push(`rid=${encodeURIComponent(RID)}`);
+  if(CODE) p.push(`code=${encodeURIComponent(CODE)}`);
+  if(MODE === "provider" && PROVIDER_EMAIL) p.push(`pe=${encodeURIComponent(PROVIDER_EMAIL)}`);
+  return `${baseUrl()}#${p.join("&")}`;
+}
+
+function copyCurrentLink(){
+  navigator.clipboard.writeText(currentLink());
+  alert("Lien copié.");
+}
+
 /* =========================
-   CREATE REQUEST (prescriber)
+   CREATE REQUEST (home)
 ========================= */
 async function createRequest(){
   const client = $("client").value.trim();
@@ -218,14 +270,12 @@ async function createRequest(){
   RID = data[0].id;
 
   const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
-  $("link").textContent = `✅ Demande créée\nLien demande : ${link}`;
-  $("link").style.whiteSpace = "pre-wrap";
-
+  $("link").textContent = `✅ Demande créée\nLien dossier prescripteur : ${link}`;
   await loadThread();
 }
 
 /* =========================
-   SEND REQUEST (send-request edge function)
+   SEND REQUEST (send-request)
 ========================= */
 async function send(){
   const email = $("provider").value.trim().toLowerCase();
@@ -267,15 +317,15 @@ function copyProviderLink(){
   alert("Lien prestataire copié.");
 }
 
-function copyThreadLink(){
+function copyPrescriberThreadLink(){
   if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
   const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
   navigator.clipboard.writeText(link);
-  alert("Lien demande copié.");
+  alert("Lien dossier prescripteur copié.");
 }
 
 /* =========================
-   LOAD THREAD (✅ on utilise get-request)
+   LOAD THREAD (get-request)
 ========================= */
 async function loadThread(){
   if(!RID || !CODE) return;
@@ -292,71 +342,78 @@ async function loadThread(){
 
   if(!res.ok){
     console.log("get-request failed:", res.status, data);
-    const target = $("thread") || $("threadProvider");
-    if(target) target.innerHTML = `<div class="hint">❌ Erreur chargement conversation</div>`;
-    if($("requestInfo")) $("requestInfo").textContent = "❌ Erreur chargement demande.";
+    if(MODE === "provider") $("requestInfoProvider").textContent = "❌ Erreur chargement.";
+    if(MODE === "prescriber_thread") $("requestInfoPrescriber").textContent = "❌ Erreur chargement.";
     return;
   }
 
-  // request info in provider mode
-  if($("requestInfo") && data.request){
-    const r = data.request;
-    $("requestInfo").textContent =
-      `Client: ${r.client_name || "-"}\nVéhicule: ${r.vehicle || "-"}\nContact email: ${r.contact_email || "-"}\nContact tel: ${r.contact_phone || "-"}`;
-  }
+  // request info
+  const r = data.request || {};
+  const info =
+`Client: ${r.client_name || "-"}
+Véhicule: ${r.vehicle || "-"}
+Contact email: ${r.contact_email || "-"}
+Contact tel: ${r.contact_phone || "-"}`;
 
-  // prescriber thread
-  if($("thread")){
-    const el = $("thread");
+  if(MODE === "provider") $("requestInfoProvider").textContent = info;
+  if(MODE === "prescriber_thread") $("requestInfoPrescriber").textContent = info;
+
+  // render messages
+  const msgs = (data.responses || []);
+  const render = (containerId, youEmailLower) => {
+    const el = $(containerId);
+    if(!el) return;
     el.innerHTML = "";
-    (data.responses || []).forEach(x=>{
-      const isThem = !!x.responder_email; // prestataire
+    msgs.forEach(x=>{
+      const email = String(x.responder_email || "").toLowerCase();
+      const isYou = youEmailLower ? (email === youEmailLower) : false;
+
+      // si prescripteur : "vous" = PRESCRIBER_EMAIL OU responder_email vide
+      let who = x.responder_email || "MF Auto Sud";
+      if(containerId.includes("Home") || containerId.includes("Prescriber")){
+        if(!x.responder_email || email === PRESCRIBER_EMAIL.toLowerCase()) who = "Vous";
+      } else {
+        // côté prestataire : "vous" = PROVIDER_EMAIL
+        if(youEmailLower && email === youEmailLower) who = "Vous";
+      }
+
+      const css = (containerId.includes("Provider"))
+        ? (isYou ? "you" : "them")
+        : ((!x.responder_email || email === PRESCRIBER_EMAIL.toLowerCase()) ? "you" : "them");
+
       el.innerHTML += `
-        <div class="msg ${isThem ? "them":"you"}">
+        <div class="msg ${css}">
           <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          <strong>${isThem ? safeText(x.responder_email || "Prestataire") : "Vous"}</strong><br>
+          <strong>${safeText(who)}</strong><br>
           ${safeText(x.message || "").replaceAll("\n","<br>")}
         </div>`;
     });
-  }
+  };
 
-  // provider thread
-  if($("threadProvider")){
-    const el = $("threadProvider");
-    el.innerHTML = "";
-    (data.responses || []).forEach(x=>{
-      const email = (x.responder_email || "").toLowerCase();
-      const isYou = PROVIDER_EMAIL && email === PROVIDER_EMAIL;
-      el.innerHTML += `
-        <div class="msg ${isYou ? "you":"them"}">
-          <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          <strong>${safeText(x.responder_email || "MF Auto Sud")}</strong><br>
-          ${safeText(x.message || "").replaceAll("\n","<br>")}
-        </div>`;
-    });
-  }
+  render("threadHome", null);
+  render("threadPrescriber", null);
+  render("threadProvider", (PROVIDER_EMAIL || "").toLowerCase());
 }
 
 /* =========================
-   SUBMIT RESPONSE (✅ author_role obligatoire)
+   SUBMIT RESPONSE : PROVIDER
 ========================= */
-async function submitResponse(){
-  const msg = ($("respMsg").value || "").trim();
-  const filesInput = $("respFiles");
-  const statusEl = $("respStatus");
+async function submitResponseProvider(){
+  const statusEl = $("respStatusProvider");
 
   if(!RID || !CODE){
     statusEl.textContent = "❌ Lien invalide (rid/code manquants).";
     return;
   }
-
-  // ✅ IMPORTANT : pe=email doit être présent pour identifier le prestataire
   if(!PROVIDER_EMAIL){
-    statusEl.textContent = "❌ Lien incomplet : paramètre pe (email prestataire) manquant.\nDemande au prescripteur de renvoyer le lien.";
+    statusEl.textContent = "❌ Lien prestataire incomplet : pe manquant.";
     return;
   }
 
   statusEl.textContent = "Envoi en cours…";
+
+  const msg = ($("respMsgProvider").value || "").trim();
+  const filesInput = $("respFilesProvider");
 
   const files = [];
   for(const file of (filesInput.files || [])){
@@ -374,7 +431,7 @@ async function submitResponse(){
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
-      author_role: "provider",          /* ✅ requis */
+      author_role: "provider",
       responder_name: "Prestataire",
       responder_email: PROVIDER_EMAIL,
       provider_email: PROVIDER_EMAIL,
@@ -384,39 +441,94 @@ async function submitResponse(){
   });
 
   if(!res.ok){
-    console.log("submit-response failed:", res.status, data);
+    console.log("submit-response (provider) failed:", res.status, data);
     statusEl.textContent = "❌ Erreur\n" + JSON.stringify(data, null, 2);
     return;
   }
 
-  statusEl.textContent = "✅ Réponse envoyée\n" + JSON.stringify(data, null, 2);
-  $("respMsg").value = "";
-  $("respFiles").value = "";
+  statusEl.textContent = "✅ Envoyé";
+  $("respMsgProvider").value = "";
+  $("respFilesProvider").value = "";
+  await loadThread();
+}
+
+/* =========================
+   SUBMIT RESPONSE : PRESCRIBER
+========================= */
+async function submitResponsePrescriber(){
+  const statusEl = $("respStatusPrescriber");
+
+  if(!RID || !CODE){
+    statusEl.textContent = "❌ Lien invalide (rid/code manquants).";
+    return;
+  }
+
+  statusEl.textContent = "Envoi en cours…";
+
+  const msg = ($("respMsgPrescriber").value || "").trim();
+  const filesInput = $("respFilesPrescriber");
+
+  const files = [];
+  for(const file of (filesInput.files || [])){
+    const dataUrl = await readFileAsDataURL(file);
+    files.push({ name: file.name, type: file.type || "application/octet-stream", dataUrl });
+  }
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/submit-response`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      author_role: "prescriber",
+      responder_name: "MF Auto Sud",
+      responder_email: PRESCRIBER_EMAIL,
+      message: msg,
+      files
+    })
+  });
+
+  if(!res.ok){
+    console.log("submit-response (prescriber) failed:", res.status, data);
+    statusEl.textContent = "❌ Erreur\n" + JSON.stringify(data, null, 2);
+    return;
+  }
+
+  statusEl.textContent = "✅ Envoyé";
+  $("respMsgPrescriber").value = "";
+  $("respFilesPrescriber").value = "";
   await loadThread();
 }
 
 /* =========================
    INIT
 ========================= */
-(function init(){
+(async function init(){
   const { rid, code, pe } = getHashParams();
 
-  // Mode prestataire si hash présent
   if(rid && code){
     RID = rid;
     CODE = code;
-    PROVIDER_EMAIL = (pe || "").trim().toLowerCase();
 
-    $("prescriberUI").style.display = "none";
-    $("providerUI").style.display = "block";
+    // ✅ Prestataire seulement si pe est présent
+    if(pe){
+      PROVIDER_EMAIL = (pe || "").trim().toLowerCase();
+      showMode("provider");
+    } else {
+      // ✅ sinon : prescripteur dossier
+      showMode("prescriber_thread");
+    }
 
-    loadThread();
+    await loadThread();
     return;
   }
 
-  // Mode prescripteur
-  $("prescriberUI").style.display = "block";
-  $("providerUI").style.display = "none";
+  // Accueil
+  showMode("home");
 })();
 </script>
 
