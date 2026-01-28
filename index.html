@@ -108,10 +108,7 @@
    CONFIG
 ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
-
-/* ✅ Mets ta vraie ANON KEY ici (celle qui commence par eyJ...) */
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
-
 const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
 
 /* =========================
@@ -132,7 +129,6 @@ function getHashParams(){
 }
 
 function randomCode(){
-  // access_code simple + compatible URL
   const a = crypto.getRandomValues(new Uint8Array(16));
   return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
@@ -165,6 +161,10 @@ async function readFileAsDataURL(file){
 
 function baseUrl(){
   return location.href.split("#")[0];
+}
+
+function safeText(s){
+  return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
 }
 
 /* =========================
@@ -218,10 +218,9 @@ async function createRequest(){
   RID = data[0].id;
 
   const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
-  $("link").innerHTML = `✅ Demande créée\nLien demande : ${link}`;
+  $("link").textContent = `✅ Demande créée\nLien demande : ${link}`;
   $("link").style.whiteSpace = "pre-wrap";
 
-  // auto refresh thread
   await loadThread();
 }
 
@@ -276,7 +275,7 @@ function copyThreadLink(){
 }
 
 /* =========================
-   LOAD THREAD (get-thread edge function)
+   LOAD THREAD (✅ on utilise get-request)
 ========================= */
 async function loadThread(){
   if(!RID || !CODE) return;
@@ -292,40 +291,11 @@ async function loadThread(){
   });
 
   if(!res.ok){
-    console.log("get-thread failed:", res.status, data);
+    console.log("get-request failed:", res.status, data);
     const target = $("thread") || $("threadProvider");
     if(target) target.innerHTML = `<div class="hint">❌ Erreur chargement conversation</div>`;
+    if($("requestInfo")) $("requestInfo").textContent = "❌ Erreur chargement demande.";
     return;
-  }
-
-  // prescriber view
-  if($("thread")){
-    const el = $("thread");
-    el.innerHTML = "";
-    (data.responses || []).forEach(x=>{
-      const isThem = !!x.responder_email; // prestataire
-      el.innerHTML += `
-        <div class="msg ${isThem ? "them":"you"}">
-          <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          <strong>${isThem ? (x.responder_email || "Prestataire") : "Vous"}</strong><br>
-          ${(x.message || "").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll("\n","<br>")}
-        </div>`;
-    });
-  }
-
-  // provider view
-  if($("threadProvider")){
-    const el = $("threadProvider");
-    el.innerHTML = "";
-    (data.responses || []).forEach(x=>{
-      const isYou = (PROVIDER_EMAIL && (x.responder_email||"").toLowerCase() === PROVIDER_EMAIL);
-      el.innerHTML += `
-        <div class="msg ${isYou ? "you":"them"}">
-          <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          <strong>${x.responder_email || "MF Auto Sud"}</strong><br>
-          ${(x.message || "").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll("\n","<br>")}
-        </div>`;
-    });
   }
 
   // request info in provider mode
@@ -334,10 +304,41 @@ async function loadThread(){
     $("requestInfo").textContent =
       `Client: ${r.client_name || "-"}\nVéhicule: ${r.vehicle || "-"}\nContact email: ${r.contact_email || "-"}\nContact tel: ${r.contact_phone || "-"}`;
   }
+
+  // prescriber thread
+  if($("thread")){
+    const el = $("thread");
+    el.innerHTML = "";
+    (data.responses || []).forEach(x=>{
+      const isThem = !!x.responder_email; // prestataire
+      el.innerHTML += `
+        <div class="msg ${isThem ? "them":"you"}">
+          <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+          <strong>${isThem ? safeText(x.responder_email || "Prestataire") : "Vous"}</strong><br>
+          ${safeText(x.message || "").replaceAll("\n","<br>")}
+        </div>`;
+    });
+  }
+
+  // provider thread
+  if($("threadProvider")){
+    const el = $("threadProvider");
+    el.innerHTML = "";
+    (data.responses || []).forEach(x=>{
+      const email = (x.responder_email || "").toLowerCase();
+      const isYou = PROVIDER_EMAIL && email === PROVIDER_EMAIL;
+      el.innerHTML += `
+        <div class="msg ${isYou ? "you":"them"}">
+          <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+          <strong>${safeText(x.responder_email || "MF Auto Sud")}</strong><br>
+          ${safeText(x.message || "").replaceAll("\n","<br>")}
+        </div>`;
+    });
+  }
 }
 
 /* =========================
-   SUBMIT RESPONSE (submit-response edge function)
+   SUBMIT RESPONSE (✅ author_role obligatoire)
 ========================= */
 async function submitResponse(){
   const msg = ($("respMsg").value || "").trim();
@@ -346,6 +347,12 @@ async function submitResponse(){
 
   if(!RID || !CODE){
     statusEl.textContent = "❌ Lien invalide (rid/code manquants).";
+    return;
+  }
+
+  // ✅ IMPORTANT : pe=email doit être présent pour identifier le prestataire
+  if(!PROVIDER_EMAIL){
+    statusEl.textContent = "❌ Lien incomplet : paramètre pe (email prestataire) manquant.\nDemande au prescripteur de renvoyer le lien.";
     return;
   }
 
@@ -367,9 +374,10 @@ async function submitResponse(){
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
+      author_role: "provider",          /* ✅ requis */
       responder_name: "Prestataire",
-      responder_email: PROVIDER_EMAIL || "",
-      provider_email: PROVIDER_EMAIL || "",
+      responder_email: PROVIDER_EMAIL,
+      provider_email: PROVIDER_EMAIL,
       message: msg,
       files
     })
