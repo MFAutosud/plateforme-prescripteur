@@ -281,7 +281,7 @@ function copyThreadLink(){
 async function loadThread(){
   if(!RID || !CODE) return;
 
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-request`, {
     method: "POST",
     headers: {
       apikey: SUPABASE_ANON_KEY,
