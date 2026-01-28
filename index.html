@@ -197,7 +197,101 @@ async function readFileAsDataURL(file){
     r.readAsDataURL(file);
   });
 }
+function parsePaste(text){
+  const t = (text || "").replace(/\r/g, "").trim();
+  const lines = t.split("\n").map(l => l.trim()).filter(Boolean);
 
+  const out = {
+    client_name: "",
+    address: "",
+    postcode: "",
+    city: "",
+    country: "",
+    siret: "",
+    vat: "",
+    contact_name: "",
+    contact_email: "",
+    contact_phone: ""
+  };
+
+  if (!lines.length) return out;
+
+  out.client_name = lines[0];
+
+  const isTitleLine = (l) => {
+    const x = l.toLowerCase();
+    return ["client", "contacts", "contact"].includes(x);
+  };
+
+  const isUselessLine = (l) => {
+    const x = l.toLowerCase();
+    return (
+      x.includes("obtenir un lien") ||
+      x.includes("mandat de prélèvement sepa") ||
+      x.includes("prelevement sepa") ||
+      x.includes("responsable mf autosud")
+    );
+  };
+
+  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(l);
+
+  for (let i = 1; i < lines.length; i++) {
+    const l = lines[i];
+    if (isTitleLine(l) || isUselessLine(l) || looksLikeShortCode(l)) continue;
+
+    if (!out.address && /\b\d{5}\b/.test(l)) {
+      out.address = l;
+      const m = l.match(/\b(\d{5})\b\s+(.+)$/);
+      if (m) {
+        out.postcode = m[1];
+        let rest = m[2].trim();
+        if (/france$/i.test(rest)) {
+          out.country = "France";
+          rest = rest.replace(/france$/i, "").trim();
+        }
+        out.city = rest;
+      }
+      continue;
+    }
+
+    const siretMatch = l.match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
+    if (siretMatch) {
+      out.siret = siretMatch[1].replace(/\s+/g, "");
+      continue;
+    }
+
+    const vatMatch = l.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
+    if (vatMatch) {
+      out.vat = vatMatch[1].replace(/\s+/g, "");
+      continue;
+    }
+
+    const emailMatch = l.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    if (emailMatch && !out.contact_email) {
+      out.contact_email = emailMatch[0].toLowerCase();
+      continue;
+    }
+
+    const phoneMatch = l.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
+    if (phoneMatch && !out.contact_phone) {
+      out.contact_phone = phoneMatch[0].replace(/[\s.\-]/g, "");
+      continue;
+    }
+
+    if (!out.contact_name) {
+      if (!/\d/.test(l) && !l.includes("@") && l.length <= 45) {
+        const w = l.split(/\s+/);
+        if (w.length >= 2 && w.length <= 5) {
+          out.contact_name = l;
+        }
+      }
+    }
+  }
+
+  if (!out.country && /france/i.test(t)) out.country = "France";
+
+  return out;
+}
 function escHtml(s){
   return String(s ?? "")
     .replaceAll("&","&amp;")
@@ -393,7 +487,7 @@ window.createRequest = async function(){
   const vehicle = ($("vehicle").value || "").trim();
   const paste = ($("pasteBlock").value || "").trim();
   const parsed = parseClientBlock(paste);
-
+  const parsed = parsePaste(paste);
   if(!parsed.client_name){
     alert("Le bloc client est obligatoire : 1ère ligne = nom du client.");
     return;
@@ -407,16 +501,24 @@ window.createRequest = async function(){
   CODE = randomCode();
 
   const payload = {
-    status: "sent",
-    prescriber_email: PRESCRIBER_EMAIL,
-    client_name: parsed.client_name,
-    vehicle: vehicle,
-    fin_type: "LLD",
-    recipients: [PRESCRIBER_EMAIL],
-    access_code: CODE,
-    contact_email: parsed.contact_email || null,
-    contact_phone: parsed.contact_phone || null,
-  };
+  prescriber_email: PRESCRIBER_EMAIL,
+  client_name: parsed.client_name || client,
+  vehicle,
+  fin_type: "LLD",
+  recipients: [PRESCRIBER_EMAIL],
+  access_code: CODE,
+  status: "sent",
+
+  address: parsed.address,
+  postcode: parsed.postcode,
+  city: parsed.city,
+  country: parsed.country,
+  siret: parsed.siret,
+  vat: parsed.vat,
+  contact_name: parsed.contact_name,
+  contact_email: parsed.contact_email,
+  contact_phone: parsed.contact_phone
+};
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
     method: "POST",
