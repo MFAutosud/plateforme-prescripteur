@@ -6,174 +6,442 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
-    body{font-family:Arial;background:#0b1220;color:#fff;padding:24px}
-    h1{color:#4da3ff;margin:0 0 18px}
-    h2{margin:0 0 10px}
-    h3{margin:8px 0 6px}
-    .box{background:#111c34;padding:16px;border-radius:10px;margin-bottom:18px}
-    label{display:block;margin-top:12px;opacity:.9}
-    input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2b3a5a;background:#0b1220;color:#fff}
-    button{margin-top:14px;padding:12px;border-radius:10px;border:0;background:#4da3ff;color:#000;font-weight:bold;cursor:pointer}
-    button.secondary{background:#334155;color:#fff}
-    button.small{padding:8px 10px;margin-top:0;border-radius:10px}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .hint{opacity:.75;font-size:12px;margin-top:6px;white-space:pre-wrap}
-    .msg{background:#0b1220;padding:10px;border-radius:8px;margin-top:8px;border:1px solid rgba(255,255,255,.08)}
-    .msg.you{border-left:4px solid #4da3ff}
-    .msg.them{border-left:4px solid #22c55e}
+    :root{
+      --bg:#0b1220;
+      --panel:#111c34;
+      --panel2:#0f1a32;
+      --text:#ffffff;
+      --muted:rgba(255,255,255,.75);
+      --line:rgba(255,255,255,.10);
+      --brand:#4da3ff;
+      --brand2:#2563eb;
+      --btn:#4da3ff;
+      --btnText:#001;
+      --btn2:#334155;
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial, sans-serif;
+      background: radial-gradient(1000px 400px at 15% -10%, rgba(77,163,255,.22), transparent 60%),
+                  radial-gradient(900px 350px at 85% 0%, rgba(37,99,235,.18), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      padding:24px;
+    }
+
+    .wrap{max-width:1100px;margin:0 auto}
+
+    /* Header */
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 16px;
+      border-radius:16px;
+      background: rgba(17,28,52,.85);
+      border:1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(6px);
+      margin-bottom:16px;
+    }
+    .brand{
+      display:flex;align-items:center;gap:12px;min-width:0;
+    }
+    .brand img{
+      width:44px;height:44px;border-radius:12px;
+      background:#0b1220;border:1px solid rgba(255,255,255,.12);
+      object-fit:contain;
+      padding:6px;
+    }
+    .brandTitle{min-width:0}
+    .brandTitle h1{
+      font-size:18px;margin:0;color:var(--brand);letter-spacing:.2px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .brandTitle .sub{
+      margin:2px 0 0;font-size:12px;opacity:.75;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .chip{
+      font-size:12px;
+      padding:6px 10px;border-radius:999px;
+      background:rgba(77,163,255,.12);
+      border:1px solid rgba(77,163,255,.25);
+      color:#cfe6ff;
+      white-space:nowrap;
+    }
+
+    /* Panels */
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
+    .box{
+      background: linear-gradient(180deg, rgba(17,28,52,.95), rgba(15,26,50,.95));
+      border:1px solid rgba(255,255,255,.08);
+      padding:16px;
+      border-radius:16px;
+      margin-bottom:14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.22);
+    }
+
+    h2{margin:0 0 10px;font-size:16px}
+    h3{margin:8px 0 8px;font-size:14px;opacity:.95}
+
+    label{display:block;margin-top:10px;font-size:13px;opacity:.9}
+    input,textarea{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(11,18,32,.85);
+      color:#fff;
+      outline:none;
+    }
+    input:focus,textarea:focus{border-color:rgba(77,163,255,.55); box-shadow:0 0 0 4px rgba(77,163,255,.12)}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    button{
+      padding:10px 12px;
+      border-radius:12px;
+      border:0;
+      background:var(--btn);
+      color:var(--btnText);
+      font-weight:800;
+      cursor:pointer;
+      transition:.12s transform ease;
+    }
+    button:hover{transform: translateY(-1px)}
+    button.secondary{background:var(--btn2);color:#fff;font-weight:700}
+    button.small{padding:8px 10px;border-radius:12px;margin-top:0}
+
+    .hint{
+      opacity:.75;font-size:12px;margin-top:8px;
+      white-space:pre-wrap;line-height:1.35
+    }
     a{color:#7cc0ff}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;background:#24365f;margin-left:6px}
-    .file{display:inline-block;margin-top:6px;padding:6px 10px;border-radius:10px;background:#334155;color:#fff;text-decoration:none}
-    hr{border:0;border-top:1px solid rgba(255,255,255,.12);margin:14px 0}
-    .providerRow{display:flex;align-items:center;gap:10px;margin:8px 0}
-    .providerRow span{flex:1}
-    .card{background:#0b1220;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-top:8px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media(max-width:720px){.grid{grid-template-columns:1fr}}
+
+    .divider{height:1px;background:rgba(255,255,255,.10);margin:14px 0}
+
+    /* Provider list rows */
+    .providerRow{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 10px;border-radius:14px;
+      background:rgba(11,18,32,.6);
+      border:1px solid rgba(255,255,255,.08);
+      margin:8px 0;
+    }
+    .providerRow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* Thread / messages */
+    .msg{
+      background:rgba(11,18,32,.75);
+      padding:12px;
+      border-radius:14px;
+      margin-top:10px;
+      border:1px solid rgba(255,255,255,.08)
+    }
+    .msg.you{border-left:4px solid var(--brand)}
+    .msg.them{border-left:4px solid var(--ok)}
+    .msgHead{display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .msgMeta{font-size:12px;opacity:.7}
+    .msgWho{font-weight:800}
+    .msgBody{margin-top:8px;line-height:1.45;font-size:13px}
+    .file{
+      display:inline-block;
+      margin-top:8px;
+      padding:8px 10px;
+      border-radius:12px;
+      background:#334155;
+      color:#fff;
+      text-decoration:none;
+      border:1px solid rgba(255,255,255,.10);
+    }
+
+    /* Request card */
+    .card{
+      background:rgba(11,18,32,.65);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      padding:14px;
+    }
+    .gridInfo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:720px){.gridInfo{grid-template-columns:1fr}}
+    .kv{
+      padding:10px 10px;border-radius:14px;
+      background:rgba(17,28,52,.55);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .kv b{display:block;font-size:12px;opacity:.8;margin-bottom:4px}
+    .kv div{font-size:13px;word-break:break-word}
+
+    /* Footer legal */
+    .legal{
+      margin-top:14px;
+      font-size:11px;
+      opacity:.70;
+      line-height:1.35;
+      border-top:1px solid rgba(255,255,255,.10);
+      padding-top:10px;
+    }
+
+    /* Pills */
+    .pill{
+      display:inline-block;
+      padding:3px 10px;
+      border-radius:999px;
+      font-size:12px;
+      background:rgba(77,163,255,.14);
+      border:1px solid rgba(77,163,255,.28);
+      color:#d9ecff;
+      margin-left:8px;
+      white-space:nowrap;
+    }
   </style>
 </head>
 
 <body>
-<h1>Plateforme prescripteur – MF Auto Sud</h1>
+<div class="wrap">
 
-<!-- =========================
-     PRESCRIPTEUR UI
-========================= -->
-<div id="prescriberUI">
-  <div class="box">
-    <h2>1) Créer une demande</h2>
+  <div class="topbar">
+    <div class="brand">
+      <img src="logo-mfautosud.png" alt="MF Auto Sud">
+      <div class="brandTitle">
+        <h1>Plateforme prescripteur – MF Auto Sud</h1>
+        <div class="sub">Demandes • Réponses • Pièces jointes • Relances automatiques</div>
+      </div>
+    </div>
+    <div class="chip" id="modeChip">Mode : Prescripteur</div>
+  </div>
 
-    <label>Véhicule</label>
-    <input id="vehicle" placeholder="Ex: Ford Puma LLD 25 mois 30 000 km + entretien">
+  <!-- =========================
+       PRESCRIPTEUR UI
+  ========================= -->
+  <div id="prescriberUI">
 
-    <label>Bloc client (copier-coller) — 1ère ligne = NOM CLIENT</label>
-    <textarea id="pasteBlock" style="height:180px" placeholder="Colle ici le bloc complet…"></textarea>
+    <div class="box">
+      <h2>1) Créer une demande</h2>
 
-    <div class="hint">
-La 1ère ligne devient automatiquement le NOM CLIENT.
+      <div class="grid2">
+        <div>
+          <label>Véhicule</label>
+          <input id="vehicle" placeholder="Ex. : Ford Puma LLD 25 mois – 30 000 km – entretien inclus">
+        </div>
+
+        <div>
+          <label>Copier le lien de la demande</label>
+          <div class="row" style="margin-top:10px">
+            <button class="secondary" onclick="copyThreadLink()">Copier le lien</button>
+          </div>
+          <div class="hint">Disponible après création (rid + code).</div>
+        </div>
+      </div>
+
+      <label>Bloc client (copier-coller) — 1ʳᵉ ligne = nom du client</label>
+      <textarea id="pasteBlock" style="height:180px" placeholder="Colle ici le bloc complet…"></textarea>
+
+      <div class="hint">
+La 1ʳᵉ ligne devient automatiquement le nom du client.
 Lignes supprimées automatiquement :
-- “Obtenir un lien à envoyer au client pour signer un mandat de prélèvement SEPA”
-- “Responsable MF Autosud”
-- variantes “prélèvement / prelevement”
+- « Obtenir un lien à envoyer au client pour signer un mandat de prélèvement SEPA »
+- « Responsable MF Autosud »
+- variantes « prélèvement / prelevement »
+      </div>
+
+      <div class="row">
+        <button onclick="createRequest()">Créer la demande</button>
+      </div>
+
+      <div id="link" class="hint"></div>
+
+      <div class="legal">
+        <b>Information (RGPD)</b> : les données transmises sont utilisées uniquement dans le cadre du traitement de la demande et de la réponse commerciale.
+        Vous pouvez demander l’accès, la rectification ou la suppression en écrivant à <a href="mailto:courtier@mfautosud.fr">courtier@mfautosud.fr</a>.
+      </div>
     </div>
 
-    <button onclick="createRequest()">Créer</button>
-    <div id="link" class="hint"></div>
-  </div>
+    <div class="box" id="sendBox" style="display:none;">
+      <h2>2) Envoyer à des prestataires</h2>
 
-  <div class="box" id="sendBox" style="display:none;">
-    <h2>2) Envoyer à des prestataires</h2>
+      <div class="row">
+        <button class="secondary" onclick="checkAll()">Tout cocher</button>
+        <button class="secondary" onclick="uncheckAll()">Tout décocher</button>
+        <button class="secondary" onclick="exportProviders()">Exporter</button>
+        <button class="secondary" onclick="clearProviders()">Tout effacer</button>
+      </div>
 
-    <div class="row">
-      <button class="secondary" onclick="checkAll()">Tout cocher</button>
-      <button class="secondary" onclick="uncheckAll()">Tout décocher</button>
-      <button class="secondary" onclick="exportProviders()">Exporter</button>
-      <button class="secondary" onclick="clearProviders()">Tout effacer</button>
+      <div id="providersList" style="margin-top:10px"></div>
+
+      <div class="divider"></div>
+
+      <h3>Ajouter / importer</h3>
+
+      <div class="grid2">
+        <div>
+          <label>E-mail du prestataire</label>
+          <input id="providerEmail" placeholder="exemple@domaine.com">
+        </div>
+        <div>
+          <label>Nom (optionnel)</label>
+          <input id="providerName" placeholder="Ex. : Groupe Grim">
+        </div>
+      </div>
+
+      <div class="row">
+        <button onclick="addProvider()">Ajouter au répertoire</button>
+      </div>
+
+      <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
+      <textarea id="importArea" style="height:110px" placeholder="Ex. : Nom <email@domaine.com>"></textarea>
+      <div class="row">
+        <button class="secondary" onclick="importProviders()">Importer</button>
+      </div>
+
+      <label>Message (optionnel) inclus dans l’e-mail</label>
+      <textarea id="customMessage" style="height:90px" placeholder="Texte optionnel…"></textarea>
+
+      <div class="row">
+        <button onclick="sendToSelected()">✅ Envoyer automatiquement</button>
+        <button class="secondary" onclick="copyThreadLink()">Copier le lien</button>
+      </div>
+
+      <div id="sendStatus" class="hint"></div>
     </div>
 
-    <div id="providersList" style="margin-top:10px"></div>
-
-    <hr>
-
-    <h3>Ajouter / Importer</h3>
-
-    <label>Email prestataire</label>
-    <input id="providerEmail" placeholder="exemple@domaine.com">
-
-    <label>Nom (optionnel)</label>
-    <input id="providerName" placeholder="Ex: GROUPE GRIM">
-
-    <div class="row">
-      <button onclick="addProvider()">Ajouter</button>
+    <div class="box">
+      <h2>3) Conversation</h2>
+      <div class="row">
+        <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
+        <button class="secondary" onclick="copyThreadLink()">Copier le lien</button>
+      </div>
+      <div id="thread" style="margin-top:10px"></div>
     </div>
 
-    <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
-    <textarea id="importArea" style="height:110px" placeholder="Ex: Nom <email@domaine.com>"></textarea>
-    <div class="row">
-      <button class="secondary" onclick="importProviders()">Importer</button>
-    </div>
+    <div class="box" id="prescriberReplyBox" style="display:none;">
+      <h2>4) Répondre (MF Auto Sud)</h2>
 
-    <label>Message (optionnel) inclus dans l’email</label>
-    <textarea id="customMessage" style="height:90px" placeholder="Texte optionnel…"></textarea>
+      <label>Message</label>
+      <textarea id="prescMsg" style="height:120px" placeholder="Votre message…"></textarea>
 
-    <div class="row">
-      <button onclick="sendToSelected()">✅ Envoyer automatiquement</button>
-      <button class="secondary" onclick="copyThreadLink()">Copier lien demande</button>
-    </div>
-    <div id="sendStatus" class="hint"></div>
-  </div>
+      <label>Documents (PDF, images…)</label>
+      <input type="file" id="prescFiles" multiple>
 
-  <div class="box">
-    <h2>3) Conversation</h2>
-    <div class="row">
-      <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
-      <button class="secondary" onclick="copyThreadLink()">Copier lien demande</button>
-    </div>
-    <div id="thread" style="margin-top:10px"></div>
-  </div>
-
-  <div class="box" id="prescriberReplyBox" style="display:none;">
-    <h2>4) Répondre (MF Auto Sud)</h2>
-
-    <label>Message</label>
-    <textarea id="prescMsg" style="height:120px" placeholder="Votre message…"></textarea>
-
-    <label>Documents (PDF, images…)</label>
-    <input type="file" id="prescFiles" multiple>
-
-    <div class="hint">
+      <div class="hint">
 La réponse :
 - s’enregistre dans l’historique,
-- notifie par email TOUS les prestataires déjà invités sur cette demande.
+- notifie par e-mail TOUS les prestataires déjà invités sur cette demande.
+      </div>
+
+      <button onclick="submitPrescriberResponse()">Envoyer la réponse</button>
+      <div id="prescStatus" class="hint"></div>
+    </div>
+  </div>
+
+  <!-- =========================
+       PRESTATAIRE UI
+  ========================= -->
+  <div id="providerUI" style="display:none;">
+    <div class="box">
+      <h2>Demande reçue <span class="pill">Prestataire</span></h2>
+      <div id="requestInfo" class="hint">Chargement…</div>
     </div>
 
-    <button onclick="submitPrescriberResponse()">Envoyer la réponse</button>
-    <div id="prescStatus" class="hint"></div>
+    <div class="box">
+      <h2>Conversation</h2>
+      <div class="row">
+        <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
+      </div>
+      <div id="threadProvider" style="margin-top:10px"></div>
+    </div>
+
+    <div class="box">
+      <h2>Répertoire vendeurs (chef des ventes)</h2>
+      <div class="hint">
+Ce répertoire est enregistré dans <b>ce navigateur</b> pour <b>ton e-mail</b> (lien prestataire avec <code>pe=</code>).
+Tu peux ajouter / supprimer des vendeurs et les cocher pour transférer plus vite.
+      </div>
+
+      <div class="row">
+        <button class="secondary" onclick="vendorCheckAll(true)">Tout cocher</button>
+        <button class="secondary" onclick="vendorCheckAll(false)">Tout décocher</button>
+        <button class="secondary" onclick="vendorExport()">Exporter</button>
+        <button class="secondary" onclick="vendorClear()">Tout effacer</button>
+      </div>
+
+      <div id="vendorList" style="margin-top:10px"></div>
+
+      <div class="divider"></div>
+
+      <h3>Ajouter / importer des vendeurs</h3>
+
+      <div class="grid2">
+        <div>
+          <label>E-mail vendeur</label>
+          <input id="vendorEmail" placeholder="vendeur@domaine.com">
+        </div>
+        <div>
+          <label>Nom (optionnel)</label>
+          <input id="vendorName" placeholder="Ex. : Jean Dupont">
+        </div>
+      </div>
+
+      <div class="row">
+        <button onclick="vendorAdd()">Ajouter</button>
+      </div>
+
+      <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
+      <textarea id="vendorImport" style="height:110px" placeholder="Ex. : Jean Dupont <vendeur@domaine.com>"></textarea>
+      <div class="row">
+        <button class="secondary" onclick="vendorImportList()">Importer</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>Transférer la demande</h2>
+      <div class="hint">
+Le nouveau destinataire reçoit un e-mail + MF Auto Sud est notifié. L’historique conserve l’info (via votre base).
+      </div>
+
+      <label>Note (optionnel)</label>
+      <textarea id="forwardNote" style="height:90px" placeholder="Ex. : Peux-tu traiter ce dossier ? Merci !"></textarea>
+
+      <div class="divider"></div>
+
+      <h3>Transférer à un vendeur (un seul)</h3>
+      <label>E-mail du nouveau destinataire</label>
+      <input id="forwardTo" placeholder="vendeur@domaine.com">
+      <div class="row">
+        <button class="secondary" onclick="forwardRequest()">Transférer</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>Transférer à plusieurs vendeurs (répertoire)</h3>
+      <div class="row">
+        <button class="secondary" onclick="forwardToSelectedVendors()">Transférer aux vendeurs cochés</button>
+      </div>
+
+      <div id="forwardStatus" class="hint"></div>
+    </div>
+
+    <div class="box">
+      <h2>Répondre</h2>
+
+      <label>Votre message</label>
+      <textarea id="respMsg" style="height:120px" placeholder="Texte d’accompagnement…"></textarea>
+
+      <label>Documents (PDF, images…)</label>
+      <input type="file" id="respFiles" multiple>
+
+      <button onclick="submitProviderResponse()">Envoyer la réponse</button>
+      <div id="respStatus" class="hint"></div>
+    </div>
   </div>
-</div>
 
-<!-- =========================
-     PRESTATAIRE UI
-========================= -->
-<div id="providerUI" style="display:none;">
-  <div class="box">
-    <h2>Demande reçue <span class="pill">Prestataire</span></h2>
-    <div id="requestInfo" class="hint">Chargement…</div>
-  </div>
-
-  <div class="box">
-    <h2>Conversation</h2>
-    <button class="secondary" onclick="loadThread()">🔄 Rafraîchir</button>
-    <div id="threadProvider" style="margin-top:10px"></div>
-  </div>
-
-  <!-- ✅ UNIQUE bloc transfert (1 seul) -->
-  <div class="box">
-    <h2>Transférer à un collègue</h2>
-    <div class="hint">Ex : chef des ventes → vendeur. Le nouveau destinataire recevra un email + MF Auto Sud sera notifié.</div>
-
-    <label>Email du nouveau destinataire</label>
-    <input id="forwardTo" placeholder="vendeur@domaine.com">
-
-    <label>Note (optionnel)</label>
-    <textarea id="forwardNote" style="height:90px" placeholder="Ex : Peux-tu traiter ce dossier, merci !"></textarea>
-
-    <button class="secondary" onclick="forwardRequest()">Transférer</button>
-    <div id="forwardStatus" class="hint"></div>
-  </div>
-
-  <div class="box">
-    <h2>Répondre</h2>
-
-    <label>Votre message</label>
-    <textarea id="respMsg" style="height:120px" placeholder="Texte d’accompagnement…"></textarea>
-
-    <label>Documents (PDF, images…)</label>
-    <input type="file" id="respFiles" multiple>
-
-    <button onclick="submitProviderResponse()">Envoyer la réponse</button>
-    <div id="respStatus" class="hint"></div>
-  </div>
 </div>
 
 <script>
@@ -196,6 +464,11 @@ let PROVIDER_EMAIL = "";
    UTILS
 ========================= */
 function $(id){ return document.getElementById(id); }
+
+function setModeChip(txt){
+  const c = $("modeChip");
+  if(c) c.textContent = "Mode : " + txt;
+}
 
 function getHashParams(){
   const p = new URLSearchParams(location.hash.replace("#",""));
@@ -364,7 +637,7 @@ function renderProviders(){
     return `
       <div class="providerRow">
         <input type="checkbox" class="providerCheck" data-email="${escHtml(p.email)}">
-        <span>${escHtml(label)}</span>
+        <span title="${escHtml(label)}">${escHtml(label)}</span>
         <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
       </div>
     `;
@@ -377,7 +650,7 @@ function uncheckAll(){ document.querySelectorAll(".providerCheck").forEach(c=>c.
 function addProvider(){
   const email = normalizeEmail($("providerEmail").value);
   const name = ($("providerName").value || "").trim();
-  if(!emailLooksValid(email)){ alert("Email invalide."); return; }
+  if(!emailLooksValid(email)){ alert("E-mail invalide."); return; }
 
   const providers = loadProviders();
   if(providers.some(p => normalizeEmail(p.email) === email)){ alert("Déjà enregistré."); return; }
@@ -416,7 +689,7 @@ function importProviders(){
 
   saveProviders(providers);
   renderProviders();
-  alert(`Import terminé: +${added} ajoutés / ${ignored} ignorés`);
+  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
 }
 
 async function exportProviders(){
@@ -446,7 +719,7 @@ async function createRequest(){
 
   const parsed = parsePaste(paste);
   if(!parsed.client_name){
-    alert("Impossible de lire le nom client (1ère ligne).");
+    alert("Impossible de lire le nom du client (1ʳᵉ ligne).");
     return;
   }
 
@@ -493,7 +766,7 @@ async function createRequest(){
   RID = data[0].id;
 
   const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
-  $("link").textContent = `✅ Demande créée\nClient: ${parsed.client_name}\nLien demande: ${link}`;
+  $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
   $("sendBox").style.display = "block";
   $("prescriberReplyBox").style.display = "block";
   renderProviders();
@@ -541,7 +814,7 @@ function copyThreadLink(){
   if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
   const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
   navigator.clipboard.writeText(link);
-  alert("Lien demande copié.");
+  alert("Lien copié.");
 }
 
 /* =========================
@@ -585,10 +858,14 @@ async function loadThread(){
       const isThem = !!x.responder_email;
       el.innerHTML += `
         <div class="msg ${isThem ? "them":"you"}">
-          <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          <strong>${isThem ? escHtml(x.responder_email || "Prestataire") : "Vous"}</strong><br>
-          ${escHtml(x.message || "").replaceAll("\n","<br>")}
-          ${renderMessageFiles(x.files)}
+          <div class="msgHead">
+            <div class="msgWho">${isThem ? escHtml(x.responder_email || "Prestataire") : "Vous"}</div>
+            <div class="msgMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+          </div>
+          <div class="msgBody">
+            ${escHtml(x.message || "").replaceAll("\n","<br>")}
+            ${renderMessageFiles(x.files)}
+          </div>
         </div>`;
     });
   }
@@ -601,10 +878,14 @@ async function loadThread(){
       const isYou = PROVIDER_EMAIL && (String(x.responder_email||"").toLowerCase() === PROVIDER_EMAIL);
       el.innerHTML += `
         <div class="msg ${isYou ? "you":"them"}">
-          <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          <strong>${escHtml(x.responder_email || "MF Auto Sud")}</strong><br>
-          ${escHtml(x.message || "").replaceAll("\n","<br>")}
-          ${renderMessageFiles(x.files)}
+          <div class="msgHead">
+            <div class="msgWho">${escHtml(x.responder_email || "MF Auto Sud")}</div>
+            <div class="msgMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+          </div>
+          <div class="msgBody">
+            ${escHtml(x.message || "").replaceAll("\n","<br>")}
+            ${renderMessageFiles(x.files)}
+          </div>
         </div>`;
     });
   }
@@ -614,29 +895,31 @@ async function loadThread(){
     const r = data.request;
     $("requestInfo").innerHTML = `
       <div class="card">
-        <div class="grid">
-          <div><strong>Client</strong><br>${escHtml(r.client_name || "-")}</div>
-          <div><strong>Véhicule</strong><br>${escHtml(r.vehicle || "-")}</div>
-          <div><strong>Contact</strong><br>${escHtml(r.contact_name || "-")}</div>
-          <div><strong>Email</strong><br>${escHtml(r.contact_email || "-")}</div>
-          <div><strong>Téléphone</strong><br>${escHtml(r.contact_phone || "-")}</div>
-          <div><strong>SIRET</strong><br>${escHtml(r.siret || "-")}</div>
-          <div><strong>TVA</strong><br>${escHtml(r.vat || "-")}</div>
-          <div><strong>Adresse</strong><br>${escHtml(r.address || "-")}</div>
+        <div class="gridInfo">
+          <div class="kv"><b>Client</b><div>${escHtml(r.client_name || "-")}</div></div>
+          <div class="kv"><b>Véhicule</b><div>${escHtml(r.vehicle || "-")}</div></div>
+          <div class="kv"><b>Contact</b><div>${escHtml(r.contact_name || "-")}</div></div>
+          <div class="kv"><b>E-mail</b><div>${escHtml(r.contact_email || "-")}</div></div>
+          <div class="kv"><b>Téléphone</b><div>${escHtml(r.contact_phone || "-")}</div></div>
+          <div class="kv"><b>SIRET</b><div>${escHtml(r.siret || "-")}</div></div>
+          <div class="kv"><b>TVA</b><div>${escHtml(r.vat || "-")}</div></div>
+          <div class="kv"><b>Adresse</b><div>${escHtml(r.address || "-")}</div></div>
+        </div>
+        <div class="legal">
+          <b>Information (RGPD)</b> : les données transmises sont utilisées uniquement dans le cadre du traitement de la demande et de la réponse commerciale.
+          Pour toute demande d’accès/suppression : <a href="mailto:${PRESCRIBER_EMAIL}">${PRESCRIBER_EMAIL}</a>.
         </div>
       </div>
     `;
   }
 }
 
-  /* =========================
+/* =========================
    VENDORS DIRECTORY (localStorage par chef des ventes)
-   => clé basée sur PROVIDER_EMAIL
 ========================= */
 function vendorKey(){
   return `mfautosud_vendors_${(PROVIDER_EMAIL || "unknown").toLowerCase()}`;
 }
-
 function vendorLoad(){
   try{
     const raw = localStorage.getItem(vendorKey());
@@ -644,15 +927,12 @@ function vendorLoad(){
     return Array.isArray(arr) ? arr : [];
   }catch{ return []; }
 }
-
 function vendorSave(arr){
   localStorage.setItem(vendorKey(), JSON.stringify(arr));
 }
-
 function vendorEmailValid(e){
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase());
 }
-
 function vendorExtract(line){
   const s = (line || "").trim();
   if(!s) return null;
@@ -672,7 +952,6 @@ function vendorExtract(line){
 
   return null;
 }
-
 function vendorRender(){
   const el = $("vendorList");
   if(!el) return;
@@ -693,19 +972,18 @@ function vendorRender(){
     return `
       <div class="providerRow">
         <input type="checkbox" class="vendorCheck" data-email="${escHtml(v.email)}">
-        <span>${escHtml(label)}</span>
+        <span title="${escHtml(label)}">${escHtml(label)}</span>
         <button class="small secondary" onclick="vendorRemove(${idx})">Suppr.</button>
       </div>
     `;
   }).join("");
 }
-
 function vendorAdd(){
   const email = normalizeEmail($("vendorEmail").value);
   const name = ($("vendorName").value || "").trim();
 
   if(!PROVIDER_EMAIL){ alert("Ouvre via le lien prestataire (pe=...)"); return; }
-  if(!vendorEmailValid(email)){ alert("Email vendeur invalide."); return; }
+  if(!vendorEmailValid(email)){ alert("E-mail vendeur invalide."); return; }
 
   const vendors = vendorLoad();
   if(vendors.some(x => normalizeEmail(x.email) === email)){
@@ -720,15 +998,13 @@ function vendorAdd(){
   $("vendorName").value = "";
   vendorRender();
 }
-
 function vendorRemove(idx){
   const vendors = vendorLoad();
   vendors.splice(idx, 1);
   vendorSave(vendors);
   vendorRender();
 }
-
-function vendorImport(){
+function vendorImportList(){
   if(!PROVIDER_EMAIL){ alert("Ouvre via le lien prestataire (pe=...)"); return; }
 
   const raw = ($("vendorImport").value || "").replace(/\r/g,"").trim();
@@ -739,7 +1015,6 @@ function vendorImport(){
   const existing = new Set(vendors.map(v => normalizeEmail(v.email)));
 
   let added=0, ignored=0;
-
   for(const line of lines){
     const p = vendorExtract(line);
     if(!p || !vendorEmailValid(p.email)){ ignored++; continue; }
@@ -751,22 +1026,19 @@ function vendorImport(){
 
   vendorSave(vendors);
   vendorRender();
-  alert(`Import terminé: +${added} ajoutés / ${ignored} ignorés`);
+  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
 }
-
 async function vendorExport(){
   const vendors = vendorLoad();
   const lines = vendors.map(v => v.name ? `${v.name} <${v.email}>` : v.email).join("\n");
   await navigator.clipboard.writeText(lines || "");
   alert("Répertoire vendeurs copié dans le presse-papiers.");
 }
-
 function vendorClear(){
-  if(!confirm("Supprimer tout le répertoire vendeurs de ce chef des ventes (local) ?")) return;
+  if(!confirm("Supprimer tout le répertoire vendeurs de ce navigateur ?")) return;
   vendorSave([]);
   vendorRender();
 }
-
 function vendorCheckAll(on){
   document.querySelectorAll(".vendorCheck").forEach(c => c.checked = !!on);
 }
@@ -827,14 +1099,12 @@ async function forwardToSelectedVendors(){
   }
 
   statusEl.textContent =
-    `✅ Transferts terminés.\nOK: ${results.ok} / Erreurs: ${results.fail}` +
-    (results.fail ? `\nDétails (console).` : "");
+    `✅ Transferts terminés.\nOK : ${results.ok} / Erreurs : ${results.fail}` +
+    (results.fail ? `\nDétails : console.` : "");
 
   $("forwardNote").value = "";
 }
-/* =========================
-   TRANSFER (forward-request)
-========================= */
+
 async function forwardRequest(){
   const statusEl = $("forwardStatus");
   const toEmail = ($("forwardTo").value || "").trim().toLowerCase();
@@ -849,11 +1119,11 @@ async function forwardRequest(){
     return;
   }
   if(!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)){
-    statusEl.textContent = "❌ Email invalide.";
+    statusEl.textContent = "❌ E-mail invalide.";
     return;
   }
   if(toEmail === PROVIDER_EMAIL){
-    statusEl.textContent = "❌ Email identique : choisis un autre destinataire.";
+    statusEl.textContent = "❌ E-mail identique : choisis un autre destinataire.";
     return;
   }
 
@@ -881,9 +1151,8 @@ async function forwardRequest(){
     return;
   }
 
-  statusEl.textContent = "✅ Transfert effectué.\nLe nouveau destinataire + MF Auto Sud ont reçu un email.";
+  statusEl.textContent = "✅ Transfert effectué.\nLe nouveau destinataire + MF Auto Sud ont reçu un e-mail.";
   $("forwardTo").value = "";
-  $("forwardNote").value = "";
 }
 
 /* =========================
@@ -1005,6 +1274,8 @@ async function submitPrescriberResponse(){
       PROVIDER_EMAIL = decodeURIComponent(pe).trim().toLowerCase();
       $("prescriberUI").style.display = "none";
       $("providerUI").style.display = "block";
+      setModeChip("Prestataire");
+      vendorRender();
       loadThread();
       return;
     }
@@ -1013,6 +1284,8 @@ async function submitPrescriberResponse(){
     PROVIDER_EMAIL = "";
     $("prescriberUI").style.display = "block";
     $("providerUI").style.display = "none";
+    setModeChip("Prescripteur (dossier)");
+
     $("sendBox").style.display = "block";
     $("prescriberReplyBox").style.display = "block";
     renderProviders();
@@ -1023,6 +1296,7 @@ async function submitPrescriberResponse(){
   // Root prescriber
   $("prescriberUI").style.display = "block";
   $("providerUI").style.display = "none";
+  setModeChip("Prescripteur");
   renderProviders();
 })();
 </script>
