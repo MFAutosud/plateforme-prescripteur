@@ -147,6 +147,22 @@ La réponse :
     <div id="threadProvider" style="margin-top:10px"></div>
   </div>
 
+  <!-- ✅ NOUVEAU : Transférer -->
+  <div class="box" id="forwardBox">
+    <h2>Transférer à un collègue</h2>
+
+    <label>Email du collègue</label>
+    <input id="forwardEmail" placeholder="vendeur@entreprise.com">
+
+    <label>Note (optionnel)</label>
+    <textarea id="forwardNote" style="height:90px" placeholder="Ex : Peux-tu traiter ce dossier, merci !"></textarea>
+
+    <button onclick="forwardToColleague()">Transférer</button>
+    <div id="forwardStatus" class="hint"></div>
+
+    <div class="hint">Après transfert : le collègue + MF Auto Sud reçoivent un email.</div>
+  </div>
+
   <div class="box">
     <h2>Répondre</h2>
 
@@ -567,7 +583,7 @@ async function loadThread(){
     const el = $("thread");
     el.innerHTML = "";
     (data.responses || []).forEach(x=>{
-      const isThem = !!x.responder_email; // provider messages have responder_email
+      const isThem = !!x.responder_email;
       el.innerHTML += `
         <div class="msg ${isThem ? "them":"you"}">
           <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
@@ -612,6 +628,56 @@ async function loadThread(){
       </div>
     `;
   }
+}
+
+/* =========================
+   TRANSFER (forward-request)
+========================= */
+async function forwardToColleague(){
+  const to_email = ($("forwardEmail").value || "").trim().toLowerCase();
+  const note = ($("forwardNote").value || "").trim();
+  const statusEl = $("forwardStatus");
+
+  if(!RID || !CODE){
+    statusEl.textContent = "❌ Lien invalide (rid/code).";
+    return;
+  }
+  if(!PROVIDER_EMAIL){
+    statusEl.textContent = "❌ Lien prestataire incomplet (pe=...).";
+    return;
+  }
+  if(!to_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to_email)){
+    statusEl.textContent = "❌ Email collègue invalide.";
+    return;
+  }
+
+  statusEl.textContent = "Transfert en cours…";
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/forward-request`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      from_email: PROVIDER_EMAIL,
+      to_email,
+      note
+    })
+  });
+
+  if(!res.ok){
+    console.log("forward-request failed:", res.status, data);
+    statusEl.textContent = "❌ Erreur\n" + JSON.stringify(data, null, 2);
+    return;
+  }
+
+  statusEl.textContent = "✅ Transféré ! Le collègue + MF Auto Sud ont été notifiés.";
+  $("forwardEmail").value = "";
+  $("forwardNote").value = "";
 }
 
 /* =========================
@@ -700,7 +766,7 @@ async function submitPrescriberResponse(){
       access_code: CODE,
       author_role: "prescriber",
       responder_name: "MF Auto Sud",
-      responder_email: "", // vide => UI "Vous"
+      responder_email: "",
       message: msg,
       files
     })
@@ -719,9 +785,7 @@ async function submitPrescriberResponse(){
 }
 
 /* =========================
-   INIT (IMPORTANT FIX)
-   ✅ Provider mode ONLY if pe is present
-   ✅ Otherwise rid+code is prescriber view of an existing thread
+   INIT
 ========================= */
 (function init(){
   const { rid, code, pe } = getHashParams();
