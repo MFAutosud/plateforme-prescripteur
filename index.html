@@ -9,6 +9,7 @@
     body{font-family:Arial;background:#0b1220;color:#fff;padding:24px}
     h1{color:#4da3ff;margin:0 0 18px}
     h2{margin:0 0 10px}
+    h3{margin:8px 0 6px}
     .box{background:#111c34;padding:16px;border-radius:10px;margin-bottom:18px}
     label{display:block;margin-top:12px;opacity:.9}
     input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2b3a5a;background:#0b1220;color:#fff}
@@ -16,7 +17,7 @@
     button.secondary{background:#334155;color:#fff}
     button.small{padding:8px 10px;margin-top:0;border-radius:10px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .hint{opacity:.7;font-size:12px;margin-top:6px;white-space:pre-wrap}
+    .hint{opacity:.75;font-size:12px;margin-top:6px;white-space:pre-wrap}
     .msg{background:#0b1220;padding:10px;border-radius:8px;margin-top:8px;border:1px solid rgba(255,255,255,.08)}
     .msg.you{border-left:4px solid #4da3ff}
     .msg.them{border-left:4px solid #22c55e}
@@ -26,6 +27,9 @@
     hr{border:0;border-top:1px solid rgba(255,255,255,.12);margin:14px 0}
     .providerRow{display:flex;align-items:center;gap:10px;margin:8px 0}
     .providerRow span{flex:1}
+    .card{background:#0b1220;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-top:8px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 
@@ -46,11 +50,11 @@
     <textarea id="pasteBlock" style="height:180px" placeholder="Colle ici le bloc complet…"></textarea>
 
     <div class="hint">
-      La 1ère ligne devient automatiquement le NOM CLIENT.
-      Lignes supprimées automatiquement :
-      - “Obtenir un lien à envoyer au client pour signer un mandat de prélèvement SEPA”
-      - “Responsable MF Autosud”
-      - et variantes “prélèvement / prelevement”
+La 1ère ligne devient automatiquement le NOM CLIENT.
+Lignes supprimées automatiquement :
+- “Obtenir un lien à envoyer au client pour signer un mandat de prélèvement SEPA”
+- “Responsable MF Autosud”
+- variantes “prélèvement / prelevement”
     </div>
 
     <button onclick="createRequest()">Créer</button>
@@ -71,7 +75,7 @@
 
     <hr>
 
-    <h3 style="margin:0 0 8px">Ajouter / Importer</h3>
+    <h3>Ajouter / Importer</h3>
 
     <label>Email prestataire</label>
     <input id="providerEmail" placeholder="exemple@domaine.com">
@@ -118,9 +122,9 @@
     <input type="file" id="prescFiles" multiple>
 
     <div class="hint">
-      La réponse va :
-      - s’enregistrer dans l’historique,
-      - notifier par email TOUS les prestataires déjà invités sur cette demande.
+La réponse :
+- s’enregistre dans l’historique,
+- notifie par email TOUS les prestataires déjà invités sur cette demande.
     </div>
 
     <button onclick="submitPrescriberResponse()">Envoyer la réponse</button>
@@ -156,35 +160,7 @@
     <div id="respStatus" class="hint"></div>
   </div>
 </div>
-// =========================
-// ADMIN : ouvrir une demande
-// =========================
-async function adminOpen(requestId){
-  const { res, data } = await fetchJson(
-    `${SUPABASE_URL}/functions/v1/get-admin-link`,
-    {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: "Bearer " + SUPABASE_ANON_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        request_id: requestId,
-        admin_email: PRESCRIBER_EMAIL
-      })
-    }
-  );
 
-  if(!res.ok || !data?.link){
-    alert("Impossible d’ouvrir la demande");
-    console.log(data);
-    return;
-  }
-
-  // Ouvre la conversation dans un nouvel onglet
-  window.open(data.link, "_blank");
-}
 <script>
 /* =========================
    CONFIG
@@ -192,8 +168,7 @@ async function adminOpen(requestId){
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
 const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
-
-const PROVIDERS_KEY = "mfautosud_providers_v2"; // localStorage
+const PROVIDERS_KEY = "mfautosud_providers_v2";
 
 /* =========================
    STATE
@@ -246,7 +221,7 @@ function escHtml(s){
 }
 
 /* =========================
-   PARSE COPY-PASTE -> client_name + infos
+   PARSE COPY-PASTE
 ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
@@ -267,11 +242,9 @@ function parsePaste(text){
 
   if (!lines.length) return out;
 
-  // ✅ 1ère ligne = nom client
   out.client_name = lines[0];
 
   const isTitleLine = (l) => ["client","contacts","contact"].includes(l.toLowerCase());
-
   const isUselessLine = (l) => {
     const x = l.toLowerCase();
     return (
@@ -283,14 +256,12 @@ function parsePaste(text){
       x.includes("responsable mf autosud")
     );
   };
-
   const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(l.trim());
 
   for (let i = 1; i < lines.length; i++) {
     const l = lines[i];
     if (isTitleLine(l) || isUselessLine(l) || looksLikeShortCode(l)) continue;
 
-    // Adresse (contient CP 5 chiffres)
     if (!out.address && /\b\d{5}\b/.test(l)) {
       out.address = l;
       const m = l.match(/\b(\d{5})\b\s+(.+)$/);
@@ -306,23 +277,18 @@ function parsePaste(text){
       continue;
     }
 
-    // SIRET
     const siretMatch = l.match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
     if (siretMatch) { out.siret = siretMatch[1].replace(/\s+/g, ""); continue; }
 
-    // TVA
     const vatMatch = l.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
     if (vatMatch) { out.vat = vatMatch[1].replace(/\s+/g, ""); continue; }
 
-    // Email
     const emailMatch = l.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     if (emailMatch && !out.contact_email) { out.contact_email = emailMatch[0].toLowerCase(); continue; }
 
-    // Téléphone FR
     const phoneMatch = l.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
     if (phoneMatch && !out.contact_phone) { out.contact_phone = phoneMatch[0].replace(/[\s.\-]/g,""); continue; }
 
-    // Nom contact (évite phrase)
     if (!out.contact_name) {
       if (!/\d/.test(l) && !l.includes("@") && l.length <= 45) {
         const w = l.split(/\s+/).filter(Boolean);
@@ -345,36 +311,23 @@ function loadProviders(){
     return Array.isArray(arr) ? arr : [];
   }catch{ return []; }
 }
-
-function saveProviders(arr){
-  localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr));
-}
-
-function normalizeEmail(email){
-  return (email || "").trim().toLowerCase();
-}
-
-function emailLooksValid(e){
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-}
+function saveProviders(arr){ localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr)); }
+function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
+function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
 function extractEmailAndName(line){
   const s = (line || "").trim();
   if(!s) return null;
 
-  // "Nom <email@...>"
   const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
   if(m){
     const name = m[1].replace(/^['"]|['"]$/g,"").trim();
     const email = (m[2] || "").trim().toLowerCase();
     return { name, email };
   }
-
-  // "email@..."
   const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
   if(emailLooksValid(only)) return { name:"", email: only };
 
-  // email quelque part
   const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   if(em) return { name:"", email: em[0].toLowerCase() };
 
@@ -397,13 +350,8 @@ function renderProviders(){
       <div class="providerRow">
         <input type="checkbox" class="providerCheck" data-email="${escHtml(p.email)}">
         <span>${escHtml(label)}</span>
-        <button class="small secondary" onclick="adminOpen('${r.id}')">
-  Ouvrir
-</button>
-
-<button class="small secondary" onclick="adminDelete('${r.id}')">
-  Supprimer
-</button>
+        <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
+      </div>
     `;
   }).join("");
 }
@@ -414,7 +362,6 @@ function uncheckAll(){ document.querySelectorAll(".providerCheck").forEach(c=>c.
 function addProvider(){
   const email = normalizeEmail($("providerEmail").value);
   const name = ($("providerName").value || "").trim();
-
   if(!emailLooksValid(email)){ alert("Email invalide."); return; }
 
   const providers = loadProviders();
@@ -422,7 +369,6 @@ function addProvider(){
 
   providers.push({ name, email });
   saveProviders(providers);
-
   $("providerEmail").value = "";
   $("providerName").value = "";
   renderProviders();
@@ -444,12 +390,10 @@ function importProviders(){
   const existing = new Set(providers.map(p => normalizeEmail(p.email)));
 
   let added=0, ignored=0;
-
   for(const line of lines){
     const parsed = extractEmailAndName(line);
     if(!parsed || !emailLooksValid(parsed.email)){ ignored++; continue; }
     if(existing.has(parsed.email)){ ignored++; continue; }
-
     providers.push({ name: parsed.name || "", email: parsed.email });
     existing.add(parsed.email);
     added++;
@@ -474,7 +418,7 @@ function clearProviders(){
 }
 
 /* =========================
-   CREATE REQUEST (prescriber)
+   CREATE REQUEST
 ========================= */
 async function createRequest(){
   const vehicle = $("vehicle").value.trim();
@@ -542,18 +486,16 @@ async function createRequest(){
 }
 
 /* =========================
-   SEND REQUEST (send-request edge function)
+   SEND (send-request)
 ========================= */
 async function sendToSelected(){
   if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
 
   const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
   const emails = checks.map(c => (c.getAttribute("data-email")||"").trim().toLowerCase()).filter(Boolean);
-
   if(!emails.length){ alert("Sélectionne au moins 1 prestataire."); return; }
 
   $("sendStatus").textContent = "Envoi automatique…";
-
   const custom = ($("customMessage").value || "").trim();
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
@@ -588,8 +530,7 @@ function copyThreadLink(){
 }
 
 /* =========================
-   LOAD THREAD (get-thread)
-   ✅ Affiche messages + liens de téléchargement fichiers
+   THREAD (get-thread)
 ========================= */
 function renderMessageFiles(files){
   if(!Array.isArray(files) || !files.length) return "";
@@ -621,13 +562,12 @@ async function loadThread(){
     return;
   }
 
-  // prescriber view
+  // Prescriber view
   if($("thread")){
     const el = $("thread");
     el.innerHTML = "";
-
     (data.responses || []).forEach(x=>{
-      const isThem = !!x.responder_email; // prestataire
+      const isThem = !!x.responder_email; // provider messages have responder_email
       el.innerHTML += `
         <div class="msg ${isThem ? "them":"you"}">
           <div class="hint">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
@@ -638,11 +578,10 @@ async function loadThread(){
     });
   }
 
-  // provider view
+  // Provider view
   if($("threadProvider")){
     const el = $("threadProvider");
     el.innerHTML = "";
-
     (data.responses || []).forEach(x=>{
       const isYou = PROVIDER_EMAIL && (String(x.responder_email||"").toLowerCase() === PROVIDER_EMAIL);
       el.innerHTML += `
@@ -655,17 +594,28 @@ async function loadThread(){
     });
   }
 
-  // request info in provider mode
+  // Request info (provider mode)
   if($("requestInfo") && data.request){
     const r = data.request;
-    $("requestInfo").textContent =
-      `Client: ${r.client_name || "-"}\nVéhicule: ${r.vehicle || "-"}\nContact: ${r.contact_name || "-"}\nEmail: ${r.contact_email || "-"}\nTel: ${r.contact_phone || "-"}\nSIRET: ${r.siret || "-"}\nTVA: ${r.vat || "-"}\nAdresse: ${r.address || "-"}`;
+    $("requestInfo").innerHTML = `
+      <div class="card">
+        <div class="grid">
+          <div><strong>Client</strong><br>${escHtml(r.client_name || "-")}</div>
+          <div><strong>Véhicule</strong><br>${escHtml(r.vehicle || "-")}</div>
+          <div><strong>Contact</strong><br>${escHtml(r.contact_name || "-")}</div>
+          <div><strong>Email</strong><br>${escHtml(r.contact_email || "-")}</div>
+          <div><strong>Téléphone</strong><br>${escHtml(r.contact_phone || "-")}</div>
+          <div><strong>SIRET</strong><br>${escHtml(r.siret || "-")}</div>
+          <div><strong>TVA</strong><br>${escHtml(r.vat || "-")}</div>
+          <div><strong>Adresse</strong><br>${escHtml(r.address || "-")}</div>
+        </div>
+      </div>
+    `;
   }
 }
 
 /* =========================
-   SUBMIT RESPONSE - PROVIDER
-   ✅ author_role + notifications infinies
+   RESPONSES (submit-response)
 ========================= */
 async function submitProviderResponse(){
   const msg = ($("respMsg").value || "").trim();
@@ -699,14 +649,10 @@ async function submitProviderResponse(){
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
-
-      // ✅ IMPORTANT pour ton Edge Function
       author_role: "provider",
-
       responder_name: "Prestataire",
       responder_email: PROVIDER_EMAIL,
       provider_email: PROVIDER_EMAIL,
-
       message: msg,
       files
     })
@@ -724,17 +670,13 @@ async function submitProviderResponse(){
   await loadThread();
 }
 
-/* =========================
-   SUBMIT RESPONSE - PRESCRIBER
-   ✅ author_role + notifications à tous les prestataires invités
-========================= */
 async function submitPrescriberResponse(){
   const msg = ($("prescMsg").value || "").trim();
   const filesInput = $("prescFiles");
   const statusEl = $("prescStatus");
 
   if(!RID || !CODE){
-    statusEl.textContent = "❌ Crée d’abord une demande.";
+    statusEl.textContent = "❌ Ouvre ou crée une demande d’abord.";
     return;
   }
 
@@ -756,14 +698,9 @@ async function submitPrescriberResponse(){
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
-
-      // ✅ IMPORTANT pour ton Edge Function
       author_role: "prescriber",
-
       responder_name: "MF Auto Sud",
-      // ✅ vide = affichage "Vous" côté UI
-      responder_email: "",
-
+      responder_email: "", // vide => UI "Vous"
       message: msg,
       files
     })
@@ -782,19 +719,18 @@ async function submitPrescriberResponse(){
 }
 
 /* =========================
-   INIT (FIX)
-   ✅ Mode prestataire UNIQUEMENT si pe=...
-   ✅ Sinon rid+code = mode prescripteur (dossier)
+   INIT (IMPORTANT FIX)
+   ✅ Provider mode ONLY if pe is present
+   ✅ Otherwise rid+code is prescriber view of an existing thread
 ========================= */
 (function init(){
   const { rid, code, pe } = getHashParams();
 
-  // Si on a rid+code => on est sur un dossier
   if(rid && code){
     RID = rid;
     CODE = code;
 
-    // ✅ Prestataire uniquement si pe est présent
+    // Provider mode only if pe exists
     if(pe && pe.trim()){
       PROVIDER_EMAIL = decodeURIComponent(pe).trim().toLowerCase();
       $("prescriberUI").style.display = "none";
@@ -803,12 +739,10 @@ async function submitPrescriberResponse(){
       return;
     }
 
-    // ✅ Sinon: Prescripteur (dossier)
+    // Prescriber view for existing request
     PROVIDER_EMAIL = "";
     $("prescriberUI").style.display = "block";
     $("providerUI").style.display = "none";
-
-    // Comme on est sur un dossier existant, on affiche les blocs utiles
     $("sendBox").style.display = "block";
     $("prescriberReplyBox").style.display = "block";
     renderProviders();
@@ -816,7 +750,7 @@ async function submitPrescriberResponse(){
     return;
   }
 
-  // Racine: prescripteur (création)
+  // Root prescriber
   $("prescriberUI").style.display = "block";
   $("providerUI").style.display = "none";
   renderProviders();
