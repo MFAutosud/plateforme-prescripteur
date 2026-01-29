@@ -156,7 +156,35 @@
     <div id="respStatus" class="hint"></div>
   </div>
 </div>
+// =========================
+// ADMIN : ouvrir une demande
+// =========================
+async function adminOpen(requestId){
+  const { res, data } = await fetchJson(
+    `${SUPABASE_URL}/functions/v1/get-admin-link`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        request_id: requestId,
+        admin_email: PRESCRIBER_EMAIL
+      })
+    }
+  );
 
+  if(!res.ok || !data?.link){
+    alert("Impossible d’ouvrir la demande");
+    console.log(data);
+    return;
+  }
+
+  // Ouvre la conversation dans un nouvel onglet
+  window.open(data.link, "_blank");
+}
 <script>
 /* =========================
    CONFIG
@@ -369,8 +397,13 @@ function renderProviders(){
       <div class="providerRow">
         <input type="checkbox" class="providerCheck" data-email="${escHtml(p.email)}">
         <span>${escHtml(label)}</span>
-        <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
-      </div>
+        <button class="small secondary" onclick="adminOpen('${r.id}')">
+  Ouvrir
+</button>
+
+<button class="small secondary" onclick="adminDelete('${r.id}')">
+  Supprimer
+</button>
     `;
   }).join("");
 }
