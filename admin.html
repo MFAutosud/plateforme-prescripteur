@@ -29,6 +29,12 @@
     .muted{opacity:.65}
     .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
     @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
+
+    /* checkbox column */
+    .selCell{width:44px;text-align:center}
+    .selCell input{transform:scale(1.15)}
+    .bulkBar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    .bulkBar .spacer{margin-left:auto}
   </style>
 </head>
 <body>
@@ -70,6 +76,20 @@
       <button class="secondary" onclick="exportCSV()">⬇️ Export CSV</button>
     </div>
 
+    <!-- ✅ Actions bulk -->
+    <div class="bulkBar">
+      <button class="secondary" onclick="toggleSelectAll(true)">✅ Tout cocher</button>
+      <button class="secondary" onclick="toggleSelectAll(false)">⬜ Tout décocher</button>
+
+      <button onclick="bulkArchive()">🗄️ Archiver sélection</button>
+      <button class="secondary" onclick="bulkUnarchive()">↩️ Désarchiver sélection</button>
+
+      <button class="secondary" onclick="bulkSoftDelete()">🧹 Suppr. RGPD sélection</button>
+      <button class="secondary" onclick="bulkRestore()">♻️ Restaurer sélection</button>
+
+      <div class="spacer hint" id="bulkStatus"></div>
+    </div>
+
     <div id="status" class="hint"></div>
   </div>
 
@@ -77,6 +97,10 @@
     <table>
       <thead>
         <tr>
+          <!-- ✅ new select-all header checkbox -->
+          <th class="selCell">
+            <input type="checkbox" id="selectAll" onclick="toggleHeaderSelectAll()">
+          </th>
           <th>Client</th>
           <th>Véhicule</th>
           <th>Créée</th>
@@ -128,9 +152,89 @@ function pillDeal(v){
 
 let CACHE = [];
 
+/* =========================
+   BULK SELECTION
+========================= */
+function getSelectedIds(){
+  return Array.from(document.querySelectorAll(".rowSelect:checked"))
+    .map(cb => cb.getAttribute("data-id"))
+    .filter(Boolean);
+}
+
+function setBulkStatus(msg){
+  const el = $("bulkStatus");
+  if(!el) return;
+  el.textContent = msg || "";
+}
+
+function syncSelectAllHeader(){
+  const all = Array.from(document.querySelectorAll(".rowSelect"));
+  const checked = all.filter(x => x.checked);
+  const h = $("selectAll");
+  if(h) h.checked = (all.length > 0 && checked.length === all.length);
+  setBulkStatus(`✅ ${checked.length} sélectionnée(s)`);
+}
+
+function toggleSelectAll(checked){
+  document.querySelectorAll(".rowSelect").forEach(cb => cb.checked = checked);
+  const h = $("selectAll");
+  if(h) h.checked = checked;
+  setBulkStatus(checked ? "✅ Tout coché" : "⬜ Tout décoché");
+}
+
+function toggleHeaderSelectAll(){
+  const h = $("selectAll");
+  toggleSelectAll(!!h?.checked);
+}
+
+async function updateReq(body){
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-update-request`, body);
+  if(!res.ok){
+    alert("Erreur: " + JSON.stringify(data, null, 2));
+    return false;
+  }
+  return true;
+}
+
+async function bulkAction(actionName, confirmText){
+  const ids = getSelectedIds();
+  if(ids.length === 0){ setBulkStatus("❌ Aucune sélection"); return; }
+  if(confirmText && !confirm(confirmText.replace("{n}", String(ids.length)))) return;
+
+  setBulkStatus("Traitement…");
+
+  for(const id of ids){
+    const ok = await updateReq({ request_id: id, action: actionName });
+    if(!ok){
+      setBulkStatus("❌ Erreur (voir popup)");
+      return;
+    }
+  }
+  setBulkStatus(`✅ OK (${ids.length})`);
+  refresh();
+}
+
+async function bulkArchive(){
+  return bulkAction("archive", "Archiver {n} demande(s) ?");
+}
+async function bulkUnarchive(){
+  return bulkAction("unarchive", "Désarchiver {n} demande(s) ?");
+}
+async function bulkSoftDelete(){
+  return bulkAction("soft_delete", "Soft delete RGPD de {n} demande(s) ? (masque la demande)");
+}
+async function bulkRestore(){
+  return bulkAction("restore", "Restaurer {n} demande(s) ?");
+}
+
+/* =========================
+   DASHBOARD
+========================= */
 async function refresh(){
   $("status").textContent = "Chargement…";
   $("rows").innerHTML = "";
+  setBulkStatus("");
+  const h = $("selectAll"); if(h) h.checked = false;
 
   const body = {
     q: ($("q").value || "").trim(),
@@ -156,13 +260,15 @@ function renderTable(rows){
   $("rows").innerHTML = rows.map(r => {
     const invited = r.invited_count ?? 0;
     const responded = r.responded_count ?? 0;
-    const rel = (r.reminders_enabled === false) ? '<span class="pill bad">OFF</span>' : '<span class="pill.ok pill ok">ON</span>';
 
     const archiveInfo = r.archived_at ? `<div class="muted">Archivé: ${fmt(r.archived_at)}</div>` : "";
     const delInfo = r.deleted_at ? `<div class="muted">Supprimé: ${fmt(r.deleted_at)}</div>` : "";
 
     return `
       <tr>
+        <td class="selCell">
+          <input type="checkbox" class="rowSelect" data-id="${esc(r.id)}" onchange="syncSelectAllHeader()">
+        </td>
         <td><div style="font-weight:700">${esc(r.client_name)}</div>${archiveInfo}${delInfo}</td>
         <td>${esc(r.vehicle)}</td>
         <td>${fmt(r.created_at)}</td>
@@ -187,6 +293,8 @@ function renderTable(rows){
       </tr>
     `;
   }).join("");
+
+  syncSelectAllHeader();
 }
 
 async function openRequest(requestId){
@@ -197,15 +305,6 @@ async function openRequest(requestId){
     return;
   }
   window.open(data.link, "_blank");
-}
-
-async function updateReq(body){
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-update-request`, body);
-  if(!res.ok){
-    alert("Erreur: " + JSON.stringify(data, null, 2));
-    return false;
-  }
-  return true;
 }
 
 async function setDeal(request_id, deal_status){ if(await updateReq({ request_id, action:"set_status", deal_status })) refresh(); }
