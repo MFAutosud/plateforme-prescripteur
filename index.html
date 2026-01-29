@@ -632,7 +632,7 @@ async function loadThread(){
 
 /* =========================
    SUBMIT RESPONSE - PROVIDER
-   ✅ Notifie MF Autosud à chaque réponse (infini)
+   ✅ author_role + notifications infinies
 ========================= */
 async function submitProviderResponse(){
   const msg = ($("respMsg").value || "").trim();
@@ -666,8 +666,14 @@ async function submitProviderResponse(){
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
+
+      // ✅ IMPORTANT pour ton Edge Function
+      author_role: "provider",
+
       responder_name: "Prestataire",
       responder_email: PROVIDER_EMAIL,
+      provider_email: PROVIDER_EMAIL,
+
       message: msg,
       files
     })
@@ -687,7 +693,7 @@ async function submitProviderResponse(){
 
 /* =========================
    SUBMIT RESPONSE - PRESCRIBER
-   ✅ Notifie tous les prestataires invités (infini)
+   ✅ author_role + notifications à tous les prestataires invités
 ========================= */
 async function submitPrescriberResponse(){
   const msg = ($("prescMsg").value || "").trim();
@@ -717,8 +723,14 @@ async function submitPrescriberResponse(){
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
+
+      // ✅ IMPORTANT pour ton Edge Function
+      author_role: "prescriber",
+
       responder_name: "MF Auto Sud",
-      responder_email: "",               // IMPORTANT: vide = "vous"
+      // ✅ vide = affichage "Vous" côté UI
+      responder_email: "",
+
       message: msg,
       files
     })
@@ -737,25 +749,41 @@ async function submitPrescriberResponse(){
 }
 
 /* =========================
-   INIT
+   INIT (FIX)
+   ✅ Mode prestataire UNIQUEMENT si pe=...
+   ✅ Sinon rid+code = mode prescripteur (dossier)
 ========================= */
 (function init(){
   const { rid, code, pe } = getHashParams();
 
+  // Si on a rid+code => on est sur un dossier
   if(rid && code){
-    // Provider mode
     RID = rid;
     CODE = code;
-    PROVIDER_EMAIL = (pe || "").trim().toLowerCase();
 
-    $("prescriberUI").style.display = "none";
-    $("providerUI").style.display = "block";
+    // ✅ Prestataire uniquement si pe est présent
+    if(pe && pe.trim()){
+      PROVIDER_EMAIL = decodeURIComponent(pe).trim().toLowerCase();
+      $("prescriberUI").style.display = "none";
+      $("providerUI").style.display = "block";
+      loadThread();
+      return;
+    }
 
+    // ✅ Sinon: Prescripteur (dossier)
+    PROVIDER_EMAIL = "";
+    $("prescriberUI").style.display = "block";
+    $("providerUI").style.display = "none";
+
+    // Comme on est sur un dossier existant, on affiche les blocs utiles
+    $("sendBox").style.display = "block";
+    $("prescriberReplyBox").style.display = "block";
+    renderProviders();
     loadThread();
     return;
   }
 
-  // Prescriber mode
+  // Racine: prescripteur (création)
   $("prescriberUI").style.display = "block";
   $("providerUI").style.display = "none";
   renderProviders();
