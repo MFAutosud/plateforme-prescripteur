@@ -147,20 +147,19 @@ La réponse :
     <div id="threadProvider" style="margin-top:10px"></div>
   </div>
 
-  <!-- ✅ NOUVEAU : Transférer -->
-  <div class="box" id="forwardBox">
+  <!-- ✅ UNIQUE bloc transfert (1 seul) -->
+  <div class="box">
     <h2>Transférer à un collègue</h2>
+    <div class="hint">Ex : chef des ventes → vendeur. Le nouveau destinataire recevra un email + MF Auto Sud sera notifié.</div>
 
-    <label>Email du collègue</label>
-    <input id="forwardEmail" placeholder="vendeur@entreprise.com">
+    <label>Email du nouveau destinataire</label>
+    <input id="forwardTo" placeholder="vendeur@domaine.com">
 
     <label>Note (optionnel)</label>
     <textarea id="forwardNote" style="height:90px" placeholder="Ex : Peux-tu traiter ce dossier, merci !"></textarea>
 
-    <button onclick="forwardToColleague()">Transférer</button>
+    <button class="secondary" onclick="forwardRequest()">Transférer</button>
     <div id="forwardStatus" class="hint"></div>
-
-    <div class="hint">Après transfert : le collègue + MF Auto Sud reçoivent un email.</div>
   </div>
 
   <div class="box">
@@ -633,10 +632,10 @@ async function loadThread(){
 /* =========================
    TRANSFER (forward-request)
 ========================= */
-async function forwardToColleague(){
-  const to_email = ($("forwardEmail").value || "").trim().toLowerCase();
-  const note = ($("forwardNote").value || "").trim();
+async function forwardRequest(){
   const statusEl = $("forwardStatus");
+  const toEmail = ($("forwardTo").value || "").trim().toLowerCase();
+  const note = ($("forwardNote").value || "").trim();
 
   if(!RID || !CODE){
     statusEl.textContent = "❌ Lien invalide (rid/code).";
@@ -646,8 +645,12 @@ async function forwardToColleague(){
     statusEl.textContent = "❌ Lien prestataire incomplet (pe=...).";
     return;
   }
-  if(!to_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to_email)){
-    statusEl.textContent = "❌ Email collègue invalide.";
+  if(!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)){
+    statusEl.textContent = "❌ Email invalide.";
+    return;
+  }
+  if(toEmail === PROVIDER_EMAIL){
+    statusEl.textContent = "❌ Email identique : choisis un autre destinataire.";
     return;
   }
 
@@ -664,7 +667,7 @@ async function forwardToColleague(){
       request_id: RID,
       access_code: CODE,
       from_email: PROVIDER_EMAIL,
-      to_email,
+      to_email: toEmail,
       note
     })
   });
@@ -675,8 +678,8 @@ async function forwardToColleague(){
     return;
   }
 
-  statusEl.textContent = "✅ Transféré ! Le collègue + MF Auto Sud ont été notifiés.";
-  $("forwardEmail").value = "";
+  statusEl.textContent = "✅ Transfert effectué.\nLe nouveau destinataire + MF Auto Sud ont reçu un email.";
+  $("forwardTo").value = "";
   $("forwardNote").value = "";
 }
 
