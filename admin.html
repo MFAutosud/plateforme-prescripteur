@@ -1,154 +1,276 @@
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<title>Admin – MF Auto Sud</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-body{font-family:Arial;background:#0b1220;color:#fff;padding:24px}
-h1{color:#4da3ff}
-.box{background:#111c34;padding:16px;border-radius:12px;margin-bottom:16px}
-input,select,textarea{padding:8px;border-radius:8px;border:1px solid #2b3a5a;background:#0b1220;color:#fff}
-button{padding:8px 12px;border-radius:8px;border:0;background:#4da3ff;color:#000;font-weight:bold;cursor:pointer}
-button.secondary{background:#334155;color:#fff}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px;border-bottom:1px solid #1f2a44;text-align:left;font-size:14px}
-tr:hover{background:#0b1220}
-.badge{padding:3px 8px;border-radius:999px;font-size:12px}
-.en-cours{background:#2563eb}
-.vendu{background:#16a34a}
-.perdu{background:#dc2626}
-.archive{background:#6b7280}
-.small{font-size:12px;opacity:.8}
-</style>
+  <meta charset="utf-8">
+  <title>MF Auto Sud — Dashboard Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body{font-family:Arial;background:#0b1220;color:#fff;padding:24px}
+    h1{color:#4da3ff;margin:0 0 10px}
+    .sub{opacity:.75;margin:0 0 18px}
+    .box{background:#111c34;padding:16px;border-radius:12px;margin-bottom:14px;border:1px solid rgba(255,255,255,.06)}
+    label{display:block;margin-top:10px;opacity:.9;font-size:13px}
+    input,select{width:100%;padding:10px;border-radius:10px;border:1px solid #2b3a5a;background:#0b1220;color:#fff}
+    button{padding:10px 12px;border-radius:10px;border:0;background:#4da3ff;color:#001;cursor:pointer;font-weight:700}
+    button.secondary{background:#334155;color:#fff}
+    button.small{padding:8px 10px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .hint{opacity:.75;font-size:12px;margin-top:8px;white-space:pre-wrap}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top;font-size:13px}
+    thead th{border-bottom:1px solid rgba(255,255,255,.15);text-align:left;position:sticky;top:0;background:#111c34;z-index:2}
+    .pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;background:#24365f}
+    .pill.ok{background:#0f766e}
+    .pill.warn{background:#b45309}
+    .pill.bad{background:#b91c1c}
+    a{color:#7cc0ff}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .muted{opacity:.65}
+    .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
+  </style>
 </head>
-
 <body>
+  <h1>Dashboard Admin — MF Auto Sud</h1>
+  <p class="sub">Vue globale, statuts, filtres, archivage RGPD, export Excel.</p>
 
-<h1>Dashboard Admin – MF Auto Sud</h1>
+  <div class="box">
+    <div class="grid">
+      <div>
+        <label>Token admin (ADMIN_TOKEN)</label>
+        <input id="adminToken" placeholder="Colle ton ADMIN_TOKEN (Supabase Secrets)">
+        <div class="hint">Le token est mémorisé dans ton navigateur.</div>
+      </div>
+      <div>
+        <label>Recherche (client ou véhicule)</label>
+        <input id="q" placeholder="Ex: COTE SANTE / Ford Puma…">
+      </div>
+      <div>
+        <label>Statut commercial</label>
+        <select id="deal">
+          <option value="">Tous</option>
+          <option value="en_cours">En cours</option>
+          <option value="vendu">Vendu</option>
+          <option value="perdu">Perdu</option>
+        </select>
+      </div>
+    </div>
 
-<div class="box">
-  <input id="search" placeholder="🔍 Recherche client / véhicule / email" style="width:40%">
-  <select id="filterStatus">
-    <option value="">Tous les statuts</option>
-    <option value="en_cours">En cours</option>
-    <option value="vendu">Vendu</option>
-    <option value="perdu">Perdu</option>
-    <option value="archive">Archivé</option>
-  </select>
-  <button onclick="load()">Actualiser</button>
-  <button class="secondary" onclick="exportCSV()">Exporter Excel</button>
-</div>
+    <div class="row" style="margin-top:12px">
+      <label style="display:flex;gap:10px;align-items:center;margin:0">
+        <input id="inclArchived" type="checkbox" style="width:auto"> Inclure archives
+      </label>
+      <label style="display:flex;gap:10px;align-items:center;margin:0">
+        <input id="inclDeleted" type="checkbox" style="width:auto"> Inclure supprimés
+      </label>
 
-<div class="box">
-<table>
-<thead>
-<tr>
-<th>Client</th>
-<th>Véhicule</th>
-<th>Statut</th>
-<th>Dernière maj</th>
-<th>Actions</th>
-</tr>
-</thead>
-<tbody id="rows"></tbody>
-</table>
-</div>
+      <button onclick="refresh()">🔄 Rafraîchir</button>
+      <button class="secondary" onclick="exportExcel()">⬇️ Export Excel</button>
+      <button class="secondary" onclick="exportCSV()">⬇️ Export CSV</button>
+    </div>
+
+    <div id="status" class="hint"></div>
+  </div>
+
+  <div class="box" style="padding:0;overflow:auto;max-height:70vh">
+    <table>
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Véhicule</th>
+          <th>Créée</th>
+          <th>Invités</th>
+          <th>Réponses</th>
+          <th>Dernière réponse</th>
+          <th>Statut</th>
+          <th>Relances</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
 
 <script>
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
-const ADMIN_TOKEN = prompt("🔐 Token admin MF Auto Sud");
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
 
-let DATA = [];
+function $(id){ return document.getElementById(id); }
+function fmt(iso){ return iso ? new Date(iso).toLocaleString("fr-FR") : "—"; }
+function esc(s){ return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
 
-async function api(body){
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-api`,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "Authorization":"Bearer "+ADMIN_TOKEN
+function saveToken(){ localStorage.setItem("mf_admin_token", $("adminToken").value.trim()); }
+function loadToken(){ $("adminToken").value = localStorage.getItem("mf_admin_token") || ""; }
+
+async function fetchJson(url, body){
+  const token = $("adminToken").value.trim();
+  saveToken();
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json",
+      "x-admin-token": token
     },
-    body:JSON.stringify(body)
+    body: JSON.stringify(body || {})
   });
-  return res.json();
+  const data = await res.json().catch(()=>null);
+  return { res, data };
 }
 
-async function load(){
-  const search = document.getElementById("search").value.toLowerCase();
-  const status = document.getElementById("filterStatus").value;
-
-  const r = await api({action:"list"});
-  if(!r.ok){ alert("Erreur chargement"); return; }
-
-  DATA = r.data.filter(x=>{
-    if(status && x.deal_status!==status) return false;
-    if(search){
-      const s = (x.client_name+x.vehicle).toLowerCase();
-      return s.includes(search);
-    }
-    return true;
-  });
-
-  render();
+function pillDeal(v){
+  if(v === "vendu") return '<span class="pill ok">Vendu</span>';
+  if(v === "perdu") return '<span class="pill bad">Perdu</span>';
+  return '<span class="pill warn">En cours</span>';
 }
 
-function render(){
-  const el = document.getElementById("rows");
-  el.innerHTML = "";
-  DATA.forEach(d=>{
-    el.innerHTML += `
+let CACHE = [];
+
+async function refresh(){
+  $("status").textContent = "Chargement…";
+  $("rows").innerHTML = "";
+
+  const body = {
+    q: ($("q").value || "").trim(),
+    deal_status: $("deal").value,
+    include_archived: $("inclArchived").checked,
+    include_deleted: $("inclDeleted").checked,
+    limit: 500
+  };
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-admin-dashboard`, body);
+
+  if(!res.ok){
+    $("status").textContent = "❌ Erreur: " + JSON.stringify(data, null, 2);
+    return;
+  }
+
+  CACHE = data.rows || [];
+  $("status").textContent = `✅ ${CACHE.length} demandes affichées`;
+  renderTable(CACHE);
+}
+
+function renderTable(rows){
+  $("rows").innerHTML = rows.map(r => {
+    const invited = r.invited_count ?? 0;
+    const responded = r.responded_count ?? 0;
+    const rel = (r.reminders_enabled === false) ? '<span class="pill bad">OFF</span>' : '<span class="pill.ok pill ok">ON</span>';
+
+    const archiveInfo = r.archived_at ? `<div class="muted">Archivé: ${fmt(r.archived_at)}</div>` : "";
+    const delInfo = r.deleted_at ? `<div class="muted">Supprimé: ${fmt(r.deleted_at)}</div>` : "";
+
+    return `
       <tr>
-        <td><strong>${d.client_name}</strong></td>
-        <td>${d.vehicle}</td>
-        <td><span class="badge ${d.deal_status}">
-          ${label(d.deal_status)}
-        </span></td>
-        <td class="small">${new Date(d.updated_at).toLocaleDateString()}</td>
+        <td><div style="font-weight:700">${esc(r.client_name)}</div>${archiveInfo}${delInfo}</td>
+        <td>${esc(r.vehicle)}</td>
+        <td>${fmt(r.created_at)}</td>
+        <td>${invited}</td>
+        <td>${responded}</td>
+        <td>${fmt(r.last_response_at)}</td>
+        <td>${pillDeal(r.deal_status)}</td>
+        <td>${(r.reminders_enabled === false) ? '<span class="pill bad">OFF</span>' : '<span class="pill ok">ON</span>'}</td>
         <td>
-          <button onclick="openDeal('${d.id}')">Ouvrir</button>
-          <button class="secondary" onclick="setStatus('${d.id}','vendu')">Vendu</button>
-          <button class="secondary" onclick="setStatus('${d.id}','perdu')">Perdu</button>
-          <button class="secondary" onclick="setStatus('${d.id}','archive')">Archiver</button>
+          <div class="actions">
+            <button class="small secondary" onclick="openRequest('${r.id}')">Ouvrir</button>
+            <button class="small" onclick="setDeal('${r.id}','en_cours')">En cours</button>
+            <button class="small" onclick="setDeal('${r.id}','vendu')">Vendu</button>
+            <button class="small" onclick="setDeal('${r.id}','perdu')">Perdu</button>
+            <button class="small secondary" onclick="toggleRem('${r.id}', ${r.reminders_enabled === false ? "true" : "false"})">${r.reminders_enabled === false ? "Relances ON" : "Relances OFF"}</button>
+            <button class="small secondary" onclick="archive('${r.id}')">Archiver</button>
+            <button class="small secondary" onclick="unarchive('${r.id}')">Désarchiver</button>
+            <button class="small secondary" onclick="softDelete('${r.id}')">Suppr. RGPD</button>
+            <button class="small secondary" onclick="restore('${r.id}')">Restaurer</button>
+          </div>
         </td>
       </tr>
     `;
-  });
+  }).join("");
 }
 
-function label(s){
-  return {
-    en_cours:"En cours",
-    vendu:"Vendu",
-    perdu:"Perdu",
-    archive:"Archivé"
-  }[s] || s;
+async function openRequest(requestId){
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-admin-link`, { request_id: requestId });
+  if(!res.ok || !data?.link){
+    alert("Impossible d’ouvrir la demande.");
+    console.log(data);
+    return;
+  }
+  window.open(data.link, "_blank");
 }
 
-async function setStatus(id,status){
-  await api({action:"update",request_id:id,deal_status:status});
-  load();
+async function updateReq(body){
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-update-request`, body);
+  if(!res.ok){
+    alert("Erreur: " + JSON.stringify(data, null, 2));
+    return false;
+  }
+  return true;
 }
 
-async function openDeal(id){
-  const r = await api({action:"link",request_id:id});
-  if(r.link) window.open(r.link,"_blank");
+async function setDeal(request_id, deal_status){ if(await updateReq({ request_id, action:"set_status", deal_status })) refresh(); }
+async function archive(request_id){ if(await updateReq({ request_id, action:"archive" })) refresh(); }
+async function unarchive(request_id){ if(await updateReq({ request_id, action:"unarchive" })) refresh(); }
+async function softDelete(request_id){
+  if(!confirm("Soft delete RGPD ? (masque la demande sans la supprimer physiquement)")) return;
+  if(await updateReq({ request_id, action:"soft_delete" })) refresh();
 }
+async function restore(request_id){ if(await updateReq({ request_id, action:"restore" })) refresh(); }
+async function toggleRem(request_id, enable){ if(await updateReq({ request_id, action:"set_reminders", reminders_enabled: !!enable })) refresh(); }
 
 function exportCSV(){
-  let csv="Client;Véhicule;Statut\n";
-  DATA.forEach(d=>{
-    csv+=`${d.client_name};${d.vehicle};${label(d.deal_status)}\n`;
-  });
-  const blob=new Blob([csv],{type:"text/csv"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="mfautosud_affaires.csv";
+  const rows = CACHE.map(r => ({
+    created_at: r.created_at,
+    client_name: r.client_name,
+    vehicle: r.vehicle,
+    deal_status: r.deal_status,
+    invited_count: r.invited_count,
+    responded_count: r.responded_count,
+    last_response_at: r.last_response_at,
+    reminders_enabled: r.reminders_enabled,
+    archived_at: r.archived_at,
+    deleted_at: r.deleted_at
+  }));
+
+  const header = Object.keys(rows[0] || {}).join(",");
+  const lines = rows.map(obj => Object.values(obj).map(v => `"${String(v ?? "").replaceAll('"','""')}"`).join(","));
+  const csv = [header, ...lines].join("\n");
+
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "mfautosud_demandes.csv";
   a.click();
+  URL.revokeObjectURL(url);
 }
 
-load();
-</script>
+function exportExcel(){
+  const rows = CACHE.map(r => ({
+    "Créée": fmt(r.created_at),
+    "Client": r.client_name,
+    "Véhicule": r.vehicle,
+    "Statut": r.deal_status,
+    "Invités": r.invited_count ?? 0,
+    "Réponses": r.responded_count ?? 0,
+    "Dernière réponse": r.last_response_at ? fmt(r.last_response_at) : "",
+    "Relances": (r.reminders_enabled === false) ? "OFF" : "ON",
+    "Archivé le": r.archived_at ? fmt(r.archived_at) : "",
+    "Supprimé le": r.deleted_at ? fmt(r.deleted_at) : ""
+  }));
 
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, "Demandes");
+  XLSX.writeFile(wb, "mfautosud_demandes.xlsx");
+}
+
+loadToken();
+["q","deal","inclArchived","inclDeleted"].forEach(id => {
+  const el = $(id);
+  if(el) el.addEventListener("input", () => refresh());
+});
+refresh();
+</script>
 </body>
 </html>
