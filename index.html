@@ -629,6 +629,209 @@ async function loadThread(){
   }
 }
 
+  /* =========================
+   VENDORS DIRECTORY (localStorage par chef des ventes)
+   => clé basée sur PROVIDER_EMAIL
+========================= */
+function vendorKey(){
+  return `mfautosud_vendors_${(PROVIDER_EMAIL || "unknown").toLowerCase()}`;
+}
+
+function vendorLoad(){
+  try{
+    const raw = localStorage.getItem(vendorKey());
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch{ return []; }
+}
+
+function vendorSave(arr){
+  localStorage.setItem(vendorKey(), JSON.stringify(arr));
+}
+
+function vendorEmailValid(e){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase());
+}
+
+function vendorExtract(line){
+  const s = (line || "").trim();
+  if(!s) return null;
+
+  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
+  if(m){
+    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
+    const email = (m[2] || "").trim().toLowerCase();
+    return { name, email };
+  }
+
+  const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
+  if(vendorEmailValid(only)) return { name:"", email: only };
+
+  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if(em) return { name:"", email: em[0].toLowerCase() };
+
+  return null;
+}
+
+function vendorRender(){
+  const el = $("vendorList");
+  if(!el) return;
+
+  if(!PROVIDER_EMAIL){
+    el.innerHTML = `<div class="hint">⚠️ Répertoire disponible uniquement via un lien prestataire (pe=...)</div>`;
+    return;
+  }
+
+  const vendors = vendorLoad();
+  if(!vendors.length){
+    el.innerHTML = `<div class="hint">Aucun vendeur enregistré.</div>`;
+    return;
+  }
+
+  el.innerHTML = vendors.map((v, idx) => {
+    const label = v.name ? `${v.name} — ${v.email}` : v.email;
+    return `
+      <div class="providerRow">
+        <input type="checkbox" class="vendorCheck" data-email="${escHtml(v.email)}">
+        <span>${escHtml(label)}</span>
+        <button class="small secondary" onclick="vendorRemove(${idx})">Suppr.</button>
+      </div>
+    `;
+  }).join("");
+}
+
+function vendorAdd(){
+  const email = normalizeEmail($("vendorEmail").value);
+  const name = ($("vendorName").value || "").trim();
+
+  if(!PROVIDER_EMAIL){ alert("Ouvre via le lien prestataire (pe=...)"); return; }
+  if(!vendorEmailValid(email)){ alert("Email vendeur invalide."); return; }
+
+  const vendors = vendorLoad();
+  if(vendors.some(x => normalizeEmail(x.email) === email)){
+    alert("Déjà enregistré.");
+    return;
+  }
+
+  vendors.push({ name, email });
+  vendorSave(vendors);
+
+  $("vendorEmail").value = "";
+  $("vendorName").value = "";
+  vendorRender();
+}
+
+function vendorRemove(idx){
+  const vendors = vendorLoad();
+  vendors.splice(idx, 1);
+  vendorSave(vendors);
+  vendorRender();
+}
+
+function vendorImport(){
+  if(!PROVIDER_EMAIL){ alert("Ouvre via le lien prestataire (pe=...)"); return; }
+
+  const raw = ($("vendorImport").value || "").replace(/\r/g,"").trim();
+  if(!raw){ alert("Colle une liste."); return; }
+
+  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
+  const vendors = vendorLoad();
+  const existing = new Set(vendors.map(v => normalizeEmail(v.email)));
+
+  let added=0, ignored=0;
+
+  for(const line of lines){
+    const p = vendorExtract(line);
+    if(!p || !vendorEmailValid(p.email)){ ignored++; continue; }
+    if(existing.has(p.email)){ ignored++; continue; }
+    vendors.push({ name: p.name || "", email: p.email });
+    existing.add(p.email);
+    added++;
+  }
+
+  vendorSave(vendors);
+  vendorRender();
+  alert(`Import terminé: +${added} ajoutés / ${ignored} ignorés`);
+}
+
+async function vendorExport(){
+  const vendors = vendorLoad();
+  const lines = vendors.map(v => v.name ? `${v.name} <${v.email}>` : v.email).join("\n");
+  await navigator.clipboard.writeText(lines || "");
+  alert("Répertoire vendeurs copié dans le presse-papiers.");
+}
+
+function vendorClear(){
+  if(!confirm("Supprimer tout le répertoire vendeurs de ce chef des ventes (local) ?")) return;
+  vendorSave([]);
+  vendorRender();
+}
+
+function vendorCheckAll(on){
+  document.querySelectorAll(".vendorCheck").forEach(c => c.checked = !!on);
+}
+
+/* =========================
+   TRANSFER (forward-request)
+========================= */
+async function forwardToSelectedVendors(){
+  const statusEl = $("forwardStatus");
+  if(!statusEl) return;
+
+  if(!RID || !CODE){
+    statusEl.textContent = "❌ Lien invalide (rid/code).";
+    return;
+  }
+  if(!PROVIDER_EMAIL){
+    statusEl.textContent = "❌ Lien prestataire incomplet (pe=...).";
+    return;
+  }
+
+  const note = ($("forwardNote").value || "").trim();
+  const checks = Array.from(document.querySelectorAll(".vendorCheck:checked"));
+  const emails = checks.map(c => (c.getAttribute("data-email")||"").trim().toLowerCase()).filter(Boolean);
+
+  if(!emails.length){
+    statusEl.textContent = "❌ Coche au moins 1 vendeur dans le répertoire.";
+    return;
+  }
+
+  statusEl.textContent = "Transfert en cours…";
+
+  const results = { ok: 0, fail: 0, errors: [] };
+
+  for(const to_email of emails){
+    const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/forward-request`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        request_id: RID,
+        access_code: CODE,
+        from_email: PROVIDER_EMAIL,
+        to_email,
+        note
+      })
+    });
+
+    if(!res.ok){
+      console.log("forward-request failed:", res.status, data);
+      results.fail++;
+      results.errors.push({ to_email, data });
+    } else {
+      results.ok++;
+    }
+  }
+
+  statusEl.textContent =
+    `✅ Transferts terminés.\nOK: ${results.ok} / Erreurs: ${results.fail}` +
+    (results.fail ? `\nDétails (console).` : "");
+
+  $("forwardNote").value = "";
+}
 /* =========================
    TRANSFER (forward-request)
 ========================= */
