@@ -1,268 +1,154 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <title>MF Auto Sud — Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body{font-family:Arial;background:#0b1220;color:#fff;padding:24px}
-    h1{color:#4da3ff;margin:0 0 18px}
-    .box{background:#111c34;padding:16px;border-radius:10px;margin-bottom:18px}
-    input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2b3a5a;background:#0b1220;color:#fff}
-    button{padding:10px 12px;border-radius:10px;border:0;background:#4da3ff;color:#000;font-weight:bold;cursor:pointer}
-    button.secondary{background:#334155;color:#fff}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .hint{opacity:.75;font-size:12px;margin-top:6px;white-space:pre-wrap}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.10);vertical-align:top}
-    thead th{border-bottom:1px solid rgba(255,255,255,.20);text-align:left}
-    a{color:#7cc0ff}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;background:#24365f}
-    .mini{font-size:12px;opacity:.8}
-  </style>
+<meta charset="utf-8">
+<title>Admin – MF Auto Sud</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{font-family:Arial;background:#0b1220;color:#fff;padding:24px}
+h1{color:#4da3ff}
+.box{background:#111c34;padding:16px;border-radius:12px;margin-bottom:16px}
+input,select,textarea{padding:8px;border-radius:8px;border:1px solid #2b3a5a;background:#0b1220;color:#fff}
+button{padding:8px 12px;border-radius:8px;border:0;background:#4da3ff;color:#000;font-weight:bold;cursor:pointer}
+button.secondary{background:#334155;color:#fff}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #1f2a44;text-align:left;font-size:14px}
+tr:hover{background:#0b1220}
+.badge{padding:3px 8px;border-radius:999px;font-size:12px}
+.en-cours{background:#2563eb}
+.vendu{background:#16a34a}
+.perdu{background:#dc2626}
+.archive{background:#6b7280}
+.small{font-size:12px;opacity:.8}
+</style>
 </head>
+
 <body>
-  <h1>Dashboard Admin — MF Auto Sud</h1>
 
-  <div class="box">
-    <h2 style="margin:0 0 10px">Connexion</h2>
-    <div class="row">
-      <div style="flex:1;min-width:240px">
-        <label class="mini">ADMIN_TOKEN</label>
-        <input id="token" placeholder="colle ton ADMIN_TOKEN (secret)">
-      </div>
-      <div style="min-width:180px">
-        <label class="mini">Limite</label>
-        <select id="limit">
-          <option value="50">50</option>
-          <option value="100">100</option>
-          <option value="200" selected>200</option>
-          <option value="500">500</option>
-        </select>
-      </div>
-      <div style="min-width:180px;align-self:flex-end">
-        <button onclick="loadAdmin()">Charger</button>
-      </div>
-    </div>
-    <div id="status" class="hint"></div>
-  </div>
+<h1>Dashboard Admin – MF Auto Sud</h1>
 
-  <div class="box" id="filtersBox" style="display:none;">
-    <h2 style="margin:0 0 10px">Filtres</h2>
-    <div class="row">
-      <div style="flex:1;min-width:220px">
-        <input id="f_client" placeholder="Client…">
-      </div>
-      <div style="flex:1;min-width:220px">
-        <input id="f_vehicle" placeholder="Véhicule…">
-      </div>
-      <div style="flex:1;min-width:220px">
-        <input id="f_provider" placeholder="Prestataire (email)…">
-      </div>
-      <div style="min-width:200px">
-        <select id="f_status">
-          <option value="">Deal: tous</option>
-          <option value="open">open</option>
-          <option value="won">won</option>
-          <option value="lost">lost</option>
-        </select>
-      </div>
-      <div style="min-width:160px">
-        <button class="secondary" onclick="resetFilters()">Reset</button>
-      </div>
-    </div>
-    <div id="count" class="hint"></div>
-  </div>
+<div class="box">
+  <input id="search" placeholder="🔍 Recherche client / véhicule / email" style="width:40%">
+  <select id="filterStatus">
+    <option value="">Tous les statuts</option>
+    <option value="en_cours">En cours</option>
+    <option value="vendu">Vendu</option>
+    <option value="perdu">Perdu</option>
+    <option value="archive">Archivé</option>
+  </select>
+  <button onclick="load()">Actualiser</button>
+  <button class="secondary" onclick="exportCSV()">Exporter Excel</button>
+</div>
 
-  <div class="box" id="tableBox" style="display:none;">
-    <h2 style="margin:0 0 10px">Demandes</h2>
-    <div style="overflow:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>Client / Véhicule</th>
-            <th>Invités</th>
-            <th>Réponses</th>
-            <th>Dernière activité</th>
-            <th>Deal</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-  </div>
+<div class="box">
+<table>
+<thead>
+<tr>
+<th>Client</th>
+<th>Véhicule</th>
+<th>Statut</th>
+<th>Dernière maj</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="rows"></tbody>
+</table>
+</div>
 
 <script>
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
+const ADMIN_TOKEN = prompt("🔐 Token admin MF Auto Sud");
 
-let ITEMS = [];
+let DATA = [];
 
-function esc(s){
-  return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
-}
-function baseUrl(){
-  return location.href.replace(/admin\.html.*$/i, "index.html");
-}
-async function fetchJson(url, options){
-  const res = await fetch(url, options);
-  let data = null;
-  try{ data = await res.json(); }catch{}
-  return {res,data};
-}
-
-async function loadAdmin(){
-  const token = document.getElementById("token").value.trim();
-  const limit = document.getElementById("limit").value;
-
-  document.getElementById("status").textContent = "Chargement…";
-
-  const {res,data} = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-dashboard`,{
+async function api(body){
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-api`,{
     method:"POST",
     headers:{
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type":"application/json"
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+ADMIN_TOKEN
     },
-    body: JSON.stringify({ admin_token: token, limit })
+    body:JSON.stringify(body)
+  });
+  return res.json();
+}
+
+async function load(){
+  const search = document.getElementById("search").value.toLowerCase();
+  const status = document.getElementById("filterStatus").value;
+
+  const r = await api({action:"list"});
+  if(!r.ok){ alert("Erreur chargement"); return; }
+
+  DATA = r.data.filter(x=>{
+    if(status && x.deal_status!==status) return false;
+    if(search){
+      const s = (x.client_name+x.vehicle).toLowerCase();
+      return s.includes(search);
+    }
+    return true;
   });
 
-  if(!res.ok){
-    document.getElementById("status").textContent = "❌ Erreur: " + JSON.stringify(data,null,2);
-    return;
-  }
-
-  ITEMS = data.items || [];
-  document.getElementById("status").textContent = `✅ OK: ${ITEMS.length} demandes`;
-  document.getElementById("filtersBox").style.display = "block";
-  document.getElementById("tableBox").style.display = "block";
   render();
-}
-
-function resetFilters(){
-  ["f_client","f_vehicle","f_provider"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("f_status").value="";
-  render();
-}
-
-function matches(item){
-  const qClient = document.getElementById("f_client").value.trim().toLowerCase();
-  const qVeh = document.getElementById("f_vehicle").value.trim().toLowerCase();
-  const qProv = document.getElementById("f_provider").value.trim().toLowerCase();
-  const qStatus = document.getElementById("f_status").value.trim();
-
-  if(qClient && !String(item.client_name||"").toLowerCase().includes(qClient)) return false;
-  if(qVeh && !String(item.vehicle||"").toLowerCase().includes(qVeh)) return false;
-  if(qStatus && String(item.deal_status||"") !== qStatus) return false;
-
-  if(qProv){
-    const providers = (item.providers || []).join(" ").toLowerCase();
-    if(!providers.includes(qProv)) return false;
-  }
-  return true;
-}
-
-async function updateDeal(request_id){
-  const token = document.getElementById("token").value.trim();
-  const status = document.getElementById("deal_"+request_id).value;
-  const notes = document.getElementById("notes_"+request_id).value;
-  const tagsRaw = document.getElementById("tags_"+request_id).value;
-  const valueRaw = document.getElementById("value_"+request_id).value;
-
-  const deal_tags = tagsRaw.split(",").map(x=>x.trim()).filter(Boolean);
-  const deal_value = valueRaw ? Number(valueRaw) : undefined;
-
-  const {res,data} = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-update-request`,{
-    method:"POST",
-    headers:{
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type":"application/json"
-    },
-    body: JSON.stringify({
-      admin_token: token,
-      request_id,
-      deal_status: status,
-      deal_notes: notes,
-      deal_tags,
-      deal_value
-    })
-  });
-
-  if(!res.ok){
-    alert("❌ Update erreur: " + JSON.stringify(data,null,2));
-    return;
-  }
-  alert("✅ Mise à jour OK");
-}
-
-function openThread(item){
-  // lien prescripteur (rid+code, sans pe)
-  const link = `${baseUrl()}#rid=${item.id}&code=${item.access_code}`;
-  window.open(link,"_blank");
 }
 
 function render(){
-  const filtered = ITEMS.filter(matches);
-  document.getElementById("count").textContent = `Affichées: ${filtered.length} (sur ${ITEMS.length})`;
-
-  const tb = document.getElementById("tbody");
-  tb.innerHTML = filtered.map(item=>{
-    const providers = (item.providers || []).slice(0,6).map(p=>`<div class="mini">${esc(p)}</div>`).join("") +
-      ((item.providers||[]).length>6 ? `<div class="mini">… +${(item.providers||[]).length-6}</div>` : "");
-
-    const last = item.last_activity_at ? new Date(item.last_activity_at).toLocaleString("fr-FR") : "—";
-    const lastAuthor = item.last_author ? `<span class="pill">${esc(item.last_author)}</span>` : "";
-
-    const tags = (item.deal_tags || []).join(", ");
-    const notes = item.deal_notes || "";
-    const value = (item.deal_value ?? "");
-
-    return `
+  const el = document.getElementById("rows");
+  el.innerHTML = "";
+  DATA.forEach(d=>{
+    el.innerHTML += `
       <tr>
+        <td><strong>${d.client_name}</strong></td>
+        <td>${d.vehicle}</td>
+        <td><span class="badge ${d.deal_status}">
+          ${label(d.deal_status)}
+        </span></td>
+        <td class="small">${new Date(d.updated_at).toLocaleDateString()}</td>
         <td>
-          <div><strong>${esc(item.client_name || "—")}</strong></div>
-          <div class="mini">${esc(item.vehicle || "—")}</div>
-          <div class="mini">Créée: ${new Date(item.created_at).toLocaleString("fr-FR")}</div>
-          <div style="margin-top:8px">${providers}</div>
-        </td>
-        <td style="text-align:center">${item.invited_count ?? 0}</td>
-        <td style="text-align:center">${item.responded_count ?? 0}</td>
-        <td>${last} ${lastAuthor}</td>
-        <td style="min-width:240px">
-          <div class="row">
-            <select id="deal_${item.id}">
-              <option value="open" ${item.deal_status==="open"?"selected":""}>open</option>
-              <option value="won" ${item.deal_status==="won"?"selected":""}>won</option>
-              <option value="lost" ${item.deal_status==="lost"?"selected":""}>lost</option>
-            </select>
-          </div>
-          <div class="mini" style="margin-top:6px">Valeur (€)</div>
-          <input id="value_${item.id}" value="${esc(value)}" placeholder="ex: 1200">
-          <div class="mini" style="margin-top:6px">Tags (séparés par virgule)</div>
-          <input id="tags_${item.id}" value="${esc(tags)}" placeholder="ex: cupra, pro, urg">
-          <div class="mini" style="margin-top:6px">Notes</div>
-          <textarea id="notes_${item.id}" style="height:70px">${esc(notes)}</textarea>
-          <div class="row" style="margin-top:8px">
-            <button onclick="updateDeal('${item.id}')">Enregistrer</button>
-          </div>
-        </td>
-        <td style="min-width:180px">
-          <div class="row">
-            <button class="secondary" onclick='openThread(${JSON.stringify(item).replaceAll("'","\\'")})'>Ouvrir</button>
-          </div>
-          <div class="mini" style="margin-top:10px">Suppression via ton delete-request (dans index)</div>
+          <button onclick="openDeal('${d.id}')">Ouvrir</button>
+          <button class="secondary" onclick="setStatus('${d.id}','vendu')">Vendu</button>
+          <button class="secondary" onclick="setStatus('${d.id}','perdu')">Perdu</button>
+          <button class="secondary" onclick="setStatus('${d.id}','archive')">Archiver</button>
         </td>
       </tr>
     `;
-  }).join("");
-
-  ["f_client","f_vehicle","f_provider"].forEach(id=>{
-    document.getElementById(id).oninput = render;
   });
-  document.getElementById("f_status").onchange = render;
 }
+
+function label(s){
+  return {
+    en_cours:"En cours",
+    vendu:"Vendu",
+    perdu:"Perdu",
+    archive:"Archivé"
+  }[s] || s;
+}
+
+async function setStatus(id,status){
+  await api({action:"update",request_id:id,deal_status:status});
+  load();
+}
+
+async function openDeal(id){
+  const r = await api({action:"link",request_id:id});
+  if(r.link) window.open(r.link,"_blank");
+}
+
+function exportCSV(){
+  let csv="Client;Véhicule;Statut\n";
+  DATA.forEach(d=>{
+    csv+=`${d.client_name};${d.vehicle};${label(d.deal_status)}\n`;
+  });
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="mfautosud_affaires.csv";
+  a.click();
+}
+
+load();
 </script>
+
 </body>
 </html>
