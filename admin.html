@@ -29,17 +29,12 @@
     .muted{opacity:.65}
     .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
     @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
-
-    /* checkbox column */
-    .selCell{width:44px;text-align:center}
-    .selCell input{transform:scale(1.15)}
-    .bulkBar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
-    .bulkBar .spacer{margin-left:auto}
+    .chk{width:auto;transform:scale(1.05)}
   </style>
 </head>
 <body>
   <h1>Dashboard Admin — MF Auto Sud</h1>
-  <p class="sub">Vue globale, statuts, filtres, archivage RGPD, export Excel.</p>
+  <p class="sub">Vue globale, statuts, filtres, transferts, archivage RGPD, export Excel.</p>
 
   <div class="box">
     <div class="grid">
@@ -65,10 +60,13 @@
 
     <div class="row" style="margin-top:12px">
       <label style="display:flex;gap:10px;align-items:center;margin:0">
-        <input id="inclArchived" type="checkbox" style="width:auto"> Inclure archives
+        <input id="inclArchived" type="checkbox" class="chk"> Inclure archives
       </label>
       <label style="display:flex;gap:10px;align-items:center;margin:0">
-        <input id="inclDeleted" type="checkbox" style="width:auto"> Inclure supprimés
+        <input id="inclDeleted" type="checkbox" class="chk"> Inclure supprimés
+      </label>
+      <label style="display:flex;gap:10px;align-items:center;margin:0">
+        <input id="onlyForwarded" type="checkbox" class="chk"> Transférées uniquement
       </label>
 
       <button onclick="refresh()">🔄 Rafraîchir</button>
@@ -76,18 +74,22 @@
       <button class="secondary" onclick="exportCSV()">⬇️ Export CSV</button>
     </div>
 
-    <!-- ✅ Actions bulk -->
-    <div class="bulkBar">
-      <button class="secondary" onclick="toggleSelectAll(true)">✅ Tout cocher</button>
-      <button class="secondary" onclick="toggleSelectAll(false)">⬜ Tout décocher</button>
+    <hr style="border:0;border-top:1px solid rgba(255,255,255,.12);margin:14px 0">
 
-      <button onclick="bulkArchive()">🗄️ Archiver sélection</button>
-      <button class="secondary" onclick="bulkUnarchive()">↩️ Désarchiver sélection</button>
+    <div class="row">
+      <button class="secondary" onclick="selectAll()">✅ Tout sélectionner</button>
+      <button class="secondary" onclick="selectNone()">🧹 Tout désélectionner</button>
 
-      <button class="secondary" onclick="bulkSoftDelete()">🧹 Suppr. RGPD sélection</button>
-      <button class="secondary" onclick="bulkRestore()">♻️ Restaurer sélection</button>
+      <button onclick="bulkSetDeal('en_cours')">Statut: En cours</button>
+      <button onclick="bulkSetDeal('vendu')">Statut: Vendu</button>
+      <button onclick="bulkSetDeal('perdu')">Statut: Perdu</button>
 
-      <div class="spacer hint" id="bulkStatus"></div>
+      <button class="secondary" onclick="bulkToggleReminders(false)">Relances OFF</button>
+      <button class="secondary" onclick="bulkToggleReminders(true)">Relances ON</button>
+
+      <button class="secondary" onclick="bulkArchive()">Archiver</button>
+      <button class="secondary" onclick="bulkSoftDelete()">Suppr. RGPD</button>
+      <button class="secondary" onclick="bulkRestore()">Restaurer</button>
     </div>
 
     <div id="status" class="hint"></div>
@@ -97,16 +99,14 @@
     <table>
       <thead>
         <tr>
-          <!-- ✅ new select-all header checkbox -->
-          <th class="selCell">
-            <input type="checkbox" id="selectAll" onclick="toggleHeaderSelectAll()">
-          </th>
+          <th style="width:40px"><input type="checkbox" class="chk" id="masterChk" onchange="toggleMaster()"></th>
           <th>Client</th>
           <th>Véhicule</th>
           <th>Créée</th>
           <th>Invités</th>
           <th>Réponses</th>
           <th>Dernière réponse</th>
+          <th>Transfert</th>
           <th>Statut</th>
           <th>Relances</th>
           <th>Actions</th>
@@ -152,95 +152,27 @@ function pillDeal(v){
 
 let CACHE = [];
 
-/* =========================
-   BULK SELECTION
-========================= */
-function getSelectedIds(){
-  return Array.from(document.querySelectorAll(".rowSelect:checked"))
-    .map(cb => cb.getAttribute("data-id"))
-    .filter(Boolean);
+function selectedIds(){
+  return Array.from(document.querySelectorAll(".rowChk:checked")).map(x => x.getAttribute("data-id")).filter(Boolean);
 }
 
-function setBulkStatus(msg){
-  const el = $("bulkStatus");
-  if(!el) return;
-  el.textContent = msg || "";
+function selectAll(){ document.querySelectorAll(".rowChk").forEach(c=>c.checked=true); }
+function selectNone(){ document.querySelectorAll(".rowChk").forEach(c=>c.checked=false); }
+function toggleMaster(){
+  const v = $("masterChk").checked;
+  document.querySelectorAll(".rowChk").forEach(c=>c.checked=v);
 }
 
-function syncSelectAllHeader(){
-  const all = Array.from(document.querySelectorAll(".rowSelect"));
-  const checked = all.filter(x => x.checked);
-  const h = $("selectAll");
-  if(h) h.checked = (all.length > 0 && checked.length === all.length);
-  setBulkStatus(`✅ ${checked.length} sélectionnée(s)`);
-}
-
-function toggleSelectAll(checked){
-  document.querySelectorAll(".rowSelect").forEach(cb => cb.checked = checked);
-  const h = $("selectAll");
-  if(h) h.checked = checked;
-  setBulkStatus(checked ? "✅ Tout coché" : "⬜ Tout décoché");
-}
-
-function toggleHeaderSelectAll(){
-  const h = $("selectAll");
-  toggleSelectAll(!!h?.checked);
-}
-
-async function updateReq(body){
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-update-request`, body);
-  if(!res.ok){
-    alert("Erreur: " + JSON.stringify(data, null, 2));
-    return false;
-  }
-  return true;
-}
-
-async function bulkAction(actionName, confirmText){
-  const ids = getSelectedIds();
-  if(ids.length === 0){ setBulkStatus("❌ Aucune sélection"); return; }
-  if(confirmText && !confirm(confirmText.replace("{n}", String(ids.length)))) return;
-
-  setBulkStatus("Traitement…");
-
-  for(const id of ids){
-    const ok = await updateReq({ request_id: id, action: actionName });
-    if(!ok){
-      setBulkStatus("❌ Erreur (voir popup)");
-      return;
-    }
-  }
-  setBulkStatus(`✅ OK (${ids.length})`);
-  refresh();
-}
-
-async function bulkArchive(){
-  return bulkAction("archive", "Archiver {n} demande(s) ?");
-}
-async function bulkUnarchive(){
-  return bulkAction("unarchive", "Désarchiver {n} demande(s) ?");
-}
-async function bulkSoftDelete(){
-  return bulkAction("soft_delete", "Soft delete RGPD de {n} demande(s) ? (masque la demande)");
-}
-async function bulkRestore(){
-  return bulkAction("restore", "Restaurer {n} demande(s) ?");
-}
-
-/* =========================
-   DASHBOARD
-========================= */
 async function refresh(){
   $("status").textContent = "Chargement…";
   $("rows").innerHTML = "";
-  setBulkStatus("");
-  const h = $("selectAll"); if(h) h.checked = false;
 
   const body = {
     q: ($("q").value || "").trim(),
     deal_status: $("deal").value,
     include_archived: $("inclArchived").checked,
     include_deleted: $("inclDeleted").checked,
+    only_forwarded: $("onlyForwarded").checked,
     limit: 500
   };
 
@@ -256,6 +188,21 @@ async function refresh(){
   renderTable(CACHE);
 }
 
+function renderTransfer(r){
+  const cnt = r.forwarded_count ?? 0;
+  if(!cnt) return `<div class="muted">—</div>`;
+  const from = r.last_forwarded_from ? esc(r.last_forwarded_from) : "—";
+  const to = r.last_forwarded_to ? esc(r.last_forwarded_to) : "—";
+  const at = r.last_forwarded_at ? fmt(r.last_forwarded_at) : "—";
+  return `
+    <div><span class="pill warn">Transférée</span></div>
+    <div class="muted" style="margin-top:6px">De: ${from}</div>
+    <div class="muted">À: ${to}</div>
+    <div class="muted">Le: ${at}</div>
+    <div class="muted">Nb: ${cnt}</div>
+  `;
+}
+
 function renderTable(rows){
   $("rows").innerHTML = rows.map(r => {
     const invited = r.invited_count ?? 0;
@@ -266,15 +213,14 @@ function renderTable(rows){
 
     return `
       <tr>
-        <td class="selCell">
-          <input type="checkbox" class="rowSelect" data-id="${esc(r.id)}" onchange="syncSelectAllHeader()">
-        </td>
+        <td><input class="rowChk chk" type="checkbox" data-id="${r.id}"></td>
         <td><div style="font-weight:700">${esc(r.client_name)}</div>${archiveInfo}${delInfo}</td>
         <td>${esc(r.vehicle)}</td>
         <td>${fmt(r.created_at)}</td>
         <td>${invited}</td>
         <td>${responded}</td>
         <td>${fmt(r.last_response_at)}</td>
+        <td>${renderTransfer(r)}</td>
         <td>${pillDeal(r.deal_status)}</td>
         <td>${(r.reminders_enabled === false) ? '<span class="pill bad">OFF</span>' : '<span class="pill ok">ON</span>'}</td>
         <td>
@@ -293,8 +239,6 @@ function renderTable(rows){
       </tr>
     `;
   }).join("");
-
-  syncSelectAllHeader();
 }
 
 async function openRequest(requestId){
@@ -307,6 +251,15 @@ async function openRequest(requestId){
   window.open(data.link, "_blank");
 }
 
+async function updateReq(body){
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-update-request`, body);
+  if(!res.ok){
+    alert("Erreur: " + JSON.stringify(data, null, 2));
+    return false;
+  }
+  return true;
+}
+
 async function setDeal(request_id, deal_status){ if(await updateReq({ request_id, action:"set_status", deal_status })) refresh(); }
 async function archive(request_id){ if(await updateReq({ request_id, action:"archive" })) refresh(); }
 async function unarchive(request_id){ if(await updateReq({ request_id, action:"unarchive" })) refresh(); }
@@ -317,6 +270,44 @@ async function softDelete(request_id){
 async function restore(request_id){ if(await updateReq({ request_id, action:"restore" })) refresh(); }
 async function toggleRem(request_id, enable){ if(await updateReq({ request_id, action:"set_reminders", reminders_enabled: !!enable })) refresh(); }
 
+/* ===== BULK ACTIONS ===== */
+async function bulkExec(actionFn){
+  const ids = selectedIds();
+  if(!ids.length){ alert("Sélectionne au moins une ligne."); return; }
+  $("status").textContent = "Traitement en cours…";
+  let ok = 0, ko = 0;
+  for(const id of ids){
+    try{
+      const success = await actionFn(id);
+      if(success) ok++; else ko++;
+    }catch{ ko++; }
+  }
+  $("status").textContent = `✅ Bulk terminé: ${ok} OK / ${ko} erreurs`;
+  refresh();
+}
+
+function bulkSetDeal(status){
+  bulkExec((id)=>updateReq({ request_id:id, action:"set_status", deal_status: status }));
+}
+
+function bulkToggleReminders(enable){
+  bulkExec((id)=>updateReq({ request_id:id, action:"set_reminders", reminders_enabled: !!enable }));
+}
+
+function bulkArchive(){
+  bulkExec((id)=>updateReq({ request_id:id, action:"archive" }));
+}
+
+function bulkRestore(){
+  bulkExec((id)=>updateReq({ request_id:id, action:"restore" }));
+}
+
+function bulkSoftDelete(){
+  if(!confirm("Supprimer (soft delete RGPD) toutes les demandes sélectionnées ?")) return;
+  bulkExec((id)=>updateReq({ request_id:id, action:"soft_delete" }));
+}
+
+/* ===== EXPORTS ===== */
 function exportCSV(){
   const rows = CACHE.map(r => ({
     created_at: r.created_at,
@@ -328,7 +319,11 @@ function exportCSV(){
     last_response_at: r.last_response_at,
     reminders_enabled: r.reminders_enabled,
     archived_at: r.archived_at,
-    deleted_at: r.deleted_at
+    deleted_at: r.deleted_at,
+    forwarded_count: r.forwarded_count,
+    last_forwarded_at: r.last_forwarded_at,
+    last_forwarded_from: r.last_forwarded_from,
+    last_forwarded_to: r.last_forwarded_to
   }));
 
   const header = Object.keys(rows[0] || {}).join(",");
@@ -354,6 +349,10 @@ function exportExcel(){
     "Réponses": r.responded_count ?? 0,
     "Dernière réponse": r.last_response_at ? fmt(r.last_response_at) : "",
     "Relances": (r.reminders_enabled === false) ? "OFF" : "ON",
+    "Transferts (nb)": r.forwarded_count ?? 0,
+    "Dernier transfert (date)": r.last_forwarded_at ? fmt(r.last_forwarded_at) : "",
+    "Dernier transfert (de)": r.last_forwarded_from || "",
+    "Dernier transfert (à)": r.last_forwarded_to || "",
     "Archivé le": r.archived_at ? fmt(r.archived_at) : "",
     "Supprimé le": r.deleted_at ? fmt(r.deleted_at) : ""
   }));
@@ -365,7 +364,7 @@ function exportExcel(){
 }
 
 loadToken();
-["q","deal","inclArchived","inclDeleted"].forEach(id => {
+["q","deal","inclArchived","inclDeleted","onlyForwarded"].forEach(id => {
   const el = $(id);
   if(el) el.addEventListener("input", () => refresh());
 });
