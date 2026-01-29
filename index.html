@@ -361,7 +361,7 @@ La réponse :
     <div class="box">
       <h2>Répertoire vendeurs (chef des ventes)</h2>
       <div class="hint">
-Ce répertoire est enregistré dans <b>ce navigateur</b> pour <b>ton e-mail</b> (lien prestataire avec <code>pe=</code>).
+Ce répertoire est enregistré dans <b>la base Supabase</b> pour <b>ton e-mail</b> (lien prestataire avec <code>pe=</code>).
 Tu peux ajouter / supprimer des vendeurs et les cocher pour transférer plus vite.
       </div>
 
@@ -403,7 +403,7 @@ Tu peux ajouter / supprimer des vendeurs et les cocher pour transférer plus vit
     <div class="box">
       <h2>Transférer la demande</h2>
       <div class="hint">
-Le nouveau destinataire reçoit un e-mail + MF Auto Sud est notifié. L’historique conserve l’info (via votre base).
+Le nouveau destinataire reçoit un e-mail + MF Auto Sud est notifié. L’historique conserve l’info.
       </div>
 
       <label>Note (optionnel)</label>
@@ -487,6 +487,26 @@ async function fetchJson(url, options){
   return { res, data };
 }
 
+async function callEdge(fnName, body){
+  return await fetchJson(`${SUPABASE_URL}/functions/v1/${fnName}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body || {})
+  });
+}
+
+function requireProviderEmail(){
+  if(!PROVIDER_EMAIL){
+    alert("Ouvre via un lien prestataire complet (avec pe=...) pour utiliser le répertoire vendeurs.");
+    return false;
+  }
+  return true;
+}
+
 async function readFileAsDataURL(file){
   return await new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -507,6 +527,9 @@ function escHtml(s){
     .replaceAll(">","&gt;")
     .replaceAll('"',"&quot;");
 }
+
+function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
+function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
 
 /* =========================
    PARSE COPY-PASTE
@@ -590,7 +613,7 @@ function parsePaste(text){
 }
 
 /* =========================
-   PROVIDERS (localStorage)
+   PROVIDERS (localStorage côté MF Auto Sud)
 ========================= */
 function loadProviders(){
   try{
@@ -600,8 +623,6 @@ function loadProviders(){
   }catch{ return []; }
 }
 function saveProviders(arr){ localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr)); }
-function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
-function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
 function extractEmailAndName(line){
   const s = (line || "").trim();
@@ -915,24 +936,9 @@ async function loadThread(){
 }
 
 /* =========================
-   VENDORS DIRECTORY (localStorage par chef des ventes)
+   VENDORS DIRECTORY (BASE SUPABASE)
+   Edge functions: vendor-list / vendor-upsert / vendor-delete
 ========================= */
-function vendorKey(){
-  return `mfautosud_vendors_${(PROVIDER_EMAIL || "unknown").toLowerCase()}`;
-}
-function vendorLoad(){
-  try{
-    const raw = localStorage.getItem(vendorKey());
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  }catch{ return []; }
-}
-function vendorSave(arr){
-  localStorage.setItem(vendorKey(), JSON.stringify(arr));
-}
-function vendorEmailValid(e){
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase());
-}
 function vendorExtract(line){
   const s = (line || "").trim();
   if(!s) return null;
@@ -945,14 +951,53 @@ function vendorExtract(line){
   }
 
   const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
-  if(vendorEmailValid(only)) return { name:"", email: only };
+  if(emailLooksValid(only)) return { name:"", email: only };
 
   const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   if(em) return { name:"", email: em[0].toLowerCase() };
 
   return null;
 }
-function vendorRender(){
+
+async function vendorFetch(){
+  if(!requireProviderEmail()) return [];
+  const { res, data } = await callEdge("vendor-list", { provider_email: PROVIDER_EMAIL });
+  if(!res.ok){
+    console.log("vendor-list error:", data);
+    alert("Erreur chargement répertoire vendeurs (voir console).");
+    return [];
+  }
+  return data.vendors || [];
+}
+
+async function vendorUpsert(email, name){
+  const { res, data } = await callEdge("vendor-upsert", {
+    provider_email: PROVIDER_EMAIL,
+    vendor_email: String(email||"").toLowerCase(),
+    vendor_name: String(name||"").trim()
+  });
+  if(!res.ok){
+    console.log("vendor-upsert error:", data);
+    alert("Erreur ajout vendeur (voir console).");
+    return false;
+  }
+  return true;
+}
+
+async function vendorDelete(email){
+  const { res, data } = await callEdge("vendor-delete", {
+    provider_email: PROVIDER_EMAIL,
+    vendor_email: String(email||"").toLowerCase()
+  });
+  if(!res.ok){
+    console.log("vendor-delete error:", data);
+    alert("Erreur suppression vendeur (voir console).");
+    return false;
+  }
+  return true;
+}
+
+async function vendorRender(){
   const el = $("vendorList");
   if(!el) return;
 
@@ -961,84 +1006,98 @@ function vendorRender(){
     return;
   }
 
-  const vendors = vendorLoad();
+  const vendors = await vendorFetch();
+
   if(!vendors.length){
     el.innerHTML = `<div class="hint">Aucun vendeur enregistré.</div>`;
     return;
   }
 
-  el.innerHTML = vendors.map((v, idx) => {
-    const label = v.name ? `${v.name} — ${v.email}` : v.email;
+  el.innerHTML = vendors.map(v => {
+    const email = String(v.vendor_email || "").toLowerCase();
+    const name = String(v.vendor_name || "").trim();
+    const label = name ? `${name} — ${email}` : email;
+
     return `
       <div class="providerRow">
-        <input type="checkbox" class="vendorCheck" data-email="${escHtml(v.email)}">
+        <input type="checkbox" class="vendorCheck" data-email="${escHtml(email)}">
         <span title="${escHtml(label)}">${escHtml(label)}</span>
-        <button class="small secondary" onclick="vendorRemove(${idx})">Suppr.</button>
+        <button class="small secondary" onclick="vendorRemove('${escHtml(email)}')">Suppr.</button>
       </div>
     `;
   }).join("");
 }
-function vendorAdd(){
+
+async function vendorAdd(){
+  if(!requireProviderEmail()) return;
+
   const email = normalizeEmail($("vendorEmail").value);
   const name = ($("vendorName").value || "").trim();
 
-  if(!PROVIDER_EMAIL){ alert("Ouvre via le lien prestataire (pe=...)"); return; }
-  if(!vendorEmailValid(email)){ alert("E-mail vendeur invalide."); return; }
-
-  const vendors = vendorLoad();
-  if(vendors.some(x => normalizeEmail(x.email) === email)){
-    alert("Déjà enregistré.");
+  if(!emailLooksValid(email)){
+    alert("E-mail vendeur invalide.");
     return;
   }
 
-  vendors.push({ name, email });
-  vendorSave(vendors);
+  const ok = await vendorUpsert(email, name);
+  if(!ok) return;
 
   $("vendorEmail").value = "";
   $("vendorName").value = "";
-  vendorRender();
+  await vendorRender();
 }
-function vendorRemove(idx){
-  const vendors = vendorLoad();
-  vendors.splice(idx, 1);
-  vendorSave(vendors);
-  vendorRender();
+
+async function vendorRemove(email){
+  if(!requireProviderEmail()) return;
+  const ok = await vendorDelete(String(email||"").toLowerCase());
+  if(!ok) return;
+  await vendorRender();
 }
-function vendorImportList(){
-  if(!PROVIDER_EMAIL){ alert("Ouvre via le lien prestataire (pe=...)"); return; }
+
+async function vendorImportList(){
+  if(!requireProviderEmail()) return;
 
   const raw = ($("vendorImport").value || "").replace(/\r/g,"").trim();
   if(!raw){ alert("Colle une liste."); return; }
 
   const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
-  const vendors = vendorLoad();
-  const existing = new Set(vendors.map(v => normalizeEmail(v.email)));
 
-  let added=0, ignored=0;
+  let added = 0, ignored = 0;
   for(const line of lines){
     const p = vendorExtract(line);
-    if(!p || !vendorEmailValid(p.email)){ ignored++; continue; }
-    if(existing.has(p.email)){ ignored++; continue; }
-    vendors.push({ name: p.name || "", email: p.email });
-    existing.add(p.email);
-    added++;
+    if(!p || !emailLooksValid(p.email)){ ignored++; continue; }
+    const ok = await vendorUpsert(p.email, p.name || "");
+    if(ok) added++; else ignored++;
   }
 
-  vendorSave(vendors);
-  vendorRender();
+  $("vendorImport").value = "";
+  await vendorRender();
   alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
 }
+
 async function vendorExport(){
-  const vendors = vendorLoad();
-  const lines = vendors.map(v => v.name ? `${v.name} <${v.email}>` : v.email).join("\n");
+  if(!requireProviderEmail()) return;
+  const vendors = await vendorFetch();
+  const lines = vendors.map(v => {
+    const email = String(v.vendor_email || "");
+    const name = String(v.vendor_name || "").trim();
+    return name ? `${name} <${email}>` : email;
+  }).join("\n");
   await navigator.clipboard.writeText(lines || "");
   alert("Répertoire vendeurs copié dans le presse-papiers.");
 }
-function vendorClear(){
-  if(!confirm("Supprimer tout le répertoire vendeurs de ce navigateur ?")) return;
-  vendorSave([]);
-  vendorRender();
+
+async function vendorClear(){
+  if(!requireProviderEmail()) return;
+  if(!confirm("Supprimer tout le répertoire vendeurs (en base) ?")) return;
+
+  const vendors = await vendorFetch();
+  for(const v of vendors){
+    await vendorDelete(String(v.vendor_email || "").toLowerCase());
+  }
+  await vendorRender();
 }
+
 function vendorCheckAll(on){
   document.querySelectorAll(".vendorCheck").forEach(c => c.checked = !!on);
 }
@@ -1070,7 +1129,7 @@ async function forwardToSelectedVendors(){
 
   statusEl.textContent = "Transfert en cours…";
 
-  const results = { ok: 0, fail: 0, errors: [] };
+  const results = { ok: 0, fail: 0 };
 
   for(const to_email of emails){
     const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/forward-request`, {
@@ -1092,7 +1151,6 @@ async function forwardToSelectedVendors(){
     if(!res.ok){
       console.log("forward-request failed:", res.status, data);
       results.fail++;
-      results.errors.push({ to_email, data });
     } else {
       results.ok++;
     }
@@ -1107,7 +1165,7 @@ async function forwardToSelectedVendors(){
 
 async function forwardRequest(){
   const statusEl = $("forwardStatus");
-  const toEmail = ($("forwardTo").value || "").trim().toLowerCase();
+  const toEmail = normalizeEmail($("forwardTo").value);
   const note = ($("forwardNote").value || "").trim();
 
   if(!RID || !CODE){
@@ -1118,7 +1176,7 @@ async function forwardRequest(){
     statusEl.textContent = "❌ Lien prestataire incomplet (pe=...).";
     return;
   }
-  if(!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)){
+  if(!emailLooksValid(toEmail)){
     statusEl.textContent = "❌ E-mail invalide.";
     return;
   }
@@ -1260,9 +1318,9 @@ async function submitPrescriberResponse(){
 }
 
 /* =========================
-   INIT
+   INIT (async)
 ========================= */
-(function init(){
+(async function init(){
   const { rid, code, pe } = getHashParams();
 
   if(rid && code){
@@ -1275,8 +1333,8 @@ async function submitPrescriberResponse(){
       $("prescriberUI").style.display = "none";
       $("providerUI").style.display = "block";
       setModeChip("Prestataire");
-      vendorRender();
-      loadThread();
+      await vendorRender();
+      await loadThread();
       return;
     }
 
@@ -1289,7 +1347,7 @@ async function submitPrescriberResponse(){
     $("sendBox").style.display = "block";
     $("prescriberReplyBox").style.display = "block";
     renderProviders();
-    loadThread();
+    await loadThread();
     return;
   }
 
