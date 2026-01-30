@@ -509,7 +509,8 @@ La réponse :
       <div id="threadProvider" style="margin-top:10px"></div>
     </div>
 
-    <div class="box">
+    <!-- ✅ PATCH: id="vendorBox" + style display none (anti flash) -->
+    <div class="box" id="vendorBox" style="display:none;">
       <h2>Répertoire vendeurs (Chef des ventes)</h2>
 
       <div class="hint" id="vendorRoleHint">
@@ -700,6 +701,15 @@ function escHtml(s){
 
 function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
 function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
+
+/* =========================
+   PATCH: Vendor box visibility
+   - cache complètement la box si pas chef des ventes
+========================= */
+function showVendorBox(show){
+  const box = document.getElementById("vendorBox");
+  if(box) box.style.display = show ? "" : "none";
+}
 
 /* =========================
    PARSE COPY-PASTE
@@ -1103,6 +1113,7 @@ async function loadThread(){
 
 /* =========================
    VENDORS DIRECTORY (DB via Supabase Edge Functions)
+   ✅ PATCH: si pas chef des ventes => on masque vendorBox
 ========================= */
 function vendorEmailValid(e){
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase());
@@ -1136,15 +1147,20 @@ function vendorExtractLine(line){
 }
 
 async function vendorFetchList(){
+  // ✅ on cache par défaut pendant le chargement (anti flash)
+  showVendorBox(false);
+
   const el = $("vendorList");
   if(!el) return;
 
   if(!RID || !CODE || !PROVIDER_EMAIL){
-    el.innerHTML = `<div class="hint">⚠️ Accès vendeurs indisponible (lien invalide).</div>`;
-    setVendorRoleHint(`⚠️ Lien incomplet (rid/code/pe).`);
+    // Pas de vendorBox si lien invalide
     return;
   }
 
+  // on affiche pendant le chargement (optionnel)
+  showVendorBox(true);
+  setVendorRoleHint("Chargement du répertoire vendeurs…");
   el.innerHTML = `<div class="hint">Chargement du répertoire vendeurs…</div>`;
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
@@ -1163,21 +1179,21 @@ async function vendorFetchList(){
 
   if(!res.ok){
     console.log("vendor-list error:", res.status, data);
-    el.innerHTML = `<div class="hint">❌ Erreur chargement vendeurs (${res.status}).</div>`;
-    setVendorRoleHint(`❌ Erreur chargement du rôle (vendor-list).`);
+    // en cas d'erreur, on masque pour éviter une box vide
+    showVendorBox(false);
     return;
   }
 
   VENDOR_IS_MANAGER = (data && data.is_sales_manager === true);
 
+  // ✅ PATCH demandé: si pas manager => on masque complètement la box
   if(!VENDOR_IS_MANAGER){
-    setVendorRoleHint(`ℹ️ Votre e-mail n’est pas qualifié <b>Chef des ventes</b>. Vous ne pouvez pas gérer le répertoire vendeurs.`);
-    el.innerHTML = `<div class="hint">Répertoire non disponible pour votre profil.</div>`;
-    disableManagerControls(true);
+    showVendorBox(false);
     return;
   }
 
-  disableManagerControls(false);
+  // ✅ Chef des ventes => box visible
+  showVendorBox(true);
   setVendorRoleHint(`<span class="tag ok">Chef des ventes</span> Vous pouvez ajouter / supprimer des vendeurs et les cocher pour transférer.`);
 
   const vendors = Array.isArray(data.vendors) ? data.vendors : [];
@@ -1199,29 +1215,6 @@ async function vendorFetchList(){
       </div>
     `;
   }).join("");
-}
-
-function disableManagerControls(disabled){
-  // Champs vendeurs + transferts
-  ["vendorEmail","vendorName","vendorImport","forwardTo","forwardNote"].forEach(id=>{
-    const el = $(id);
-    if(el) el.disabled = !!disabled;
-  });
-
-  // Boutons vendeurs/transferts (ciblage par onclick)
-  const btns = Array.from(document.querySelectorAll("#providerUI button"));
-  btns.forEach(b=>{
-    const oc = (b.getAttribute("onclick") || "").toLowerCase();
-    const isVendorOrForward =
-      oc.includes("vendor") ||
-      oc.includes("forwardrequest") ||
-      oc.includes("forwardtoselectedvendors");
-    if(isVendorOrForward){
-      b.disabled = !!disabled;
-      b.style.opacity = disabled ? ".55" : "1";
-      b.style.cursor = disabled ? "not-allowed" : "pointer";
-    }
-  });
 }
 
 async function vendorAddDb(){
@@ -1663,6 +1656,9 @@ async function submitPrescriberResponse(){
       $("prescriberUI").style.display = "none";
       $("providerUI").style.display = "block";
       setModeChip("Prestataire");
+
+      // ✅ PATCH: on cache d'abord la box vendeurs, puis on laisse vendorFetchList décider
+      showVendorBox(false);
 
       await vendorFetchList();
       await loadThread();
