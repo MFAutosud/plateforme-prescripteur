@@ -117,7 +117,6 @@
       padding:24px;
     }
 
-    /* En clair, on adoucit les halos */
     [data-theme="light"] body{
       background:
         radial-gradient(1100px 460px at 10% -10%, rgba(37,99,235,.10), transparent 60%),
@@ -127,7 +126,6 @@
 
     .wrap{max-width:1100px;margin:0 auto}
 
-    /* Header */
     .topbar{
       display:flex;
       align-items:center;
@@ -143,7 +141,6 @@
     }
     .brand{display:flex;align-items:center;gap:12px;min-width:0;}
 
-    /* ✅ Logo stable (ne s’écrase plus) */
     .brandLogo{
       width:44px;height:44px;border-radius:12px;
       background:var(--panel2);
@@ -155,8 +152,7 @@
     .brandLogo img{
       max-width:100%;
       max-height:100%;
-      width:auto;
-      height:auto;
+      width:auto;height:auto;
       object-fit:contain;
       display:block;
     }
@@ -184,7 +180,6 @@
       white-space:nowrap;
     }
 
-    /* Layout */
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     @media(max-width:900px){.grid2{grid-template-columns:1fr}}
 
@@ -255,7 +250,6 @@
 
     .divider{height:1px;background:var(--divider);margin:14px 0}
 
-    /* Rows */
     .providerRow{
       display:flex;align-items:center;gap:10px;
       padding:10px 10px;border-radius:14px;
@@ -265,7 +259,6 @@
     }
     .providerRow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-    /* Messages */
     .msg{
       background:var(--msgBg);
       padding:12px;
@@ -293,7 +286,6 @@
 
     a{color:var(--link)}
 
-    /* Request card */
     .card{
       background:var(--cardBg);
       border:1px solid var(--rowBorder);
@@ -332,7 +324,6 @@
       white-space:nowrap;
     }
 
-    /* Small status pills */
     .tag{
       display:inline-block;
       padding:3px 8px;
@@ -343,7 +334,6 @@
       color:var(--text);
     }
     .tag.ok{border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.10)}
-    .tag.bad{border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.10)}
   </style>
 </head>
 
@@ -363,7 +353,6 @@
 
     <div class="topbarRight">
       <div class="chip" id="modeChip">Mode : Prescripteur</div>
-      <!-- ✅ Toggle thème -->
       <button class="secondary" id="themeBtn" style="white-space:nowrap" onclick="toggleTheme()">🌙 Mode sombre</button>
     </div>
   </div>
@@ -481,12 +470,6 @@ Lignes supprimées automatiquement :
       <label>Documents (PDF, images…)</label>
       <input type="file" id="prescFiles" multiple>
 
-      <div class="hint">
-La réponse :
-- s’enregistre dans l’historique,
-- notifie par e-mail TOUS les prestataires déjà invités sur cette demande.
-      </div>
-
       <button onclick="submitPrescriberResponse()">Envoyer la réponse</button>
       <div id="prescStatus" class="hint"></div>
     </div>
@@ -512,10 +495,7 @@ La réponse :
     <!-- ✅ PATCH: id="vendorBox" + style display none (anti flash) -->
     <div class="box" id="vendorBox" style="display:none;">
       <h2>Répertoire vendeurs (Chef des ventes)</h2>
-
-      <div class="hint" id="vendorRoleHint">
-        Chargement du répertoire vendeurs…
-      </div>
+      <div class="hint" id="vendorRoleHint">Chargement du répertoire vendeurs…</div>
 
       <div class="row">
         <button class="secondary" onclick="vendorCheckAll(true)">Tout cocher</button>
@@ -554,10 +534,6 @@ La réponse :
 
     <div class="box">
       <h2>Transférer la demande</h2>
-      <div class="hint">
-Le nouveau destinataire reçoit un e-mail + MF Auto Sud est notifié. L’historique conserve l’information.
-      </div>
-
       <label>Note (optionnel)</label>
       <textarea id="forwardNote" style="height:90px" placeholder="Ex. : Peux-tu traiter ce dossier ? Merci !"></textarea>
 
@@ -612,13 +588,10 @@ function applyTheme(theme){
     btn.textContent = (t === "light") ? "☀️ Mode clair" : "🌙 Mode sombre";
   }
 }
-
 function toggleTheme(){
   const cur = document.documentElement.getAttribute("data-theme") || "dark";
   applyTheme(cur === "dark" ? "light" : "dark");
 }
-
-// Apply on load ASAP
 (function(){
   const saved = localStorage.getItem(THEME_KEY) || "dark";
   applyTheme(saved);
@@ -628,7 +601,7 @@ function toggleTheme(){
    CONFIG
 ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
+const SUPABASE_ANON_KEY = "REPLACE_ME";
 const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
 const PROVIDERS_KEY = "mfautosud_providers_v2";
 
@@ -643,41 +616,21 @@ let PROVIDER_EMAIL = "";
    UTILS
 ========================= */
 function $(id){ return document.getElementById(id); }
-
-function setModeChip(txt){
-  const c = $("modeChip");
-  if(c) c.textContent = "Mode : " + txt;
-}
-
+function setModeChip(txt){ const c = $("modeChip"); if(c) c.textContent = "Mode : " + txt; }
 function getHashParams(){
   const p = new URLSearchParams(location.hash.replace("#",""));
   return { rid: p.get("rid"), code: p.get("code"), pe: p.get("pe") };
 }
-
 function randomCode(){
   const a = crypto.getRandomValues(new Uint8Array(16));
   return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
-
 async function fetchJson(url, options){
   const res = await fetch(url, options);
   let data = null;
   try { data = await res.json(); } catch {}
   return { res, data };
 }
-
-async function callEdge(fnName, body){
-  return await fetchJson(`${SUPABASE_URL}/functions/v1/${fnName}`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body || {})
-  });
-}
-
 async function readFileAsDataURL(file){
   return await new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -686,11 +639,7 @@ async function readFileAsDataURL(file){
     r.readAsDataURL(file);
   });
 }
-
-function baseUrl(){
-  return location.href.split("#")[0];
-}
-
+function baseUrl(){ return location.href.split("#")[0]; }
 function escHtml(s){
   return String(s ?? "")
     .replaceAll("&","&amp;")
@@ -698,7 +647,6 @@ function escHtml(s){
     .replaceAll(">","&gt;")
     .replaceAll('"',"&quot;");
 }
-
 function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
 function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
 
@@ -1102,10 +1050,6 @@ async function loadThread(){
           <div class="kv"><b>TVA</b><div>${escHtml(r.vat || "-")}</div></div>
           <div class="kv"><b>Adresse</b><div>${escHtml(r.address || "-")}</div></div>
         </div>
-        <div class="legal">
-          <b>Information (RGPD)</b> : les données transmises sont utilisées uniquement dans le cadre du traitement de la demande et de la réponse commerciale.
-          Pour toute demande d’accès/suppression : <a href="mailto:${PRESCRIBER_EMAIL}">${PRESCRIBER_EMAIL}</a>.
-        </div>
       </div>
     `;
   }
@@ -1118,7 +1062,6 @@ async function loadThread(){
 function vendorEmailValid(e){
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase());
 }
-
 let VENDOR_IS_MANAGER = false;
 
 function setVendorRoleHint(html){
@@ -1136,7 +1079,6 @@ function vendorExtractLine(line){
     const email = (m[2] || "").trim().toLowerCase();
     return { name, email };
   }
-
   const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
   if(emailLooksValid(only)) return { name:"", email: only };
 
@@ -1147,21 +1089,16 @@ function vendorExtractLine(line){
 }
 
 async function vendorFetchList(){
-  // ✅ on cache par défaut pendant le chargement (anti flash)
+  // anti-flash
   showVendorBox(false);
 
   const el = $("vendorList");
   if(!el) return;
 
-  if(!RID || !CODE || !PROVIDER_EMAIL){
-    // Pas de vendorBox si lien invalide
-    return;
-  }
+  if(!RID || !CODE || !PROVIDER_EMAIL) return;
 
-  // on affiche pendant le chargement (optionnel)
-  showVendorBox(true);
-  setVendorRoleHint("Chargement du répertoire vendeurs…");
-  el.innerHTML = `<div class="hint">Chargement du répertoire vendeurs…</div>`;
+  // on peut afficher une frame de chargement, mais la box reste cachée tant que non validée
+  setVendorRoleHint("Vérification du profil…");
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
     method: "POST",
@@ -1179,24 +1116,23 @@ async function vendorFetchList(){
 
   if(!res.ok){
     console.log("vendor-list error:", res.status, data);
-    // en cas d'erreur, on masque pour éviter une box vide
     showVendorBox(false);
     return;
   }
 
   VENDOR_IS_MANAGER = (data && data.is_sales_manager === true);
-
-  // ✅ PATCH demandé: si pas manager => on masque complètement la box
   if(!VENDOR_IS_MANAGER){
+    // ✅ demandé: masque complet
     showVendorBox(false);
     return;
   }
 
-  // ✅ Chef des ventes => box visible
+  // ✅ manager => on montre la box seulement maintenant
   showVendorBox(true);
-  setVendorRoleHint(`<span class="tag ok">Chef des ventes</span> Vous pouvez ajouter / supprimer des vendeurs et les cocher pour transférer.`);
 
+  setVendorRoleHint(`<span class="tag ok">Chef des ventes</span> Répertoire vendeurs actif.`);
   const vendors = Array.isArray(data.vendors) ? data.vendors : [];
+
   if(!vendors.length){
     el.innerHTML = `<div class="hint">Aucun vendeur enregistré.</div>`;
     return;
@@ -1217,18 +1153,17 @@ async function vendorFetchList(){
   }).join("");
 }
 
+function vendorCheckAll(on){
+  document.querySelectorAll(".vendorCheck").forEach(c => c.checked = !!on);
+}
+
 async function vendorAddDb(){
-  if(!VENDOR_IS_MANAGER){
-    alert("Action réservée au Chef des ventes.");
-    return;
-  }
+  if(!VENDOR_IS_MANAGER){ alert("Action réservée au Chef des ventes."); return; }
+
   const email = ( $("vendorEmail").value || "" ).trim().toLowerCase();
   const name = ( $("vendorName").value || "" ).trim();
 
-  if(!vendorEmailValid(email)){
-    alert("E-mail vendeur invalide.");
-    return;
-  }
+  if(!vendorEmailValid(email)){ alert("E-mail vendeur invalide."); return; }
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-upsert`, {
     method: "POST",
@@ -1258,10 +1193,7 @@ async function vendorAddDb(){
 }
 
 async function vendorDeleteDb(vendorEmail){
-  if(!VENDOR_IS_MANAGER){
-    alert("Action réservée au Chef des ventes.");
-    return;
-  }
+  if(!VENDOR_IS_MANAGER){ alert("Action réservée au Chef des ventes."); return; }
   if(!confirm("Supprimer ce vendeur ?")) return;
 
   const email = String(vendorEmail || "").trim().toLowerCase();
@@ -1291,21 +1223,15 @@ async function vendorDeleteDb(vendorEmail){
   await vendorFetchList();
 }
 
-function vendorCheckAll(on){
-  document.querySelectorAll(".vendorCheck").forEach(c => c.checked = !!on);
-}
-
 async function vendorImportList(){
-  if(!VENDOR_IS_MANAGER){
-    alert("Action réservée au Chef des ventes.");
-    return;
-  }
+  if(!VENDOR_IS_MANAGER){ alert("Action réservée au Chef des ventes."); return; }
+
   const raw = ($("vendorImport").value || "").replace(/\r/g,"").trim();
   if(!raw){ alert("Colle une liste."); return; }
 
   const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
-
   let added = 0, ignored = 0;
+
   for(const line of lines){
     const p = vendorExtractLine(line);
     if(!p || !emailLooksValid(p.email)){ ignored++; continue; }
@@ -1335,10 +1261,8 @@ async function vendorImportList(){
 }
 
 async function vendorExport(){
-  if(!VENDOR_IS_MANAGER){
-    alert("Action réservée au Chef des ventes.");
-    return;
-  }
+  if(!VENDOR_IS_MANAGER){ alert("Action réservée au Chef des ventes."); return; }
+
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
     method: "POST",
     headers: {
@@ -1352,9 +1276,10 @@ async function vendorExport(){
       access_code: CODE
     })
   });
+
   if(!res.ok){
-    alert("Erreur export vendeurs (voir console).");
     console.log("vendor-list error:", data);
+    alert("Erreur export vendeurs (voir console).");
     return;
   }
 
@@ -1366,14 +1291,11 @@ async function vendorExport(){
   }).join("\n");
 
   await navigator.clipboard.writeText(lines || "");
-  alert("Répertoire vendeurs copié dans le presse-papiers.");
+  alert("Répertoire vendeurs copié.");
 }
 
 async function vendorClear(){
-  if(!VENDOR_IS_MANAGER){
-    alert("Action réservée au Chef des ventes.");
-    return;
-  }
+  if(!VENDOR_IS_MANAGER){ alert("Action réservée au Chef des ventes."); return; }
   if(!confirm("Supprimer tout le répertoire vendeurs (en base) ?")) return;
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
@@ -1391,14 +1313,14 @@ async function vendorClear(){
   });
 
   if(!res.ok){
-    alert("Erreur chargement vendeurs (voir console).");
     console.log("vendor-list error:", data);
+    alert("Erreur chargement vendeurs (voir console).");
     return;
   }
 
   const vendors = Array.isArray(data.vendors) ? data.vendors : [];
   for(const v of vendors){
-    const ve = String(v.vendor_email || "").toLowerCase();
+    const ve = String(v.vendor_email || "").trim().toLowerCase();
     await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-delete`, {
       method: "POST",
       headers: {
@@ -1443,12 +1365,11 @@ async function forwardToSelectedVendors(){
   const emails = checks.map(c => (c.getAttribute("data-email")||"").trim().toLowerCase()).filter(Boolean);
 
   if(!emails.length){
-    statusEl.textContent = "❌ Coche au moins 1 vendeur dans le répertoire.";
+    statusEl.textContent = "❌ Coche au moins 1 vendeur.";
     return;
   }
 
-  statusEl.textContent = "Transfert en cours…";
-
+  statusEl.textContent = "Transferts en cours…";
   const results = { ok: 0, fail: 0 };
 
   for(const to_email of emails){
@@ -1476,10 +1397,7 @@ async function forwardToSelectedVendors(){
     }
   }
 
-  statusEl.textContent =
-    `✅ Transferts terminés.\nOK : ${results.ok} / Erreurs : ${results.fail}` +
-    (results.fail ? `\nDétails : console.` : "");
-
+  statusEl.textContent = `✅ Terminé. OK: ${results.ok} / Erreurs: ${results.fail}`;
   $("forwardNote").value = "";
 }
 
@@ -1505,7 +1423,7 @@ async function forwardRequest(){
     return;
   }
   if(toEmail === PROVIDER_EMAIL){
-    statusEl.textContent = "❌ E-mail identique : choisis un autre destinataire.";
+    statusEl.textContent = "❌ E-mail identique.";
     return;
   }
 
@@ -1533,116 +1451,12 @@ async function forwardRequest(){
     return;
   }
 
-  statusEl.textContent = "✅ Transfert effectué.\nLe nouveau destinataire + MF Auto Sud ont reçu un e-mail.";
+  statusEl.textContent = "✅ Transfert effectué.";
   $("forwardTo").value = "";
 }
 
 /* =========================
-   RESPONSES (submit-response)
-========================= */
-async function submitProviderResponse(){
-  const msg = ($("respMsg").value || "").trim();
-  const filesInput = $("respFiles");
-  const statusEl = $("respStatus");
-
-  if(!RID || !CODE){
-    statusEl.textContent = "❌ Lien invalide (rid/code manquants).";
-    return;
-  }
-  if(!PROVIDER_EMAIL){
-    statusEl.textContent = "❌ Lien prestataire incomplet (pe=...).";
-    return;
-  }
-
-  statusEl.textContent = "Envoi en cours…";
-
-  const files = [];
-  for(const file of (filesInput.files || [])){
-    const dataUrl = await readFileAsDataURL(file);
-    files.push({ name: file.name, type: file.type || "application/octet-stream", dataUrl });
-  }
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/submit-response`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      request_id: RID,
-      access_code: CODE,
-      author_role: "provider",
-      responder_name: "Prestataire",
-      responder_email: PROVIDER_EMAIL,
-      provider_email: PROVIDER_EMAIL,
-      message: msg,
-      files
-    })
-  });
-
-  if(!res.ok){
-    console.log("submit-response failed:", res.status, data);
-    statusEl.textContent = "❌ Erreur\n" + JSON.stringify(data, null, 2);
-    return;
-  }
-
-  statusEl.textContent = "✅ Réponse envoyée";
-  $("respMsg").value = "";
-  $("respFiles").value = "";
-  await loadThread();
-}
-
-async function submitPrescriberResponse(){
-  const msg = ($("prescMsg").value || "").trim();
-  const filesInput = $("prescFiles");
-  const statusEl = $("prescStatus");
-
-  if(!RID || !CODE){
-    statusEl.textContent = "❌ Ouvre ou crée une demande d’abord.";
-    return;
-  }
-
-  statusEl.textContent = "Envoi en cours…";
-
-  const files = [];
-  for(const file of (filesInput.files || [])){
-    const dataUrl = await readFileAsDataURL(file);
-    files.push({ name: file.name, type: file.type || "application/octet-stream", dataUrl });
-  }
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/submit-response`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      request_id: RID,
-      access_code: CODE,
-      author_role: "prescriber",
-      responder_name: "MF Auto Sud",
-      responder_email: "",
-      message: msg,
-      files
-    })
-  });
-
-  if(!res.ok){
-    console.log("submit-response failed:", res.status, data);
-    statusEl.textContent = "❌ Erreur\n" + JSON.stringify(data, null, 2);
-    return;
-  }
-
-  statusEl.textContent = "✅ Réponse envoyée";
-  $("prescMsg").value = "";
-  $("prescFiles").value = "";
-  await loadThread();
-}
-
-/* =========================
-   INIT (async)
+   INIT
 ========================= */
 (async function init(){
   const { rid, code, pe } = getHashParams();
@@ -1657,21 +1471,15 @@ async function submitPrescriberResponse(){
       $("providerUI").style.display = "block";
       setModeChip("Prestataire");
 
-      // ✅ PATCH: on cache d'abord la box vendeurs, puis on laisse vendorFetchList décider
       showVendorBox(false);
-
       await vendorFetchList();
       await loadThread();
       return;
     }
 
-    PROVIDER_EMAIL = "";
     $("prescriberUI").style.display = "block";
     $("providerUI").style.display = "none";
     setModeChip("Prescripteur (dossier)");
-
-    $("sendBox").style.display = "block";
-    $("prescriberReplyBox").style.display = "block";
     renderProviders();
     await loadThread();
     return;
