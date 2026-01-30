@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <title>Plateforme prescripteur – MF Auto Sud</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
+  
+<link rel="icon" type="image/png" href="assets/logo-mfautosud.png">
+  
   <style>
     :root{
       --bg:#0b1220;
@@ -209,7 +211,7 @@
 
   <div class="topbar">
     <div class="brand">
-      <img src="logo-mfautosud.png" alt="MF Auto Sud">
+<img src="assets/logo-mfautosud.png" alt="MF Auto Sud">
       <div class="brandTitle">
         <h1>Plateforme prescripteur – MF Auto Sud</h1>
         <div class="sub">Demandes • Réponses • Pièces jointes • Relances automatiques</div>
@@ -390,7 +392,7 @@ Tu peux ajouter / supprimer des vendeurs et les cocher pour transférer plus vit
       </div>
 
       <div class="row">
-        <button onclick="vendorAdd()">Ajouter</button>
+<button onclick="vendorAddDb()">Ajouter</button>
       </div>
 
       <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
@@ -1317,6 +1319,144 @@ async function submitPrescriberResponse(){
   await loadThread();
 }
 
+  /* =========================
+   VENDORS DIRECTORY (DB via Supabase Edge Functions)
+========================= */
+
+function vendorEmailValid(e){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase());
+}
+
+async function vendorFetchList(){
+  const el = $("vendorList");
+  if(!el) return;
+
+  if(!RID || !CODE || !PROVIDER_EMAIL){
+    el.innerHTML = `<div class="hint">⚠️ Accès vendeur indisponible (lien invalide).</div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="hint">Chargement du répertoire vendeurs…</div>`;
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider_email: PROVIDER_EMAIL,
+      request_id: RID,
+      access_code: CODE
+    })
+  });
+
+  if(!res.ok){
+    console.log("vendor-list error:", res.status, data);
+    el.innerHTML = `<div class="hint">❌ Erreur chargement vendeurs (${res.status}).</div>`;
+    return;
+  }
+
+  // Si pas chef des ventes => on affiche un message propre
+  if(data.is_sales_manager !== true){
+    el.innerHTML = `<div class="hint">ℹ️ Votre e-mail n’est pas qualifié “Chef des ventes”, vous ne pouvez pas gérer un répertoire vendeurs.</div>`;
+    // Option : tu peux aussi masquer la box entière si tu préfères
+    return;
+  }
+
+  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
+  if(!vendors.length){
+    el.innerHTML = `<div class="hint">Aucun vendeur enregistré.</div>`;
+    return;
+  }
+
+  el.innerHTML = vendors.map(v => {
+    const label = v.vendor_name ? `${v.vendor_name} — ${v.vendor_email}` : v.vendor_email;
+    return `
+      <div class="providerRow">
+        <input type="checkbox" class="vendorCheck" data-email="${escHtml(v.vendor_email)}">
+        <span title="${escHtml(label)}">${escHtml(label)}</span>
+        <button class="small secondary" onclick="vendorDeleteDb('${escHtml(v.vendor_email)}')">Suppr.</button>
+      </div>
+    `;
+  }).join("");
+}
+
+async function vendorAddDb(){
+  const email = ( $("vendorEmail").value || "" ).trim().toLowerCase();
+  const name = ( $("vendorName").value || "" ).trim();
+
+  if(!vendorEmailValid(email)){
+    alert("E-mail vendeur invalide.");
+    return;
+  }
+  if(!RID || !CODE || !PROVIDER_EMAIL){
+    alert("Lien invalide.");
+    return;
+  }
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-upsert`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider_email: PROVIDER_EMAIL,
+      vendor_email: email,
+      vendor_name: name,
+      request_id: RID,
+      access_code: CODE
+    })
+  });
+
+  if(!res.ok){
+    console.log("vendor-upsert error:", res.status, data);
+    alert("Erreur ajout vendeur.");
+    return;
+  }
+
+  $("vendorEmail").value = "";
+  $("vendorName").value = "";
+  await vendorFetchList();
+}
+
+async function vendorDeleteDb(vendorEmail){
+  if(!confirm("Supprimer ce vendeur ?")) return;
+
+  const email = String(vendorEmail || "").trim().toLowerCase();
+  if(!email) return;
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-delete`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider_email: PROVIDER_EMAIL,
+      vendor_email: email,
+      request_id: RID,
+      access_code: CODE
+    })
+  });
+
+  if(!res.ok){
+    console.log("vendor-delete error:", res.status, data);
+    alert("Erreur suppression vendeur.");
+    return;
+  }
+
+  await vendorFetchList();
+}
+
+function vendorCheckAll(on){
+  document.querySelectorAll(".vendorCheck").forEach(c => c.checked = !!on);
+}
+  
 /* =========================
    INIT (async)
 ========================= */
@@ -1329,14 +1469,14 @@ async function submitPrescriberResponse(){
 
     // Provider mode only if pe exists
     if(pe && pe.trim()){
-      PROVIDER_EMAIL = decodeURIComponent(pe).trim().toLowerCase();
-      $("prescriberUI").style.display = "none";
-      $("providerUI").style.display = "block";
-      setModeChip("Prestataire");
-      await vendorRender();
-      await loadThread();
-      return;
-    }
+  PROVIDER_EMAIL = decodeURIComponent(pe).trim().toLowerCase();
+  $("prescriberUI").style.display = "none";
+  $("providerUI").style.display = "block";
+  setModeChip("Prestataire");
+  vendorFetchList();     // ✅ AJOUT
+  loadThread();
+  return;
+}
 
     // Prescriber view for existing request
     PROVIDER_EMAIL = "";
