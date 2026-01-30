@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <title>Plateforme prescripteur – MF Auto Sud</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  
-<link rel="icon" type="image/png" href="assets/logo-mfautosud.png">
-  
+
+  <!-- ✅ Favicon (corrigé : chemin relatif sûr GitHub Pages) -->
+  <link rel="icon" type="image/png" href="./assets/logo-mfautosud.png">
+
   <style>
     :root{
       --bg:#0b1220;
@@ -23,19 +24,20 @@
       --ok:#22c55e;
       --warn:#f59e0b;
       --bad:#ef4444;
+      --shadow: 0 10px 24px rgba(0,0,0,.22);
     }
 
     *{box-sizing:border-box}
     body{
       margin:0;
       font-family:Arial, sans-serif;
-      background: radial-gradient(1000px 400px at 15% -10%, rgba(77,163,255,.22), transparent 60%),
-                  radial-gradient(900px 350px at 85% 0%, rgba(37,99,235,.18), transparent 60%),
-                  var(--bg);
+      background:
+        radial-gradient(1100px 460px at 10% -10%, rgba(77,163,255,.22), transparent 60%),
+        radial-gradient(900px 380px at 90% 0%, rgba(37,99,235,.18), transparent 60%),
+        var(--bg);
       color:var(--text);
       padding:24px;
     }
-
     .wrap{max-width:1100px;margin:0 auto}
 
     /* Header */
@@ -50,15 +52,15 @@
       border:1px solid rgba(255,255,255,.08);
       backdrop-filter: blur(6px);
       margin-bottom:16px;
+      box-shadow: var(--shadow);
     }
-    .brand{
-      display:flex;align-items:center;gap:12px;min-width:0;
-    }
+    .brand{display:flex;align-items:center;gap:12px;min-width:0;}
     .brand img{
       width:44px;height:44px;border-radius:12px;
       background:#0b1220;border:1px solid rgba(255,255,255,.12);
       object-fit:contain;
       padding:6px;
+      display:block;
     }
     .brandTitle{min-width:0}
     .brandTitle h1{
@@ -78,7 +80,7 @@
       white-space:nowrap;
     }
 
-    /* Panels */
+    /* Layout */
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     @media(max-width:900px){.grid2{grid-template-columns:1fr}}
 
@@ -88,7 +90,7 @@
       padding:16px;
       border-radius:16px;
       margin-bottom:14px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.22);
+      box-shadow: var(--shadow);
     }
 
     h2{margin:0 0 10px;font-size:16px}
@@ -104,7 +106,10 @@
       color:#fff;
       outline:none;
     }
-    input:focus,textarea:focus{border-color:rgba(77,163,255,.55); box-shadow:0 0 0 4px rgba(77,163,255,.12)}
+    input:focus,textarea:focus{
+      border-color:rgba(77,163,255,.55);
+      box-shadow:0 0 0 4px rgba(77,163,255,.12)
+    }
 
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
     button{
@@ -115,21 +120,21 @@
       color:var(--btnText);
       font-weight:800;
       cursor:pointer;
-      transition:.12s transform ease;
+      transition:.12s transform ease, .12s opacity ease;
     }
     button:hover{transform: translateY(-1px)}
+    button:active{transform: translateY(0px); opacity:.92}
     button.secondary{background:var(--btn2);color:#fff;font-weight:700}
     button.small{padding:8px 10px;border-radius:12px;margin-top:0}
 
     .hint{
-      opacity:.75;font-size:12px;margin-top:8px;
+      opacity:.78;font-size:12px;margin-top:8px;
       white-space:pre-wrap;line-height:1.35
     }
-    a{color:#7cc0ff}
 
     .divider{height:1px;background:rgba(255,255,255,.10);margin:14px 0}
 
-    /* Provider list rows */
+    /* Rows */
     .providerRow{
       display:flex;align-items:center;gap:10px;
       padding:10px 10px;border-radius:14px;
@@ -139,7 +144,7 @@
     }
     .providerRow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-    /* Thread / messages */
+    /* Messages */
     .msg{
       background:rgba(11,18,32,.75);
       padding:12px;
@@ -163,6 +168,7 @@
       text-decoration:none;
       border:1px solid rgba(255,255,255,.10);
     }
+    a{color:#7cc0ff}
 
     /* Request card */
     .card{
@@ -181,7 +187,6 @@
     .kv b{display:block;font-size:12px;opacity:.8;margin-bottom:4px}
     .kv div{font-size:13px;word-break:break-word}
 
-    /* Footer legal */
     .legal{
       margin-top:14px;
       font-size:11px;
@@ -191,7 +196,6 @@
       padding-top:10px;
     }
 
-    /* Pills */
     .pill{
       display:inline-block;
       padding:3px 10px;
@@ -203,6 +207,19 @@
       margin-left:8px;
       white-space:nowrap;
     }
+
+    /* Small status pills */
+    .tag{
+      display:inline-block;
+      padding:3px 8px;
+      border-radius:999px;
+      font-size:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(11,18,32,.55);
+      color:#fff;
+    }
+    .tag.ok{border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.10)}
+    .tag.bad{border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.10)}
   </style>
 </head>
 
@@ -211,10 +228,11 @@
 
   <div class="topbar">
     <div class="brand">
-<img src="assets/logo-mfautosud.png" alt="MF Auto Sud">
+      <!-- ✅ Logo corrigé : chemin relatif sûr GitHub Pages -->
+      <img src="./assets/logo-mfautosud.png" alt="MF Auto Sud">
       <div class="brandTitle">
         <h1>Plateforme prescripteur – MF Auto Sud</h1>
-        <div class="sub">Demandes • Réponses • Pièces jointes • Relances automatiques</div>
+        <div class="sub">Demandes • Réponses • Pièces jointes • Transferts • Relances automatiques</div>
       </div>
     </div>
     <div class="chip" id="modeChip">Mode : Prescripteur</div>
@@ -235,7 +253,7 @@
         </div>
 
         <div>
-          <label>Copier le lien de la demande</label>
+          <label>Lien de la demande</label>
           <div class="row" style="margin-top:10px">
             <button class="secondary" onclick="copyThreadLink()">Copier le lien</button>
           </div>
@@ -262,7 +280,8 @@ Lignes supprimées automatiquement :
 
       <div class="legal">
         <b>Information (RGPD)</b> : les données transmises sont utilisées uniquement dans le cadre du traitement de la demande et de la réponse commerciale.
-        Vous pouvez demander l’accès, la rectification ou la suppression en écrivant à <a href="mailto:courtier@mfautosud.fr">courtier@mfautosud.fr</a>.
+        Vous pouvez demander l’accès, la rectification ou la suppression en écrivant à
+        <a href="mailto:courtier@mfautosud.fr">courtier@mfautosud.fr</a>.
       </div>
     </div>
 
@@ -361,10 +380,10 @@ La réponse :
     </div>
 
     <div class="box">
-      <h2>Répertoire vendeurs (chef des ventes)</h2>
-      <div class="hint">
-Ce répertoire est enregistré dans <b>la base Supabase</b> pour <b>ton e-mail</b> (lien prestataire avec <code>pe=</code>).
-Tu peux ajouter / supprimer des vendeurs et les cocher pour transférer plus vite.
+      <h2>Répertoire vendeurs (Chef des ventes)</h2>
+
+      <div class="hint" id="vendorRoleHint">
+        Chargement du répertoire vendeurs…
       </div>
 
       <div class="row">
@@ -392,7 +411,8 @@ Tu peux ajouter / supprimer des vendeurs et les cocher pour transférer plus vit
       </div>
 
       <div class="row">
-<button onclick="vendorAddDb()">Ajouter</button>
+        <!-- ✅ bouton -> vendorAddDb (DB Supabase) -->
+        <button onclick="vendorAddDb()">Ajouter</button>
       </div>
 
       <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
@@ -405,7 +425,7 @@ Tu peux ajouter / supprimer des vendeurs et les cocher pour transférer plus vit
     <div class="box">
       <h2>Transférer la demande</h2>
       <div class="hint">
-Le nouveau destinataire reçoit un e-mail + MF Auto Sud est notifié. L’historique conserve l’info.
+Le nouveau destinataire reçoit un e-mail + MF Auto Sud est notifié. L’historique conserve l’information.
       </div>
 
       <label>Note (optionnel)</label>
@@ -554,7 +574,6 @@ function parsePaste(text){
   };
 
   if (!lines.length) return out;
-
   out.client_name = lines[0];
 
   const isTitleLine = (l) => ["client","contacts","contact"].includes(l.toLowerCase());
@@ -873,7 +892,6 @@ async function loadThread(){
     return;
   }
 
-  // Prescriber view
   if($("thread")){
     const el = $("thread");
     el.innerHTML = "";
@@ -893,7 +911,6 @@ async function loadThread(){
     });
   }
 
-  // Provider view
   if($("threadProvider")){
     const el = $("threadProvider");
     el.innerHTML = "";
@@ -913,7 +930,6 @@ async function loadThread(){
     });
   }
 
-  // Request info (provider mode)
   if($("requestInfo") && data.request){
     const r = data.request;
     $("requestInfo").innerHTML = `
@@ -938,10 +954,322 @@ async function loadThread(){
 }
 
 /* =========================
-   VENDORS DIRECTORY (BASE SUPABASE)
-   Edge functions: vendor-list / vendor-upsert / vendor-delete
+   VENDORS DIRECTORY (DB via Supabase Edge Functions)
+   vendor-list / vendor-upsert / vendor-delete
+   ✅ Seul le Chef des ventes peut gérer
 ========================= */
-function vendorExtract(line){
+function vendorEmailValid(e){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase());
+}
+
+let VENDOR_IS_MANAGER = false;
+
+function setVendorRoleHint(html){
+  const el = $("vendorRoleHint");
+  if(el) el.innerHTML = html;
+}
+
+async function vendorFetchList(){
+  const el = $("vendorList");
+  if(!el) return;
+
+  if(!RID || !CODE || !PROVIDER_EMAIL){
+    el.innerHTML = `<div class="hint">⚠️ Accès vendeurs indisponible (lien invalide).</div>`;
+    setVendorRoleHint(`⚠️ Lien incomplet (rid/code/pe).`);
+    return;
+  }
+
+  el.innerHTML = `<div class="hint">Chargement du répertoire vendeurs…</div>`;
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider_email: PROVIDER_EMAIL,
+      request_id: RID,
+      access_code: CODE
+    })
+  });
+
+  if(!res.ok){
+    console.log("vendor-list error:", res.status, data);
+    el.innerHTML = `<div class="hint">❌ Erreur chargement vendeurs (${res.status}).</div>`;
+    setVendorRoleHint(`❌ Erreur chargement du rôle (vendor-list).`);
+    return;
+  }
+
+  VENDOR_IS_MANAGER = (data && data.is_sales_manager === true);
+
+  if(!VENDOR_IS_MANAGER){
+    setVendorRoleHint(`ℹ️ Votre e-mail n’est pas qualifié <b>Chef des ventes</b>. Vous ne pouvez pas gérer le répertoire vendeurs.`);
+    el.innerHTML = `<div class="hint">Répertoire non disponible pour votre profil.</div>`;
+    disableVendorControls(true);
+    return;
+  }
+
+  disableVendorControls(false);
+  setVendorRoleHint(`<span class="tag ok">Chef des ventes</span> Vous pouvez ajouter / supprimer des vendeurs et les cocher pour transférer.`);
+
+  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
+  if(!vendors.length){
+    el.innerHTML = `<div class="hint">Aucun vendeur enregistré.</div>`;
+    return;
+  }
+
+  el.innerHTML = vendors.map(v => {
+    const ve = String(v.vendor_email || "").trim().toLowerCase();
+    const vn = String(v.vendor_name || "").trim();
+    const label = vn ? `${vn} — ${ve}` : ve;
+
+    return `
+      <div class="providerRow">
+        <input type="checkbox" class="vendorCheck" data-email="${escHtml(ve)}">
+        <span title="${escHtml(label)}">${escHtml(label)}</span>
+        <button class="small secondary" onclick="vendorDeleteDb('${escHtml(ve)}')">Suppr.</button>
+      </div>
+    `;
+  }).join("");
+}
+
+function disableVendorControls(disabled){
+  ["vendorEmail","vendorName","vendorImport","forwardTo","forwardNote"].forEach(id=>{
+    const el = $(id);
+    if(el) el.disabled = !!disabled;
+  });
+  // On désactive aussi les boutons d'action
+  document.querySelectorAll("#providerUI button").forEach(b=>{
+    const txt = (b.textContent || "").toLowerCase();
+    // laisse "Rafraîchir" thread OK
+    if(txt.includes("rafraîchir")) return;
+    if(txt.includes("réponse") || txt.includes("envoyer la réponse")) return;
+    // Les actions vendeurs + transferts se désactivent si pas manager
+    if(
+      txt.includes("tout cocher") ||
+      txt.includes("tout décocher") ||
+      txt.includes("exporter") ||
+      txt.includes("tout effacer") ||
+      txt.includes("ajouter") ||
+      txt.includes("importer") ||
+      txt.includes("transférer aux vendeurs") ||
+      txt === "transférer"
+    ){
+      b.disabled = !!disabled;
+      b.style.opacity = disabled ? ".55" : "1";
+      b.style.cursor = disabled ? "not-allowed" : "pointer";
+    }
+  });
+}
+
+async function vendorAddDb(){
+  if(!VENDOR_IS_MANAGER){
+    alert("Action réservée au Chef des ventes.");
+    return;
+  }
+  const email = ( $("vendorEmail").value || "" ).trim().toLowerCase();
+  const name = ( $("vendorName").value || "" ).trim();
+
+  if(!vendorEmailValid(email)){
+    alert("E-mail vendeur invalide.");
+    return;
+  }
+  if(!RID || !CODE || !PROVIDER_EMAIL){
+    alert("Lien invalide.");
+    return;
+  }
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-upsert`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider_email: PROVIDER_EMAIL,
+      vendor_email: email,
+      vendor_name: name,
+      request_id: RID,
+      access_code: CODE
+    })
+  });
+
+  if(!res.ok){
+    console.log("vendor-upsert error:", res.status, data);
+    alert("Erreur ajout vendeur.");
+    return;
+  }
+
+  $("vendorEmail").value = "";
+  $("vendorName").value = "";
+  await vendorFetchList();
+}
+
+async function vendorDeleteDb(vendorEmail){
+  if(!VENDOR_IS_MANAGER){
+    alert("Action réservée au Chef des ventes.");
+    return;
+  }
+  if(!confirm("Supprimer ce vendeur ?")) return;
+
+  const email = String(vendorEmail || "").trim().toLowerCase();
+  if(!email) return;
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-delete`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider_email: PROVIDER_EMAIL,
+      vendor_email: email,
+      request_id: RID,
+      access_code: CODE
+    })
+  });
+
+  if(!res.ok){
+    console.log("vendor-delete error:", res.status, data);
+    alert("Erreur suppression vendeur.");
+    return;
+  }
+
+  await vendorFetchList();
+}
+
+function vendorCheckAll(on){
+  document.querySelectorAll(".vendorCheck").forEach(c => c.checked = !!on);
+}
+
+async function vendorImportList(){
+  if(!VENDOR_IS_MANAGER){
+    alert("Action réservée au Chef des ventes.");
+    return;
+  }
+  const raw = ($("vendorImport").value || "").replace(/\r/g,"").trim();
+  if(!raw){ alert("Colle une liste."); return; }
+
+  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
+
+  let added = 0, ignored = 0;
+  for(const line of lines){
+    const p = vendorExtractLine(line);
+    if(!p || !emailLooksValid(p.email)){ ignored++; continue; }
+
+    const { res } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-upsert`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        provider_email: PROVIDER_EMAIL,
+        vendor_email: p.email,
+        vendor_name: p.name || "",
+        request_id: RID,
+        access_code: CODE
+      })
+    });
+
+    if(res.ok) added++; else ignored++;
+  }
+
+  $("vendorImport").value = "";
+  await vendorFetchList();
+  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
+}
+
+async function vendorExport(){
+  if(!VENDOR_IS_MANAGER){
+    alert("Action réservée au Chef des ventes.");
+    return;
+  }
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider_email: PROVIDER_EMAIL,
+      request_id: RID,
+      access_code: CODE
+    })
+  });
+  if(!res.ok){
+    alert("Erreur export vendeurs (voir console).");
+    console.log("vendor-list error:", data);
+    return;
+  }
+
+  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
+  const lines = vendors.map(v => {
+    const email = String(v.vendor_email || "");
+    const name = String(v.vendor_name || "").trim();
+    return name ? `${name} <${email}>` : email;
+  }).join("\n");
+
+  await navigator.clipboard.writeText(lines || "");
+  alert("Répertoire vendeurs copié dans le presse-papiers.");
+}
+
+async function vendorClear(){
+  if(!VENDOR_IS_MANAGER){
+    alert("Action réservée au Chef des ventes.");
+    return;
+  }
+  if(!confirm("Supprimer tout le répertoire vendeurs (en base) ?")) return;
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider_email: PROVIDER_EMAIL,
+      request_id: RID,
+      access_code: CODE
+    })
+  });
+
+  if(!res.ok){
+    alert("Erreur chargement vendeurs (voir console).");
+    console.log("vendor-list error:", data);
+    return;
+  }
+
+  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
+  for(const v of vendors){
+    const ve = String(v.vendor_email || "").toLowerCase();
+    await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-delete`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        provider_email: PROVIDER_EMAIL,
+        vendor_email: ve,
+        request_id: RID,
+        access_code: CODE
+      })
+    });
+  }
+
+  await vendorFetchList();
+}
+
+function vendorExtractLine(line){
   const s = (line || "").trim();
   if(!s) return null;
 
@@ -961,149 +1289,6 @@ function vendorExtract(line){
   return null;
 }
 
-async function vendorFetch(){
-  if(!requireProviderEmail()) return [];
-  const { res, data } = await callEdge("vendor-list", { provider_email: PROVIDER_EMAIL });
-  if(!res.ok){
-    console.log("vendor-list error:", data);
-    alert("Erreur chargement répertoire vendeurs (voir console).");
-    return [];
-  }
-  return data.vendors || [];
-}
-
-async function vendorUpsert(email, name){
-  const { res, data } = await callEdge("vendor-upsert", {
-    provider_email: PROVIDER_EMAIL,
-    vendor_email: String(email||"").toLowerCase(),
-    vendor_name: String(name||"").trim()
-  });
-  if(!res.ok){
-    console.log("vendor-upsert error:", data);
-    alert("Erreur ajout vendeur (voir console).");
-    return false;
-  }
-  return true;
-}
-
-async function vendorDelete(email){
-  const { res, data } = await callEdge("vendor-delete", {
-    provider_email: PROVIDER_EMAIL,
-    vendor_email: String(email||"").toLowerCase()
-  });
-  if(!res.ok){
-    console.log("vendor-delete error:", data);
-    alert("Erreur suppression vendeur (voir console).");
-    return false;
-  }
-  return true;
-}
-
-async function vendorRender(){
-  const el = $("vendorList");
-  if(!el) return;
-
-  if(!PROVIDER_EMAIL){
-    el.innerHTML = `<div class="hint">⚠️ Répertoire disponible uniquement via un lien prestataire (pe=...)</div>`;
-    return;
-  }
-
-  const vendors = await vendorFetch();
-
-  if(!vendors.length){
-    el.innerHTML = `<div class="hint">Aucun vendeur enregistré.</div>`;
-    return;
-  }
-
-  el.innerHTML = vendors.map(v => {
-    const email = String(v.vendor_email || "").toLowerCase();
-    const name = String(v.vendor_name || "").trim();
-    const label = name ? `${name} — ${email}` : email;
-
-    return `
-      <div class="providerRow">
-        <input type="checkbox" class="vendorCheck" data-email="${escHtml(email)}">
-        <span title="${escHtml(label)}">${escHtml(label)}</span>
-        <button class="small secondary" onclick="vendorRemove('${escHtml(email)}')">Suppr.</button>
-      </div>
-    `;
-  }).join("");
-}
-
-async function vendorAdd(){
-  if(!requireProviderEmail()) return;
-
-  const email = normalizeEmail($("vendorEmail").value);
-  const name = ($("vendorName").value || "").trim();
-
-  if(!emailLooksValid(email)){
-    alert("E-mail vendeur invalide.");
-    return;
-  }
-
-  const ok = await vendorUpsert(email, name);
-  if(!ok) return;
-
-  $("vendorEmail").value = "";
-  $("vendorName").value = "";
-  await vendorRender();
-}
-
-async function vendorRemove(email){
-  if(!requireProviderEmail()) return;
-  const ok = await vendorDelete(String(email||"").toLowerCase());
-  if(!ok) return;
-  await vendorRender();
-}
-
-async function vendorImportList(){
-  if(!requireProviderEmail()) return;
-
-  const raw = ($("vendorImport").value || "").replace(/\r/g,"").trim();
-  if(!raw){ alert("Colle une liste."); return; }
-
-  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
-
-  let added = 0, ignored = 0;
-  for(const line of lines){
-    const p = vendorExtract(line);
-    if(!p || !emailLooksValid(p.email)){ ignored++; continue; }
-    const ok = await vendorUpsert(p.email, p.name || "");
-    if(ok) added++; else ignored++;
-  }
-
-  $("vendorImport").value = "";
-  await vendorRender();
-  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
-}
-
-async function vendorExport(){
-  if(!requireProviderEmail()) return;
-  const vendors = await vendorFetch();
-  const lines = vendors.map(v => {
-    const email = String(v.vendor_email || "");
-    const name = String(v.vendor_name || "").trim();
-    return name ? `${name} <${email}>` : email;
-  }).join("\n");
-  await navigator.clipboard.writeText(lines || "");
-  alert("Répertoire vendeurs copié dans le presse-papiers.");
-}
-
-async function vendorClear(){
-  if(!requireProviderEmail()) return;
-  if(!confirm("Supprimer tout le répertoire vendeurs (en base) ?")) return;
-
-  const vendors = await vendorFetch();
-  for(const v of vendors){
-    await vendorDelete(String(v.vendor_email || "").toLowerCase());
-  }
-  await vendorRender();
-}
-
-function vendorCheckAll(on){
-  document.querySelectorAll(".vendorCheck").forEach(c => c.checked = !!on);
-}
-
 /* =========================
    TRANSFER (forward-request)
 ========================= */
@@ -1111,6 +1296,10 @@ async function forwardToSelectedVendors(){
   const statusEl = $("forwardStatus");
   if(!statusEl) return;
 
+  if(!VENDOR_IS_MANAGER){
+    statusEl.textContent = "❌ Action réservée au Chef des ventes.";
+    return;
+  }
   if(!RID || !CODE){
     statusEl.textContent = "❌ Lien invalide (rid/code).";
     return;
@@ -1170,6 +1359,10 @@ async function forwardRequest(){
   const toEmail = normalizeEmail($("forwardTo").value);
   const note = ($("forwardNote").value || "").trim();
 
+  if(!VENDOR_IS_MANAGER){
+    statusEl.textContent = "❌ Action réservée au Chef des ventes.";
+    return;
+  }
   if(!RID || !CODE){
     statusEl.textContent = "❌ Lien invalide (rid/code).";
     return;
@@ -1319,144 +1512,6 @@ async function submitPrescriberResponse(){
   await loadThread();
 }
 
-  /* =========================
-   VENDORS DIRECTORY (DB via Supabase Edge Functions)
-========================= */
-
-function vendorEmailValid(e){
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase());
-}
-
-async function vendorFetchList(){
-  const el = $("vendorList");
-  if(!el) return;
-
-  if(!RID || !CODE || !PROVIDER_EMAIL){
-    el.innerHTML = `<div class="hint">⚠️ Accès vendeur indisponible (lien invalide).</div>`;
-    return;
-  }
-
-  el.innerHTML = `<div class="hint">Chargement du répertoire vendeurs…</div>`;
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      provider_email: PROVIDER_EMAIL,
-      request_id: RID,
-      access_code: CODE
-    })
-  });
-
-  if(!res.ok){
-    console.log("vendor-list error:", res.status, data);
-    el.innerHTML = `<div class="hint">❌ Erreur chargement vendeurs (${res.status}).</div>`;
-    return;
-  }
-
-  // Si pas chef des ventes => on affiche un message propre
-  if(data.is_sales_manager !== true){
-    el.innerHTML = `<div class="hint">ℹ️ Votre e-mail n’est pas qualifié “Chef des ventes”, vous ne pouvez pas gérer un répertoire vendeurs.</div>`;
-    // Option : tu peux aussi masquer la box entière si tu préfères
-    return;
-  }
-
-  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
-  if(!vendors.length){
-    el.innerHTML = `<div class="hint">Aucun vendeur enregistré.</div>`;
-    return;
-  }
-
-  el.innerHTML = vendors.map(v => {
-    const label = v.vendor_name ? `${v.vendor_name} — ${v.vendor_email}` : v.vendor_email;
-    return `
-      <div class="providerRow">
-        <input type="checkbox" class="vendorCheck" data-email="${escHtml(v.vendor_email)}">
-        <span title="${escHtml(label)}">${escHtml(label)}</span>
-        <button class="small secondary" onclick="vendorDeleteDb('${escHtml(v.vendor_email)}')">Suppr.</button>
-      </div>
-    `;
-  }).join("");
-}
-
-async function vendorAddDb(){
-  const email = ( $("vendorEmail").value || "" ).trim().toLowerCase();
-  const name = ( $("vendorName").value || "" ).trim();
-
-  if(!vendorEmailValid(email)){
-    alert("E-mail vendeur invalide.");
-    return;
-  }
-  if(!RID || !CODE || !PROVIDER_EMAIL){
-    alert("Lien invalide.");
-    return;
-  }
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-upsert`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      provider_email: PROVIDER_EMAIL,
-      vendor_email: email,
-      vendor_name: name,
-      request_id: RID,
-      access_code: CODE
-    })
-  });
-
-  if(!res.ok){
-    console.log("vendor-upsert error:", res.status, data);
-    alert("Erreur ajout vendeur.");
-    return;
-  }
-
-  $("vendorEmail").value = "";
-  $("vendorName").value = "";
-  await vendorFetchList();
-}
-
-async function vendorDeleteDb(vendorEmail){
-  if(!confirm("Supprimer ce vendeur ?")) return;
-
-  const email = String(vendorEmail || "").trim().toLowerCase();
-  if(!email) return;
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-delete`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      provider_email: PROVIDER_EMAIL,
-      vendor_email: email,
-      request_id: RID,
-      access_code: CODE
-    })
-  });
-
-  if(!res.ok){
-    console.log("vendor-delete error:", res.status, data);
-    alert("Erreur suppression vendeur.");
-    return;
-  }
-
-  await vendorFetchList();
-}
-
-function vendorCheckAll(on){
-  document.querySelectorAll(".vendorCheck").forEach(c => c.checked = !!on);
-}
-  
 /* =========================
    INIT (async)
 ========================= */
@@ -1469,14 +1524,15 @@ function vendorCheckAll(on){
 
     // Provider mode only if pe exists
     if(pe && pe.trim()){
-  PROVIDER_EMAIL = decodeURIComponent(pe).trim().toLowerCase();
-  $("prescriberUI").style.display = "none";
-  $("providerUI").style.display = "block";
-  setModeChip("Prestataire");
-  vendorFetchList();     // ✅ AJOUT
-  loadThread();
-  return;
-}
+      PROVIDER_EMAIL = decodeURIComponent(pe).trim().toLowerCase();
+      $("prescriberUI").style.display = "none";
+      $("providerUI").style.display = "block";
+      setModeChip("Prestataire");
+
+      await vendorFetchList();  // ✅ charge rôle + répertoire
+      await loadThread();
+      return;
+    }
 
     // Prescriber view for existing request
     PROVIDER_EMAIL = "";
