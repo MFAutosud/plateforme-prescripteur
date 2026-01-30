@@ -5,26 +5,104 @@
   <title>Plateforme prescripteur – MF Auto Sud</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- ✅ Favicon (corrigé : chemin relatif sûr GitHub Pages) -->
+  <!-- ✅ Favicon (chemin relatif sûr GitHub Pages) -->
   <link rel="icon" type="image/png" href="./assets/logo-mfautosud.png">
 
   <style>
+    /* =========================
+       THEME TOKENS
+    ========================= */
     :root{
       --bg:#0b1220;
       --panel:#111c34;
       --panel2:#0f1a32;
+
       --text:#ffffff;
       --muted:rgba(255,255,255,.75);
       --line:rgba(255,255,255,.10);
+
       --brand:#4da3ff;
       --brand2:#2563eb;
+
       --btn:#4da3ff;
       --btnText:#001;
       --btn2:#334155;
+
       --ok:#22c55e;
       --warn:#f59e0b;
       --bad:#ef4444;
+
       --shadow: 0 10px 24px rgba(0,0,0,.22);
+
+      --fieldBg: rgba(11,18,32,.85);
+      --fieldBorder: rgba(255,255,255,.14);
+      --fieldFocus: rgba(77,163,255,.55);
+
+      --chipBg: rgba(77,163,255,.12);
+      --chipBorder: rgba(77,163,255,.25);
+      --chipText: #cfe6ff;
+
+      --link: #7cc0ff;
+
+      --rowBg: rgba(11,18,32,.60);
+      --rowBorder: rgba(255,255,255,.08);
+
+      --msgBg: rgba(11,18,32,.75);
+      --cardBg: rgba(11,18,32,.65);
+      --kvBg: rgba(17,28,52,.55);
+
+      --topbarBg: rgba(17,28,52,.85);
+      --topbarBorder: rgba(255,255,255,.08);
+
+      --fileBg: #334155;
+      --fileBorder: rgba(255,255,255,.10);
+
+      --divider: rgba(255,255,255,.10);
+    }
+
+    /* ✅ Thème clair */
+    [data-theme="light"]{
+      --bg:#f6f8fc;
+      --panel:#ffffff;
+      --panel2:#ffffff;
+
+      --text:#0b1220;
+      --muted:rgba(15,23,42,.72);
+      --line:rgba(15,23,42,.12);
+
+      --brand:#2563eb;
+      --brand2:#1d4ed8;
+
+      --btn:#2563eb;
+      --btnText:#ffffff;
+      --btn2:#e2e8f0;
+
+      --shadow: 0 10px 24px rgba(2,6,23,.08);
+
+      --fieldBg: rgba(255,255,255,.95);
+      --fieldBorder: rgba(15,23,42,.14);
+      --fieldFocus: rgba(37,99,235,.45);
+
+      --chipBg: rgba(37,99,235,.10);
+      --chipBorder: rgba(37,99,235,.22);
+      --chipText: rgba(15,23,42,.85);
+
+      --link: #2563eb;
+
+      --rowBg: rgba(2,6,23,.03);
+      --rowBorder: rgba(2,6,23,.08);
+
+      --msgBg: rgba(2,6,23,.03);
+      --cardBg: rgba(2,6,23,.02);
+      --kvBg: rgba(2,6,23,.03);
+
+      --topbarBg: rgba(255,255,255,.85);
+      --topbarBorder: rgba(2,6,23,.10);
+
+      --fileBg: rgba(2,6,23,.06);
+      --fileBorder: rgba(2,6,23,.10);
+
+      --divider: rgba(2,6,23,.10);
     }
 
     *{box-sizing:border-box}
@@ -38,6 +116,15 @@
       color:var(--text);
       padding:24px;
     }
+
+    /* En clair, on adoucit les halos */
+    [data-theme="light"] body{
+      background:
+        radial-gradient(1100px 460px at 10% -10%, rgba(37,99,235,.10), transparent 60%),
+        radial-gradient(900px 380px at 90% 0%, rgba(77,163,255,.08), transparent 60%),
+        var(--bg);
+    }
+
     .wrap{max-width:1100px;margin:0 auto}
 
     /* Header */
@@ -48,35 +135,52 @@
       gap:12px;
       padding:14px 16px;
       border-radius:16px;
-      background: rgba(17,28,52,.85);
-      border:1px solid rgba(255,255,255,.08);
+      background: var(--topbarBg);
+      border:1px solid var(--topbarBorder);
       backdrop-filter: blur(6px);
       margin-bottom:16px;
       box-shadow: var(--shadow);
     }
     .brand{display:flex;align-items:center;gap:12px;min-width:0;}
-    .brand img{
+
+    /* ✅ Logo stable (ne s’écrase plus) */
+    .brandLogo{
       width:44px;height:44px;border-radius:12px;
-      background:#0b1220;border:1px solid rgba(255,255,255,.12);
-      object-fit:contain;
+      background:var(--panel2);
+      border:1px solid var(--line);
+      display:flex;align-items:center;justify-content:center;
       padding:6px;
+      flex:0 0 auto;
+    }
+    .brandLogo img{
+      max-width:100%;
+      max-height:100%;
+      width:auto;
+      height:auto;
+      object-fit:contain;
       display:block;
     }
+
     .brandTitle{min-width:0}
     .brandTitle h1{
       font-size:18px;margin:0;color:var(--brand);letter-spacing:.2px;
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
     .brandTitle .sub{
-      margin:2px 0 0;font-size:12px;opacity:.75;
+      margin:2px 0 0;font-size:12px;opacity:.80;color:var(--muted);
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
+
+    .topbarRight{
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;
+    }
+
     .chip{
       font-size:12px;
       padding:6px 10px;border-radius:999px;
-      background:rgba(77,163,255,.12);
-      border:1px solid rgba(77,163,255,.25);
-      color:#cfe6ff;
+      background:var(--chipBg);
+      border:1px solid var(--chipBorder);
+      color:var(--chipText);
       white-space:nowrap;
     }
 
@@ -92,23 +196,31 @@
       margin-bottom:14px;
       box-shadow: var(--shadow);
     }
+    [data-theme="light"] .box{
+      background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.92));
+      border:1px solid rgba(2,6,23,.10);
+    }
 
     h2{margin:0 0 10px;font-size:16px}
     h3{margin:8px 0 8px;font-size:14px;opacity:.95}
 
-    label{display:block;margin-top:10px;font-size:13px;opacity:.9}
+    label{display:block;margin-top:10px;font-size:13px;opacity:.92;color:var(--muted)}
     input,textarea{
       width:100%;
       padding:10px 12px;
       border-radius:12px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(11,18,32,.85);
-      color:#fff;
+      border:1px solid var(--fieldBorder);
+      background:var(--fieldBg);
+      color:var(--text);
       outline:none;
     }
     input:focus,textarea:focus{
-      border-color:rgba(77,163,255,.55);
-      box-shadow:0 0 0 4px rgba(77,163,255,.12)
+      border-color:var(--fieldFocus);
+      box-shadow:0 0 0 4px rgba(77,163,255,.12);
+    }
+    [data-theme="light"] input:focus,
+    [data-theme="light"] textarea:focus{
+      box-shadow:0 0 0 4px rgba(37,99,235,.12);
     }
 
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
@@ -124,56 +236,67 @@
     }
     button:hover{transform: translateY(-1px)}
     button:active{transform: translateY(0px); opacity:.92}
-    button.secondary{background:var(--btn2);color:#fff;font-weight:700}
+    button.secondary{
+      background:var(--btn2);
+      color: var(--text);
+      font-weight:700;
+      border:1px solid var(--line);
+    }
+    [data-theme="light"] button.secondary{
+      color:#0b1220;
+      border:1px solid rgba(2,6,23,.10);
+    }
     button.small{padding:8px 10px;border-radius:12px;margin-top:0}
 
     .hint{
-      opacity:.78;font-size:12px;margin-top:8px;
-      white-space:pre-wrap;line-height:1.35
+      opacity:.86;font-size:12px;margin-top:8px;
+      white-space:pre-wrap;line-height:1.35;color:var(--muted)
     }
 
-    .divider{height:1px;background:rgba(255,255,255,.10);margin:14px 0}
+    .divider{height:1px;background:var(--divider);margin:14px 0}
 
     /* Rows */
     .providerRow{
       display:flex;align-items:center;gap:10px;
       padding:10px 10px;border-radius:14px;
-      background:rgba(11,18,32,.6);
-      border:1px solid rgba(255,255,255,.08);
+      background:var(--rowBg);
+      border:1px solid var(--rowBorder);
       margin:8px 0;
     }
     .providerRow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
     /* Messages */
     .msg{
-      background:rgba(11,18,32,.75);
+      background:var(--msgBg);
       padding:12px;
       border-radius:14px;
       margin-top:10px;
-      border:1px solid rgba(255,255,255,.08)
+      border:1px solid var(--rowBorder)
     }
     .msg.you{border-left:4px solid var(--brand)}
     .msg.them{border-left:4px solid var(--ok)}
     .msgHead{display:flex;gap:10px;align-items:center;justify-content:space-between}
-    .msgMeta{font-size:12px;opacity:.7}
+    .msgMeta{font-size:12px;opacity:.75;color:var(--muted)}
     .msgWho{font-weight:800}
     .msgBody{margin-top:8px;line-height:1.45;font-size:13px}
+
     .file{
       display:inline-block;
       margin-top:8px;
       padding:8px 10px;
       border-radius:12px;
-      background:#334155;
-      color:#fff;
+      background:var(--fileBg);
+      color:var(--text);
       text-decoration:none;
-      border:1px solid rgba(255,255,255,.10);
+      border:1px solid var(--fileBorder);
     }
-    a{color:#7cc0ff}
+
+    a{color:var(--link)}
 
     /* Request card */
     .card{
-      background:rgba(11,18,32,.65);
-      border:1px solid rgba(255,255,255,.10);
+      background:var(--cardBg);
+      border:1px solid var(--rowBorder);
       border-radius:16px;
       padding:14px;
     }
@@ -181,8 +304,8 @@
     @media(max-width:720px){.gridInfo{grid-template-columns:1fr}}
     .kv{
       padding:10px 10px;border-radius:14px;
-      background:rgba(17,28,52,.55);
-      border:1px solid rgba(255,255,255,.08);
+      background:var(--kvBg);
+      border:1px solid var(--rowBorder);
     }
     .kv b{display:block;font-size:12px;opacity:.8;margin-bottom:4px}
     .kv div{font-size:13px;word-break:break-word}
@@ -190,10 +313,11 @@
     .legal{
       margin-top:14px;
       font-size:11px;
-      opacity:.70;
+      opacity:.78;
       line-height:1.35;
-      border-top:1px solid rgba(255,255,255,.10);
+      border-top:1px solid var(--divider);
       padding-top:10px;
+      color:var(--muted);
     }
 
     .pill{
@@ -201,9 +325,9 @@
       padding:3px 10px;
       border-radius:999px;
       font-size:12px;
-      background:rgba(77,163,255,.14);
-      border:1px solid rgba(77,163,255,.28);
-      color:#d9ecff;
+      background:var(--chipBg);
+      border:1px solid var(--chipBorder);
+      color:var(--chipText);
       margin-left:8px;
       white-space:nowrap;
     }
@@ -214,9 +338,9 @@
       padding:3px 8px;
       border-radius:999px;
       font-size:12px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(11,18,32,.55);
-      color:#fff;
+      border:1px solid var(--line);
+      background:var(--rowBg);
+      color:var(--text);
     }
     .tag.ok{border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.10)}
     .tag.bad{border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.10)}
@@ -228,14 +352,20 @@
 
   <div class="topbar">
     <div class="brand">
-      <!-- ✅ Logo corrigé : chemin relatif sûr GitHub Pages -->
-      <img src="./assets/logo-mfautosud.png" alt="MF Auto Sud">
+      <div class="brandLogo">
+        <img src="./assets/logo-mfautosud.png" alt="MF Auto Sud">
+      </div>
       <div class="brandTitle">
         <h1>Plateforme prescripteur – MF Auto Sud</h1>
         <div class="sub">Demandes • Réponses • Pièces jointes • Transferts • Relances automatiques</div>
       </div>
     </div>
-    <div class="chip" id="modeChip">Mode : Prescripteur</div>
+
+    <div class="topbarRight">
+      <div class="chip" id="modeChip">Mode : Prescripteur</div>
+      <!-- ✅ Toggle thème -->
+      <button class="secondary" id="themeBtn" style="white-space:nowrap" onclick="toggleTheme()">🌙 Mode sombre</button>
+    </div>
   </div>
 
   <!-- =========================
@@ -411,7 +541,6 @@ La réponse :
       </div>
 
       <div class="row">
-        <!-- ✅ bouton -> vendorAddDb (DB Supabase) -->
         <button onclick="vendorAddDb()">Ajouter</button>
       </div>
 
@@ -468,6 +597,33 @@ Le nouveau destinataire reçoit un e-mail + MF Auto Sud est notifié. L’histor
 
 <script>
 /* =========================
+   THEME (dark/light)
+========================= */
+const THEME_KEY = "mfautosud_theme";
+
+function applyTheme(theme){
+  const t = (theme === "light") ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", t);
+  localStorage.setItem(THEME_KEY, t);
+
+  const btn = document.getElementById("themeBtn");
+  if(btn){
+    btn.textContent = (t === "light") ? "☀️ Mode clair" : "🌙 Mode sombre";
+  }
+}
+
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "dark";
+  applyTheme(cur === "dark" ? "light" : "dark");
+}
+
+// Apply on load ASAP
+(function(){
+  const saved = localStorage.getItem(THEME_KEY) || "dark";
+  applyTheme(saved);
+})();
+
+/* =========================
    CONFIG
 ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
@@ -519,14 +675,6 @@ async function callEdge(fnName, body){
     },
     body: JSON.stringify(body || {})
   });
-}
-
-function requireProviderEmail(){
-  if(!PROVIDER_EMAIL){
-    alert("Ouvre via un lien prestataire complet (avec pe=...) pour utiliser le répertoire vendeurs.");
-    return false;
-  }
-  return true;
 }
 
 async function readFileAsDataURL(file){
@@ -955,8 +1103,6 @@ async function loadThread(){
 
 /* =========================
    VENDORS DIRECTORY (DB via Supabase Edge Functions)
-   vendor-list / vendor-upsert / vendor-delete
-   ✅ Seul le Chef des ventes peut gérer
 ========================= */
 function vendorEmailValid(e){
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase());
@@ -967,6 +1113,26 @@ let VENDOR_IS_MANAGER = false;
 function setVendorRoleHint(html){
   const el = $("vendorRoleHint");
   if(el) el.innerHTML = html;
+}
+
+function vendorExtractLine(line){
+  const s = (line || "").trim();
+  if(!s) return null;
+
+  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
+  if(m){
+    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
+    const email = (m[2] || "").trim().toLowerCase();
+    return { name, email };
+  }
+
+  const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
+  if(emailLooksValid(only)) return { name:"", email: only };
+
+  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if(em) return { name:"", email: em[0].toLowerCase() };
+
+  return null;
 }
 
 async function vendorFetchList(){
@@ -1007,11 +1173,11 @@ async function vendorFetchList(){
   if(!VENDOR_IS_MANAGER){
     setVendorRoleHint(`ℹ️ Votre e-mail n’est pas qualifié <b>Chef des ventes</b>. Vous ne pouvez pas gérer le répertoire vendeurs.`);
     el.innerHTML = `<div class="hint">Répertoire non disponible pour votre profil.</div>`;
-    disableVendorControls(true);
+    disableManagerControls(true);
     return;
   }
 
-  disableVendorControls(false);
+  disableManagerControls(false);
   setVendorRoleHint(`<span class="tag ok">Chef des ventes</span> Vous pouvez ajouter / supprimer des vendeurs et les cocher pour transférer.`);
 
   const vendors = Array.isArray(data.vendors) ? data.vendors : [];
@@ -1035,28 +1201,22 @@ async function vendorFetchList(){
   }).join("");
 }
 
-function disableVendorControls(disabled){
+function disableManagerControls(disabled){
+  // Champs vendeurs + transferts
   ["vendorEmail","vendorName","vendorImport","forwardTo","forwardNote"].forEach(id=>{
     const el = $(id);
     if(el) el.disabled = !!disabled;
   });
-  // On désactive aussi les boutons d'action
-  document.querySelectorAll("#providerUI button").forEach(b=>{
-    const txt = (b.textContent || "").toLowerCase();
-    // laisse "Rafraîchir" thread OK
-    if(txt.includes("rafraîchir")) return;
-    if(txt.includes("réponse") || txt.includes("envoyer la réponse")) return;
-    // Les actions vendeurs + transferts se désactivent si pas manager
-    if(
-      txt.includes("tout cocher") ||
-      txt.includes("tout décocher") ||
-      txt.includes("exporter") ||
-      txt.includes("tout effacer") ||
-      txt.includes("ajouter") ||
-      txt.includes("importer") ||
-      txt.includes("transférer aux vendeurs") ||
-      txt === "transférer"
-    ){
+
+  // Boutons vendeurs/transferts (ciblage par onclick)
+  const btns = Array.from(document.querySelectorAll("#providerUI button"));
+  btns.forEach(b=>{
+    const oc = (b.getAttribute("onclick") || "").toLowerCase();
+    const isVendorOrForward =
+      oc.includes("vendor") ||
+      oc.includes("forwardrequest") ||
+      oc.includes("forwardtoselectedvendors");
+    if(isVendorOrForward){
       b.disabled = !!disabled;
       b.style.opacity = disabled ? ".55" : "1";
       b.style.cursor = disabled ? "not-allowed" : "pointer";
@@ -1074,10 +1234,6 @@ async function vendorAddDb(){
 
   if(!vendorEmailValid(email)){
     alert("E-mail vendeur invalide.");
-    return;
-  }
-  if(!RID || !CODE || !PROVIDER_EMAIL){
-    alert("Lien invalide.");
     return;
   }
 
@@ -1267,26 +1423,6 @@ async function vendorClear(){
   }
 
   await vendorFetchList();
-}
-
-function vendorExtractLine(line){
-  const s = (line || "").trim();
-  if(!s) return null;
-
-  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
-  if(m){
-    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
-    const email = (m[2] || "").trim().toLowerCase();
-    return { name, email };
-  }
-
-  const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
-  if(emailLooksValid(only)) return { name:"", email: only };
-
-  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  if(em) return { name:"", email: em[0].toLowerCase() };
-
-  return null;
 }
 
 /* =========================
@@ -1522,19 +1658,17 @@ async function submitPrescriberResponse(){
     RID = rid;
     CODE = code;
 
-    // Provider mode only if pe exists
     if(pe && pe.trim()){
       PROVIDER_EMAIL = decodeURIComponent(pe).trim().toLowerCase();
       $("prescriberUI").style.display = "none";
       $("providerUI").style.display = "block";
       setModeChip("Prestataire");
 
-      await vendorFetchList();  // ✅ charge rôle + répertoire
+      await vendorFetchList();
       await loadThread();
       return;
     }
 
-    // Prescriber view for existing request
     PROVIDER_EMAIL = "";
     $("prescriberUI").style.display = "block";
     $("providerUI").style.display = "none";
@@ -1547,7 +1681,6 @@ async function submitPrescriberResponse(){
     return;
   }
 
-  // Root prescriber
   $("prescriberUI").style.display = "block";
   $("providerUI").style.display = "none";
   setModeChip("Prescripteur");
