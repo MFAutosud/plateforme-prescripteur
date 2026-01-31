@@ -490,14 +490,29 @@ function escHtml(s){
 function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
 function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
 function setModeChip(txt){ const c=$("modeChip"); if(c) c.textContent = "Mode : " + txt; }
-function baseUrl(){ return location.href.split("#")[0]; }
+function baseUrl(){
+  // On enlève hash ET query, pour repartir proprement sur /index.html
+  return window.location.origin + window.location.pathname;
+}
 function randomCode(){
   const a = crypto.getRandomValues(new Uint8Array(16));
   return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
-function getHashParams(){
-  const p = new URLSearchParams(location.hash.replace("#",""));
-  return { rid: p.get("rid"), code: p.get("code"), pe: p.get("pe"), admin: p.get("admin"), token: p.get("token") };
+function getAllParams(){
+  // Query string (recommandé, robuste)
+  const url = new URL(window.location.href);
+  const qs = url.searchParams;
+
+  // Hash (fallback ancien format)
+  const hs = new URLSearchParams(window.location.hash.replace("#",""));
+
+  const rid   = qs.get("rid")   || hs.get("rid");
+  const code  = qs.get("code")  || hs.get("code");
+  const pe    = qs.get("pe")    || hs.get("pe");
+  const admin = qs.get("admin") || hs.get("admin");
+  const token = qs.get("token") || hs.get("token");
+
+  return { rid, code, pe, admin, token };
 }
 async function fetchJson(url, options){
   const res = await fetch(url, options);
@@ -730,7 +745,7 @@ async function createRequest(){
   if(!res.ok){ console.log(res.status, data); alert("Erreur création (console)."); return; }
 
   RID = data[0].id;
-  const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
+const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
   $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
 
   $("sendBox").style.display = "block";
@@ -741,7 +756,7 @@ async function createRequest(){
 
 async function copyThreadLink(){
   if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
-  const link = `${baseUrl()}#rid=${RID}&code=${CODE}`;
+  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
   await navigator.clipboard.writeText(link);
   alert("Lien copié.");
 }
@@ -936,16 +951,44 @@ async function adminSave(){
   renderProviders();
 
   // mode based on hash
-  const { rid, code, pe, admin, token } = getHashParams();
-  if(rid && code){
-    RID = rid; CODE = code;
-    $("sendBox").style.display = "block";
-    $("prescriberReplyBox").style.display = "block";
-    setModeChip("Prescripteur (dossier)");
-    loadThread();
-  }else{
-    setModeChip("Prescripteur");
-  }
+ const { rid, code, pe, admin, token } = getAllParams();
+
+// 1) Mode prestataire si pe existe (prioritaire)
+if (rid && code && pe && String(pe).trim()) {
+  RID = rid;
+  CODE = code;
+  PROVIDER_EMAIL = decodeURIComponent(String(pe)).trim().toLowerCase();
+
+  // On bascule UI
+  $("prescriberUI").style.display = "none";
+  $("providerUI").style.display = "block";
+  setModeChip("Prestataire");
+
+  // (Optionnel) charger le vendorBox si tu as la fonction vendorFetchList()
+  // vendorFetchList();
+
+  loadThread();
+} 
+// 2) Mode prescripteur dossier
+else if (rid && code) {
+  RID = rid;
+  CODE = code;
+
+  $("prescriberUI").style.display = "block";
+  $("providerUI").style.display = "none";
+
+  $("sendBox").style.display = "block";
+  $("prescriberReplyBox").style.display = "block";
+
+  setModeChip("Prescripteur (dossier)");
+  loadThread();
+} 
+// 3) Mode prescripteur (accueil)
+else {
+  $("prescriberUI").style.display = "block";
+  $("providerUI").style.display = "none";
+  setModeChip("Prescripteur");
+}
 
   // admin activation:
   // open with: #admin=1&token=TON_ADMIN_TOKEN
