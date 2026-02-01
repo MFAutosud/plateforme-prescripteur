@@ -127,11 +127,8 @@
     }
     .providerRow input{margin-top:0}
     .providerRow .txt{
-      flex:1;
-      min-width:0;
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
+      flex:1; min-width:0;
+      display:flex; flex-direction:column; justify-content:center;
     }
     .providerRow .main{
       display:block; font-size:13px; font-weight:800; color:var(--text);
@@ -193,7 +190,6 @@
 
   <!-- ========================= PRESCRIPTEUR UI ========================= -->
   <div id="prescriberUI">
-
     <div class="box">
       <h2>1) Créer une demande</h2>
 
@@ -206,7 +202,7 @@
         <div>
           <label>Lien de la demande</label>
           <div class="row" style="margin-top:10px">
-            <button class="secondary" id="copyLinkBtn">Copier le lien</button>
+            <button class="secondary" id="copyLinkBtn" type="button">Copier le lien</button>
           </div>
           <div class="hint">Disponible après création (rid + code).</div>
         </div>
@@ -224,7 +220,7 @@ Lignes supprimées automatiquement :
       </div>
 
       <div class="row">
-        <button id="createBtn">Créer la demande</button>
+        <button id="createBtn" type="button">Créer la demande</button>
       </div>
 
       <div id="link" class="hint"></div>
@@ -234,10 +230,10 @@ Lignes supprimées automatiquement :
       <h2>2) Envoyer à des prestataires</h2>
 
       <div class="row">
-        <button class="secondary" id="checkAllBtn">Tout cocher</button>
-        <button class="secondary" id="uncheckAllBtn">Tout décocher</button>
-        <button class="secondary" id="exportProvidersBtn">Exporter</button>
-        <button class="secondary" id="clearProvidersBtn">Tout effacer</button>
+        <button class="secondary" id="checkAllBtn" type="button">Tout cocher</button>
+        <button class="secondary" id="uncheckAllBtn" type="button">Tout décocher</button>
+        <button class="secondary" id="exportProvidersBtn" type="button">Exporter</button>
+        <button class="secondary" id="clearProvidersBtn" type="button">Tout effacer</button>
       </div>
 
       <div id="providersList" style="margin-top:10px"></div>
@@ -263,21 +259,21 @@ Lignes supprimées automatiquement :
       </div>
 
       <div class="row">
-        <button id="addProviderBtn">Ajouter au répertoire</button>
+        <button id="addProviderBtn" type="button">Ajouter au répertoire</button>
       </div>
 
       <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
       <textarea id="importArea" style="height:110px" placeholder="Ex. : Nom <email@domaine.com>"></textarea>
       <div class="row">
-        <button class="secondary" id="importProvidersBtn">Importer</button>
+        <button class="secondary" id="importProvidersBtn" type="button">Importer</button>
       </div>
 
       <label>Message (optionnel) inclus dans l’e-mail</label>
       <textarea id="customMessage" style="height:90px" placeholder="Texte optionnel…"></textarea>
 
       <div class="row">
-        <button id="sendBtn">✅ Envoyer automatiquement</button>
-        <button class="secondary" id="copyLinkBtn2">Copier le lien</button>
+        <button id="sendBtn" type="button">✅ Envoyer automatiquement</button>
+        <button class="secondary" id="copyLinkBtn2" type="button">Copier le lien</button>
       </div>
 
       <div id="sendStatus" class="hint"></div>
@@ -286,8 +282,8 @@ Lignes supprimées automatiquement :
     <div class="box">
       <h2>3) Conversation</h2>
       <div class="row">
-        <button class="secondary" id="refreshThreadBtn">🔄 Rafraîchir</button>
-        <button class="secondary" id="copyLinkBtn3">Copier le lien</button>
+        <button class="secondary" id="refreshThreadBtn" type="button">🔄 Rafraîchir</button>
+        <button class="secondary" id="copyLinkBtn3" type="button">Copier le lien</button>
       </div>
       <div id="thread" style="margin-top:10px"></div>
     </div>
@@ -295,6 +291,7 @@ Lignes supprimées automatiquement :
 
   <!-- ========================= PRESTATAIRE UI ========================= -->
   <div id="providerUI" style="display:none;">
+
     <div class="box">
       <h2>Demande reçue <span class="tag">Prestataire</span></h2>
       <div id="requestInfo" class="hint">Chargement…</div>
@@ -305,7 +302,7 @@ Lignes supprimées automatiquement :
       <div class="hint" id="assignHint">Chargement…</div>
       <div id="assignList" style="margin-top:10px"></div>
       <div class="row">
-        <button class="secondary" id="assignBtn">Attribuer</button>
+        <button class="secondary" id="assignBtn" type="button">Attribuer</button>
       </div>
       <div class="hint" id="assignStatus"></div>
     </div>
@@ -313,7 +310,7 @@ Lignes supprimées automatiquement :
     <div class="box">
       <h2>Conversation</h2>
       <div class="row">
-        <button class="secondary" id="refreshThreadProviderBtn">🔄 Rafraîchir</button>
+        <button class="secondary" id="refreshThreadProviderBtn" type="button">🔄 Rafraîchir</button>
       </div>
       <div id="threadProvider" style="margin-top:10px"></div>
     </div>
@@ -327,8 +324,17 @@ Lignes supprimées automatiquement :
       <label>Documents (PDF, images…)</label>
       <input type="file" id="respFiles" multiple>
 
-      <button id="providerReplyBtn">Envoyer la réponse</button>
+      <button id="providerReplyBtn" type="button">Envoyer la réponse</button>
       <div id="respStatus" class="hint"></div>
+    </div>
+
+    <!-- Debug (visible seulement si ?debug=1) -->
+    <div class="box" id="debugBox" style="display:none;">
+      <h2>Debug (sans console)</h2>
+      <div id="debugOut" class="hint">—</div>
+      <div class="row">
+        <button class="secondary" id="debugClearBtn" type="button">Vider</button>
+      </div>
     </div>
   </div>
 
@@ -357,7 +363,8 @@ function toggleTheme(){
 (function(){
   const saved = localStorage.getItem(THEME_KEY) || "dark";
   applyTheme(saved);
-  document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+  const tbtn = document.getElementById("themeBtn");
+  if(tbtn) tbtn.addEventListener("click", toggleTheme);
 })();
 
 /* ========================= STATE ========================= */
@@ -389,13 +396,46 @@ function getAllParams(){
   const rid   = qs.get("rid")   || hs.get("rid");
   const code  = qs.get("code")  || hs.get("code");
   const pe    = qs.get("pe")    || hs.get("pe");
-  return { rid, code, pe };
+  const debug = qs.get("debug") || hs.get("debug");
+  return { rid, code, pe, debug };
 }
 async function fetchJson(url, options){
   const res = await fetch(url, options);
   let data = null;
   try { data = await res.json(); } catch {}
   return { res, data };
+}
+
+/* ========================= DEBUG (sans console) ========================= */
+let DEBUG_ON = false;
+function debugShow(show){
+  const box = $("debugBox");
+  if(box) box.style.display = show ? "" : "none";
+}
+function debugClear(){
+  const out = $("debugOut");
+  if(out) out.textContent = "—";
+}
+function debugLog(...args){
+  if(!DEBUG_ON) return;
+  const out = $("debugOut");
+  if(!out) return;
+  const txt = args.map(a=>{
+    try { return (typeof a === "string") ? a : JSON.stringify(a, null, 2); }
+    catch { return String(a); }
+  }).join(" ");
+  out.textContent = (out.textContent === "—" ? "" : out.textContent + "\n\n") + txt;
+}
+function syncState(){
+  window.RID = RID;
+  window.CODE = CODE;
+  window.PROVIDER_EMAIL = PROVIDER_EMAIL;
+}
+
+/* ========================= UI Helpers ========================= */
+function showAssignBox(show){
+  const box = $("assignBox");
+  if(box) box.style.display = show ? "" : "none";
 }
 
 /* ✅ FIX adresse : évite "France France" */
@@ -425,7 +465,6 @@ function loadProviders(){
 }
 function saveProviders(arr){ localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr)); }
 
-/* ✅ FIX affichage mail dans la ligne */
 function renderProviders(){
   const listEl = $("providersList");
   if(!listEl) return;
@@ -468,8 +507,8 @@ function removeProvider(index){
 }
 
 async function addProvider(){
-  const email = normalizeEmail($("providerEmail").value);
-  const name = ($("providerName").value || "").trim();
+  const email = normalizeEmail($("providerEmail")?.value || "");
+  const name = String($("providerName")?.value || "").trim();
   const is_sales_manager = !!($("providerIsManager") && $("providerIsManager").checked);
   const is_vendor = !!($("providerIsVendor") && $("providerIsVendor").checked);
 
@@ -484,8 +523,8 @@ async function addProvider(){
   providers.push({ name, email, is_sales_manager, is_vendor });
   saveProviders(providers);
 
-  $("providerEmail").value = "";
-  $("providerName").value = "";
+  if($("providerEmail")) $("providerEmail").value = "";
+  if($("providerName")) $("providerName").value = "";
   if($("providerIsManager")) $("providerIsManager").checked = false;
   if($("providerIsVendor")) $("providerIsVendor").checked = false;
 
@@ -528,7 +567,7 @@ function extractEmailAndName(line){
 }
 
 function importProviders(){
-  const raw = ($("importArea").value || "").replace(/\r/g,"").trim();
+  const raw = String($("importArea")?.value || "").replace(/\r/g,"").trim();
   if(!raw){ alert("Colle une liste."); return; }
 
   const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
@@ -553,7 +592,7 @@ function importProviders(){
 /* ========================= PARSE COPY-PASTE (blindé) ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
-  const rawLines = t.split("\n").map(l => l.replace(/\u00A0/g," ").trim()); // nbsp -> space
+  const rawLines = t.split("\n").map(l => l.replace(/\u00A0/g," ").trim());
   const lines = rawLines.filter(l => l && l.length);
 
   const out = {
@@ -591,7 +630,7 @@ function parsePaste(text){
     );
   };
 
-  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l)); // ex: "Fr"
+  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l));
 
   const parseZipCityCountry = (l) => {
     const m = norm(l).match(/\b(\d{5})\b\s+(.+)$/);
@@ -633,12 +672,10 @@ function parsePaste(text){
   };
 
   const extractPhoneValue = (l) => {
-    // accepte 06.59.92.85.69 / 06 59 92 85 69 / +33 ...
     const m = norm(l).match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
     return m ? m[0].replace(/[\s.\-]/g, "") : "";
   };
 
-  // client name = 1ère ligne utile
   let firstMeaningful = "";
   for (const l of lines) {
     if (isUselessLine(l)) continue;
@@ -646,7 +683,7 @@ function parsePaste(text){
   }
   out.client_name = firstMeaningful || lines[0];
 
-  let pending = null; // "siret" | "vat" | null
+  let pending = null;
 
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
@@ -661,7 +698,6 @@ function parsePaste(text){
       continue;
     }
 
-    // labels sans valeur => pending
     if (!out.siret && /siret\s*[:\-]?\s*$/i.test(l)) { pending = "siret"; continue; }
     if (!out.vat && /tva\s*[:\-]?\s*$/i.test(l)) { pending = "vat"; continue; }
 
@@ -707,17 +743,18 @@ function parsePaste(text){
 
 /* ========================= REQUEST creation / send / thread ========================= */
 async function createRequest(){
-  const vehicle = $("vehicle").value.trim();
-  const paste = ($("pasteBlock").value || "").trim();
+  const vehicle = String($("vehicle")?.value || "").trim();
+  const paste = String($("pasteBlock")?.value || "").trim();
   if(!vehicle || !paste){ alert("Véhicule + bloc client obligatoires."); return; }
 
   const parsed = parsePaste(paste);
-  console.log("PARSE:", parsed);
+  debugLog("PARSE =", parsed);
 
   if(!parsed.client_name){ alert("Nom client introuvable (1ère ligne)."); return; }
 
   RID = "";
   CODE = randomCode();
+  syncState();
 
   const payload = {
     status: "draft",
@@ -750,16 +787,18 @@ async function createRequest(){
   });
 
   if(!res.ok){
-    console.log("create request failed:", res.status, data);
-    alert("Erreur création (console).");
+    debugLog("create request failed", res.status, data);
+    alert("Erreur création (voir debug si ?debug=1).");
     return;
   }
 
   RID = data[0].id;
-  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
-  $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
+  syncState();
 
-  $("sendBox").style.display = "block";
+  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
+  if($("link")) $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
+
+  if($("sendBox")) $("sendBox").style.display = "block";
   renderProviders();
   await loadThread();
 }
@@ -781,8 +820,8 @@ async function sendToSelected(){
 
   if(!emails.length){ alert("Sélectionne au moins 1 prestataire."); return; }
 
-  $("sendStatus").textContent = "Envoi…";
-  const custom = ($("customMessage").value || "").trim();
+  if($("sendStatus")) $("sendStatus").textContent = "Envoi…";
+  const custom = String($("customMessage")?.value || "").trim();
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
     method: "POST",
@@ -795,11 +834,11 @@ async function sendToSelected(){
   });
 
   if(!res.ok){
-    console.log("send-request failed:", res.status, data);
-    $("sendStatus").textContent = "❌ Erreur (console).";
+    debugLog("send-request failed", res.status, data);
+    if($("sendStatus")) $("sendStatus").textContent = "❌ Erreur (debug si ?debug=1).";
     return;
   }
-  $("sendStatus").textContent = "✅ Envoyé";
+  if($("sendStatus")) $("sendStatus").textContent = "✅ Envoyé";
 }
 
 /* ========================= THREAD ========================= */
@@ -845,7 +884,7 @@ async function loadThread(){
 
   const target = $("thread") || $("threadProvider");
   if(!res.ok){
-    console.log("get-thread failed:", res.status, data);
+    debugLog("get-thread failed", res.status, data);
     if(target) target.innerHTML = `<div class="hint">❌ Erreur chargement conversation</div>`;
     return;
   }
@@ -897,50 +936,171 @@ async function loadThread(){
   }
 }
 
+/* ========================= CHEF DES VENTES: vendor-list + assign ========================= */
+async function providerRoleAndTeam(){
+  debugLog("CALL vendor-list…", { provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE });
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
+    method:"POST",
+    headers:{
+      apikey: SUPABASE_ANON_KEY,
+      Authorization:"Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
+  });
+
+  debugLog("vendor-list status =", res.status);
+  debugLog("vendor-list data =", data);
+
+  if(!res.ok) return { is_manager:false, vendors:[] };
+  return {
+    is_manager: data?.is_sales_manager === true,
+    vendors: Array.isArray(data?.vendors) ? data.vendors : []
+  };
+}
+
+function renderAssignList(vendors){
+  const el = $("assignList");
+  const hint = $("assignHint");
+  if(!el) return;
+
+  if(!vendors || !vendors.length){
+    if(hint) hint.textContent = "Aucun vendeur rattaché à ce chef des ventes.";
+    el.innerHTML = "";
+    return;
+  }
+
+  if(hint) hint.textContent = "Choisis un vendeur de l’équipe :";
+  el.innerHTML = vendors.map((v, i)=>{
+    const email = String(v.vendor_email || "").trim().toLowerCase();
+    const name = String(v.vendor_name || "").trim();
+    const label = name ? `${name} — ${email}` : email;
+
+    return `
+      <div class="providerRow">
+        <input type="radio" name="assignVendor" value="${escHtml(email)}" ${i===0 ? "checked" : ""}>
+        <div class="txt">
+          <span class="main">${escHtml(label)}</span>
+          <span class="sub">Attribuer ce dossier à ce vendeur</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function assignRequestToSelectedVendor(){
+  const status = $("assignStatus");
+  const picked = document.querySelector('input[name="assignVendor"]:checked');
+
+  if(!picked){
+    if(status) status.textContent = "❌ Sélectionne un vendeur.";
+    debugLog("ASSIGN: aucun vendeur sélectionné");
+    return;
+  }
+
+  const vendor_email = String(picked.value || "").trim().toLowerCase();
+  if(status) status.textContent = "Attribution en cours…";
+
+  debugLog("CALL request-assign…", { request_id: RID, access_code: CODE, manager_email: PROVIDER_EMAIL, vendor_email });
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/request-assign`, {
+    method:"POST",
+    headers:{
+      apikey: SUPABASE_ANON_KEY,
+      Authorization:"Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({ request_id: RID, access_code: CODE, manager_email: PROVIDER_EMAIL, vendor_email })
+  });
+
+  debugLog("request-assign status =", res.status);
+  debugLog("request-assign data =", data);
+
+  if(!res.ok){
+    if(status) status.textContent = "❌ Erreur attribution (debug si ?debug=1).";
+    return;
+  }
+
+  if(status) status.textContent = "✅ Dossier attribué.";
+  await loadThread();
+}
+
 /* ========================= INIT ========================= */
-(function init(){
-  $("createBtn").addEventListener("click", createRequest);
-  $("copyLinkBtn").addEventListener("click", copyThreadLink);
-  $("copyLinkBtn2").addEventListener("click", copyThreadLink);
-  $("copyLinkBtn3").addEventListener("click", copyThreadLink);
+(async function init(){
+  const { rid, code, pe, debug } = getAllParams();
+  DEBUG_ON = String(debug) === "1";
+  debugShow(DEBUG_ON);
 
-  $("addProviderBtn").addEventListener("click", addProvider);
-  $("checkAllBtn").addEventListener("click", ()=>checkAll(true));
-  $("uncheckAllBtn").addEventListener("click", ()=>checkAll(false));
-  $("exportProvidersBtn").addEventListener("click", exportProviders);
-  $("clearProvidersBtn").addEventListener("click", clearProviders);
-  $("importProvidersBtn").addEventListener("click", importProviders);
-  $("sendBtn").addEventListener("click", sendToSelected);
-  $("refreshThreadBtn").addEventListener("click", loadThread);
+  const dbgClear = $("debugClearBtn");
+  if(dbgClear) dbgClear.addEventListener("click", ()=>debugClear());
 
-  // provider mode
-  $("refreshThreadProviderBtn").addEventListener("click", loadThread);
+  // binds prescriber
+  const bind = (id, fn) => { const el=$(id); if(el) el.addEventListener("click", fn); };
+  bind("createBtn", createRequest);
+  bind("copyLinkBtn", copyThreadLink);
+  bind("copyLinkBtn2", copyThreadLink);
+  bind("copyLinkBtn3", copyThreadLink);
+
+  bind("addProviderBtn", addProvider);
+  bind("checkAllBtn", ()=>checkAll(true));
+  bind("uncheckAllBtn", ()=>checkAll(false));
+  bind("exportProvidersBtn", exportProviders);
+  bind("clearProvidersBtn", clearProviders);
+  bind("importProvidersBtn", importProviders);
+  bind("sendBtn", sendToSelected);
+  bind("refreshThreadBtn", loadThread);
+
+  // provider buttons
+  bind("refreshThreadProviderBtn", loadThread);
+  bind("assignBtn", assignRequestToSelectedVendor);
 
   renderProviders();
 
-  const { rid, code, pe } = getAllParams();
-
+  // MODE PRESTATAIRE
   if (rid && code && pe && String(pe).trim()) {
-    RID = rid;
-    CODE = code;
+    RID = String(rid);
+    CODE = String(code);
     PROVIDER_EMAIL = decodeURIComponent(String(pe)).trim().toLowerCase();
+    syncState();
 
     $("prescriberUI").style.display = "none";
     $("providerUI").style.display = "block";
     setModeChip("Prestataire");
-    loadThread();
+
+    await loadThread();
+
+    // Chef des ventes ?
+    const role = await providerRoleAndTeam();
+    if(role.is_manager){
+      showAssignBox(true);
+      renderAssignList(role.vendors);
+      if($("assignStatus")) $("assignStatus").textContent = "";
+    }else{
+      showAssignBox(false);
+    }
+
     return;
   }
 
+  // MODE PRESCRIPTEUR DOSSIER
   if (rid && code) {
-    RID = rid;
-    CODE = code;
-    $("sendBox").style.display = "block";
+    RID = String(rid);
+    CODE = String(code);
+    syncState();
+
+    $("prescriberUI").style.display = "block";
+    $("providerUI").style.display = "none";
+
+    if($("sendBox")) $("sendBox").style.display = "block";
     setModeChip("Prescripteur (dossier)");
-    loadThread();
+    await loadThread();
     return;
   }
 
+  // MODE PRESCRIPTEUR ACCUEIL
+  $("prescriberUI").style.display = "block";
+  $("providerUI").style.display = "none";
   setModeChip("Prescripteur");
 })();
 </script>
