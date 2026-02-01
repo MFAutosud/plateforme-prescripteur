@@ -288,6 +288,28 @@ Lignes supprimées automatiquement :
       </div>
       <div id="thread" style="margin-top:10px"></div>
     </div>
+
+    <!-- ✅ NOUVEAU : MF AUTO SUD RÉPONDRE -->
+    <div class="box" id="prescriberReplyBox" style="display:none;">
+      <h2>4) Répondre (MF Auto Sud)</h2>
+
+      <label>Message</label>
+      <textarea id="prescMsg" style="height:120px" placeholder="Votre message…"></textarea>
+
+      <div class="row">
+        <button id="prescReplyBtn" type="button">Envoyer la réponse</button>
+      </div>
+      <div id="prescStatus" class="hint"></div>
+
+      <label class="checkline" style="margin-top:10px">
+        <input type="checkbox" id="notifyAssignedOnly">
+        Notifier seulement le prestataire assigné (si assigné)
+      </label>
+
+      <div class="hint" style="margin-top:10px">
+        ⚠️ Pour que “Répondre (MF Auto Sud)” envoie un e-mail aux prestataires, il faut une Edge Function <b>prescriber-reply</b> côté Supabase.
+      </div>
+    </div>
   </div>
 
   <!-- ========================= PRESTATAIRE UI ========================= -->
@@ -747,6 +769,50 @@ function parsePaste(text){
   return out;
 }
 
+/* ========================= PRESCRIBER REPLY (MF -> prestataires) ========================= */
+async function prescriberReply(){
+  if(!RID || !CODE){
+    if($("prescStatus")) $("prescStatus").textContent = "❌ Crée/ouvre d’abord une demande.";
+    return;
+  }
+
+  const msg = String($("prescMsg")?.value || "").trim();
+  if(!msg){
+    if($("prescStatus")) $("prescStatus").textContent = "❌ Écris un message.";
+    return;
+  }
+
+  const notifyAssignedOnly = !!$("notifyAssignedOnly")?.checked;
+
+  if($("prescStatus")) $("prescStatus").textContent = "Envoi…";
+
+  // NOTE: nécessite Edge Function: /functions/v1/prescriber-reply
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/prescriber-reply`, {
+    method:"POST",
+    headers:{
+      apikey: SUPABASE_ANON_KEY,
+      Authorization:"Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      message: msg,
+      notify_assigned_only: notifyAssignedOnly
+    })
+  });
+
+  if(!res.ok){
+    debugLog("prescriber-reply failed", res.status, data);
+    if($("prescStatus")) $("prescStatus").textContent = "❌ Erreur envoi (debug si ?debug=1).";
+    return;
+  }
+
+  if($("prescMsg")) $("prescMsg").value = "";
+  if($("prescStatus")) $("prescStatus").textContent = "✅ Envoyé";
+  await loadThread();
+}
+
 /* ========================= REQUEST creation / send / thread ========================= */
 async function createRequest(){
   const vehicle = String($("vehicle")?.value || "").trim();
@@ -805,6 +871,7 @@ async function createRequest(){
   if($("link")) $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
 
   if($("sendBox")) $("sendBox").style.display = "block";
+  if($("prescriberReplyBox")) $("prescriberReplyBox").style.display = "block"; // ✅
   renderProviders();
   await loadThread();
 }
@@ -862,7 +929,6 @@ async function providerReply(){
 
   if($("respStatus")) $("respStatus").textContent = "Envoi…";
 
-  // NOTE: nécessite Edge Function: /functions/v1/provider-reply
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
     method:"POST",
     headers:{
@@ -937,15 +1003,16 @@ async function loadThread(){
     return;
   }
 
+  // prescriber thread
   if($("thread")){
     const el = $("thread");
     el.innerHTML = "";
     (data.responses || []).forEach(x=>{
-      const isThem = !!x.responder_email;
+      const isProvider = !!x.responder_email;
       el.innerHTML += `
-        <div class="msg ${isThem ? "them":"you"}">
+        <div class="msg ${isProvider ? "them":"you"}">
           <div class="msgHead">
-            <div class="msgWho">${isThem ? escHtml(x.responder_email || "Prestataire") : "Vous"}</div>
+            <div class="msgWho">${isProvider ? escHtml(x.responder_email || "Prestataire") : "MF Auto Sud"}</div>
             <div class="msgMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
           </div>
           <div class="msgBody">
@@ -982,9 +1049,17 @@ async function loadThread(){
       </div>
     `;
   }
+
+  // ✅ Affiche le bloc "Répondre (MF Auto Sud)" uniquement si on est en mode prescripteur avec rid+code
+  if($("prescriberReplyBox")){
+    const isPrescriberCtx = !!(RID && CODE && !$("providerUI")?.style.display?.includes("block"));
+    // plus simple : si providerUI visible => on cache
+    const providerVisible = $("providerUI") && $("providerUI").style.display !== "none";
+    $("prescriberReplyBox").style.display = providerVisible ? "none" : (RID && CODE ? "" : "none");
+  }
 }
 
-/* ========================= CHEF DES VENTES: vendor-list + assign ========================= */
+/* ========================= CHEFCHEF DES VENTES: vendor-list + assign ========================= */
 async function providerRoleAndTeam(){
   debugLog("CALL vendor-list…", { provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE });
 
@@ -1099,6 +1174,9 @@ async function assignRequestToSelectedVendor(){
   bind("sendBtn", sendToSelected);
   bind("refreshThreadBtn", loadThread);
 
+  // prescriber reply
+  bind("prescReplyBtn", prescriberReply);
+
   // provider buttons
   bind("refreshThreadProviderBtn", loadThread);
   bind("assignBtn", assignRequestToSelectedVendor);
@@ -1142,6 +1220,7 @@ async function assignRequestToSelectedVendor(){
     $("providerUI").style.display = "none";
 
     if($("sendBox")) $("sendBox").style.display = "block";
+    if($("prescriberReplyBox")) $("prescriberReplyBox").style.display = "block";
     setModeChip("Prescripteur (dossier)");
     await loadThread();
     return;
@@ -1150,6 +1229,7 @@ async function assignRequestToSelectedVendor(){
   // MODE PRESCRIPTEUR ACCUEIL
   $("prescriberUI").style.display = "block";
   $("providerUI").style.display = "none";
+  if($("prescriberReplyBox")) $("prescriberReplyBox").style.display = "none";
   setModeChip("Prescripteur");
 })();
 </script>
