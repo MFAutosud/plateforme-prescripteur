@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>Plateforme prescripteur – MF Auto Sud</title>
+  <title>Admin – MF Auto Sud</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="./assets/logo-mfautosud.png">
 
@@ -54,6 +54,7 @@
         radial-gradient(900px 380px at 90% 0%, rgba(77,163,255,.08), transparent 60%),
         var(--bg);
     }
+
     .wrap{max-width:1100px;margin:0 auto}
 
     .topbar{
@@ -77,9 +78,6 @@
       white-space:nowrap;
     }
 
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    @media(max-width:900px){.grid2{grid-template-columns:1fr}}
-
     .box{
       background: linear-gradient(180deg, rgba(17,28,52,.95), rgba(15,26,50,.95));
       border:1px solid rgba(255,255,255,.08);
@@ -99,6 +97,9 @@
     input:focus,textarea:focus{border-color:var(--fieldFocus); box-shadow:0 0 0 4px rgba(77,163,255,.12)}
     [data-theme="light"] input:focus,[data-theme="light"] textarea:focus{box-shadow:0 0 0 4px rgba(37,99,235,.12)}
 
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
     button{
       padding:10px 12px; border-radius:12px; border:0;
@@ -115,7 +116,6 @@
 
     .hint{opacity:.86;font-size:12px;margin-top:8px;white-space:pre-wrap;line-height:1.35;color:var(--muted)}
     .divider{height:1px;background:var(--divider);margin:14px 0}
-    a{color:var(--link)}
 
     .providerRow{
       display:flex;align-items:flex-start;gap:10px;
@@ -124,7 +124,6 @@
       border:1px solid var(--rowBorder);
       margin:8px 0;
     }
-    .providerRow input{margin-top:3px}
     .providerRow .txt{flex:1; min-width:0}
     .providerRow .main{
       display:block; font-size:13px; font-weight:800; color:var(--text);
@@ -135,30 +134,12 @@
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
 
-    .msg{background:var(--msgBg); padding:12px; border-radius:14px; margin-top:10px; border:1px solid var(--rowBorder)}
-    .msg.you{border-left:4px solid var(--brand)}
-    .msg.them{border-left:4px solid var(--ok)}
-    .msgHead{display:flex;gap:10px;align-items:center;justify-content:space-between}
-    .msgMeta{font-size:12px;opacity:.75;color:var(--muted)}
-    .msgWho{font-weight:800}
-    .msgBody{margin-top:8px;line-height:1.45;font-size:13px}
-    .file{
-      display:inline-block; margin-top:8px; padding:8px 10px; border-radius:12px;
-      background:var(--fileBg); color:var(--text); text-decoration:none; border:1px solid var(--fileBorder);
-    }
-
-    .card{background:var(--cardBg); border:1px solid var(--rowBorder); border-radius:16px; padding:14px;}
-    .gridInfo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media(max-width:720px){.gridInfo{grid-template-columns:1fr}}
-    .kv{padding:10px 10px;border-radius:14px;background:var(--kvBg);border:1px solid var(--rowBorder);}
-    .kv b{display:block;font-size:12px;opacity:.8;margin-bottom:4px}
-    .kv div{font-size:13px;word-break:break-word}
-
     .tag{
       display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px;
       border:1px solid var(--line); background:var(--rowBg); color:var(--text);
     }
     .tag.ok{border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.10)}
+    .tag.bad{border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.10)}
     .checkline{display:flex;align-items:center;gap:8px;margin-top:0;color:var(--muted)}
     .checkline input{width:auto}
   </style>
@@ -173,268 +154,87 @@
         <img src="./assets/logo-mfautosud.png" alt="MF Auto Sud">
       </div>
       <div class="brandTitle">
-        <h1>Plateforme prescripteur – MF Auto Sud</h1>
-        <div class="sub">Demandes • Réponses • Pièces jointes • Transferts • Relances automatiques</div>
+        <h1>Admin – MF Auto Sud</h1>
+        <div class="sub">Gestion des prestataires • Rôles • Équipes (Chefs des ventes → Vendeurs)</div>
       </div>
     </div>
 
     <div class="topbarRight">
-      <div class="chip" id="modeChip">Mode : Prescripteur</div>
+      <div class="chip" id="modeChip">Mode : Admin</div>
       <button class="secondary" id="themeBtn" style="white-space:nowrap">🌙 Mode sombre</button>
     </div>
   </div>
 
-  <!-- =========================
-       PRESCRIPTEUR UI
-  ========================= -->
-  <div id="prescriberUI">
-
-    <!-- ADMIN -->
-    <div class="box" id="adminBox" style="display:none;">
-      <h2>Admin — Prestataires & rôles</h2>
-      <div class="hint" id="adminHint">Admin désactivé.</div>
-
-      <div class="divider"></div>
-
-      <h3>Ajouter / mettre à jour</h3>
-      <div class="grid2">
-        <div>
-          <label>E-mail</label>
-          <input id="adminEmail" placeholder="ex: chef@concession.com">
-        </div>
-        <div>
-          <label>Nom (optionnel)</label>
-          <input id="adminName" placeholder="ex: Concession X">
-        </div>
-      </div>
-
-      <div class="row">
-        <label class="checkline"><input type="checkbox" id="adminIsManager"> Chef des ventes</label>
-        <label class="checkline"><input type="checkbox" id="adminIsVendor"> Vendeur</label>
-        <button id="adminSave">Enregistrer</button>
-        <button class="secondary" id="adminRefresh">Rafraîchir</button>
-      </div>
-
-      <div class="divider"></div>
-
-      <h3>Liste</h3>
-      <div id="adminList" class="hint">—</div>
-
-      <div class="divider"></div>
-
-      <h3>Chefs des ventes → Vendeurs (gestion équipe)</h3>
-      <div class="hint">Ici tu pourras voir les équipes et ajouter/supprimer des vendeurs (nécessite fonctions admin-manager-vendor-list + admin-vendor-upsert/delete).</div>
-      <div id="teamBox" class="hint">—</div>
+  <div class="box">
+    <h2>Accès Admin</h2>
+    <div class="hint">
+      ✅ Ajoute ton token dans l’URL : <b>?token=TON_TOKEN</b><br>
+      Il sera mémorisé sur cet ordinateur.
     </div>
 
-    <div class="box">
-      <h2>1) Créer une demande</h2>
-
-      <div class="grid2">
-        <div>
-          <label>Véhicule</label>
-          <input id="vehicle" placeholder="Ex. : Ford Puma LLD 25 mois – 30 000 km – entretien inclus">
-        </div>
-
-        <div>
-          <label>Lien de la demande</label>
-          <div class="row" style="margin-top:10px">
-            <button class="secondary" id="copyLinkBtn">Copier le lien</button>
-          </div>
-          <div class="hint">Disponible après création (rid + code).</div>
+    <div class="grid2">
+      <div>
+        <label>Token admin</label>
+        <input id="tokenInput" placeholder="Colle ton token ici">
+      </div>
+      <div>
+        <label>Actions</label>
+        <div class="row" style="margin-top:10px">
+          <button class="secondary" id="saveTokenBtn">Enregistrer le token</button>
+          <button class="secondary" id="clearTokenBtn">Supprimer le token</button>
+          <button id="refreshAllBtn">Rafraîchir</button>
         </div>
       </div>
-
-      <label>Bloc client (copier-coller) — 1ʳᵉ ligne = nom du client</label>
-      <textarea id="pasteBlock" style="height:180px" placeholder="Colle ici le bloc complet…"></textarea>
-
-      <div class="hint">
-La 1ʳᵉ ligne devient automatiquement le nom du client.
-Lignes supprimées automatiquement :
-- « Obtenir un lien à envoyer au client pour signer un mandat de prélèvement SEPA »
-- « Responsable MF Autosud »
-- variantes « prélèvement / prelevement »
-      </div>
-
-      <div class="row">
-        <button id="createBtn">Créer la demande</button>
-      </div>
-
-      <div id="link" class="hint"></div>
     </div>
 
-    <div class="box" id="sendBox" style="display:none;">
-      <h2>2) Envoyer à des prestataires</h2>
-
-      <div class="row">
-        <button class="secondary" id="checkAllBtn">Tout cocher</button>
-        <button class="secondary" id="uncheckAllBtn">Tout décocher</button>
-        <button class="secondary" id="exportProvidersBtn">Exporter</button>
-        <button class="secondary" id="clearProvidersBtn">Tout effacer</button>
-      </div>
-
-      <div id="providersList" style="margin-top:10px"></div>
-
-      <div class="divider"></div>
-
-      <h3>Ajouter / importer</h3>
-
-      <div class="grid2">
-        <div>
-          <label>E-mail du prestataire</label>
-          <input id="providerEmail" placeholder="exemple@domaine.com">
-        </div>
-        <div>
-          <label>Nom (optionnel)</label>
-          <input id="providerName" placeholder="Ex. : Groupe Grim">
-        </div>
-      </div>
-
-      <div class="row">
-        <label class="checkline"><input type="checkbox" id="providerIsManager"> Chef des ventes</label>
-        <label class="checkline"><input type="checkbox" id="providerIsVendor"> Vendeur</label>
-      </div>
-
-      <div class="row">
-        <button id="addProviderBtn">Ajouter au répertoire</button>
-      </div>
-
-      <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
-      <textarea id="importArea" style="height:110px" placeholder="Ex. : Nom <email@domaine.com>"></textarea>
-      <div class="row">
-        <button class="secondary" id="importProvidersBtn">Importer</button>
-      </div>
-
-      <label>Message (optionnel) inclus dans l’e-mail</label>
-      <textarea id="customMessage" style="height:90px" placeholder="Texte optionnel…"></textarea>
-
-      <div class="row">
-        <button id="sendBtn">✅ Envoyer automatiquement</button>
-        <button class="secondary" id="copyLinkBtn2">Copier le lien</button>
-      </div>
-
-      <div id="sendStatus" class="hint"></div>
-    </div>
-
-    <div class="box">
-      <h2>3) Conversation</h2>
-      <div class="row">
-        <button class="secondary" id="refreshThreadBtn">🔄 Rafraîchir</button>
-        <button class="secondary" id="copyLinkBtn3">Copier le lien</button>
-      </div>
-      <div id="thread" style="margin-top:10px"></div>
-    </div>
-
-    <div class="box" id="prescriberReplyBox" style="display:none;">
-      <h2>4) Répondre (MF Auto Sud)</h2>
-
-      <label>Message</label>
-      <textarea id="prescMsg" style="height:120px" placeholder="Votre message…"></textarea>
-
-      <label>Documents (PDF, images…)</label>
-      <input type="file" id="prescFiles" multiple>
-
-      <button id="prescReplyBtn">Envoyer la réponse</button>
-      <div id="prescStatus" class="hint"></div>
-    </div>
+    <div id="authStatus" class="hint"></div>
   </div>
 
-  <!-- =========================
-       PRESTATAIRE UI
-  ========================= -->
-  <div id="providerUI" style="display:none;">
-    <div class="box">
-      <h2>Demande reçue <span class="tag">Prestataire</span></h2>
-      <div id="requestInfo" class="hint">Chargement…</div>
-    </div>
+  <div class="box">
+    <h2>Prestataires & rôles</h2>
 
-    <div class="box" id="assignBox" style="display:none;">
-      <h2>Chef des ventes — Attribuer à un vendeur</h2>
-      <div class="hint" id="assignHint">Chargement…</div>
-      <div id="assignList" style="margin-top:10px"></div>
-      <div class="row">
-        <button class="secondary" id="assignBtn">Attribuer</button>
+    <h3>Ajouter / mettre à jour</h3>
+    <div class="grid2">
+      <div>
+        <label>E-mail</label>
+        <input id="adminEmail" placeholder="chef@concession.com">
       </div>
-      <div class="hint" id="assignStatus"></div>
-    </div>
-
-    <div class="box">
-      <h2>Conversation</h2>
-      <div class="row">
-        <button class="secondary" id="refreshThreadProviderBtn">🔄 Rafraîchir</button>
-      </div>
-      <div id="threadProvider" style="margin-top:10px"></div>
-    </div>
-
-    <div class="box" id="vendorBox" style="display:none;">
-      <h2>Répertoire vendeurs (Chef des ventes)</h2>
-      <div class="hint" id="vendorRoleHint">Chargement…</div>
-
-      <div class="row">
-        <button class="secondary" id="vendorExportBtn">Exporter</button>
-        <button class="secondary" id="vendorClearBtn">Tout effacer</button>
-      </div>
-
-      <div id="vendorList" style="margin-top:10px"></div>
-
-      <div class="divider"></div>
-
-      <h3>Ajouter / importer des vendeurs</h3>
-
-      <div class="grid2">
-        <div>
-          <label>E-mail vendeur</label>
-          <input id="vendorEmail" placeholder="vendeur@domaine.com">
-        </div>
-        <div>
-          <label>Nom (optionnel)</label>
-          <input id="vendorName" placeholder="Ex. : Jean Dupont">
-        </div>
-      </div>
-
-      <div class="row">
-        <button id="vendorAddBtn">Ajouter</button>
-      </div>
-
-      <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
-      <textarea id="vendorImport" style="height:110px" placeholder="Ex. : Jean Dupont <vendeur@domaine.com>"></textarea>
-      <div class="row">
-        <button class="secondary" id="vendorImportBtn">Importer</button>
+      <div>
+        <label>Nom (optionnel)</label>
+        <input id="adminName" placeholder="Concession X">
       </div>
     </div>
 
-    <div class="box">
-      <h2>Répondre</h2>
-
-      <label>Votre message</label>
-      <textarea id="respMsg" style="height:120px" placeholder="Texte d’accompagnement…"></textarea>
-
-      <label>Documents (PDF, images…)</label>
-      <input type="file" id="respFiles" multiple>
-
-      <button id="providerReplyBtn">Envoyer la réponse</button>
-      <div id="respStatus" class="hint"></div>
+    <div class="row">
+      <label class="checkline"><input type="checkbox" id="adminIsManager"> Chef des ventes</label>
+      <label class="checkline"><input type="checkbox" id="adminIsVendor"> Vendeur</label>
+      <button id="adminSave">Enregistrer</button>
+      <button class="secondary" id="adminRefresh">Rafraîchir</button>
     </div>
+
+    <div class="divider"></div>
+
+    <h3>Liste</h3>
+    <div id="adminList" class="hint">—</div>
+  </div>
+
+  <div class="box">
+    <h2>Chefs des ventes → Vendeurs (gestion équipe)</h2>
+    <div class="hint">Tu vois toutes les équipes. Tu peux ajouter/supprimer des vendeurs.</div>
+    <div id="teamBox" class="hint">—</div>
   </div>
 
 </div>
 
 <script>
-/* =========================
-   CONFIG
-========================= */
+/* ========================= CONFIG ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
-const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
-const PROVIDERS_KEY = "mfautosud_providers_v2";
 
-/* optionnel: admin sans URL spéciale */
-const DEFAULT_ADMIN_TOKEN = ""; // ex: "mfautosud_admin_2026_9F3kL8pXqZ"
-
-/* =========================
-   THEME
-========================= */
 const THEME_KEY = "mfautosud_theme";
+const ADMIN_TOKEN_KEY = "mfautosud_admin_token";
+
+/* ========================= THEME ========================= */
 function applyTheme(theme){
   const t = (theme === "light") ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", t);
@@ -452,45 +252,32 @@ function toggleTheme(){
   document.getElementById("themeBtn").addEventListener("click", toggleTheme);
 })();
 
-/* =========================
-   STATE
-========================= */
-let RID = "";
-let CODE = "";
-let PROVIDER_EMAIL = "";
-let ADMIN_TOKEN = "";
-let VENDOR_IS_MANAGER = false;
-
-/* =========================
-   UTILS
-========================= */
+/* ========================= UTILS ========================= */
 function $(id){ return document.getElementById(id); }
 function escHtml(s){
   return String(s ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
     .replaceAll('"',"&quot;");
 }
 function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
 function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
-function setModeChip(txt){ const c=$("modeChip"); if(c) c.textContent = "Mode : " + txt; }
-function baseUrl(){ return window.location.origin + window.location.pathname; }
-function randomCode(){
-  const a = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-function getAllParams(){
+
+function getTokenFromUrl(){
   const url = new URL(window.location.href);
   const qs = url.searchParams;
-  const hs = new URLSearchParams(window.location.hash.replace("#",""));
-  const rid   = qs.get("rid")   || hs.get("rid");
-  const code  = qs.get("code")  || hs.get("code");
-  const pe    = qs.get("pe")    || hs.get("pe");
-  const admin = qs.get("admin") || hs.get("admin");
-  const token = qs.get("token") || hs.get("token");
-  return { rid, code, pe, admin, token };
+  const hs = new URLSearchParams(url.hash.replace("#",""));
+  return (qs.get("token") || hs.get("token") || "").trim();
 }
+function getToken(){
+  return (localStorage.getItem(ADMIN_TOKEN_KEY) || "").trim();
+}
+function setToken(t){
+  localStorage.setItem(ADMIN_TOKEN_KEY, String(t||"").trim());
+}
+function clearToken(){
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+}
+
 async function fetchJson(url, options){
   const res = await fetch(url, options);
   let data = null;
@@ -498,924 +285,266 @@ async function fetchJson(url, options){
   return { res, data };
 }
 
-function showVendorBox(show){
-  const box = $("vendorBox");
-  if(box) box.style.display = show ? "" : "none";
-}
-function showAssignBox(show){
-  const box = $("assignBox");
-  if(box) box.style.display = show ? "" : "none";
-}
-
-/* ✅ FIX adresse : évite "France France" */
-function formatAddress(r){
-  const addr = String(r.address || "").trim();
-  const postcode = String(r.postcode || "").trim();
-  const city = String(r.city || "").trim();
-  const country = String(r.country || "").trim();
-
-  const addrHasFrance = /france/i.test(addr);
-  const parts = [];
-
-  if(addr) parts.push(addr);
-  if(postcode || city) parts.push([postcode, city].filter(Boolean).join(" "));
-  if(country && !addrHasFrance) parts.push(country);
-
-  return parts.join(" ").replace(/\s+/g," ").trim();
-}
-
-/* =========================
-   PROVIDERS localStorage
-========================= */
-function loadProviders(){
-  try{
-    const raw = localStorage.getItem(PROVIDERS_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  }catch{ return []; }
-}
-function saveProviders(arr){ localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr)); }
-
-function renderProviders(){
-  const listEl = $("providersList");
-  if(!listEl) return;
-
-  const providers = loadProviders();
-  if(!providers.length){
-    listEl.innerHTML = `<div class="hint">Aucun prestataire enregistré.</div>`;
-    return;
-  }
-
-  listEl.innerHTML = providers.map((p, idx) => {
-    const email = normalizeEmail(p.email || p.provider_email || "");
-    const name  = String(p.name || p.provider_name || "").trim();
-    const tags = [
-      p.is_sales_manager ? "Chef des ventes" : "",
-      p.is_vendor ? "Vendeur" : ""
-    ].filter(Boolean).join(" • ");
-
-    return `
-      <div class="providerRow">
-        <input type="checkbox" class="providerCheck" data-email="${escHtml(email)}">
-        <div class="txt">
-          <span class="main">${escHtml(email || "(email manquant)")}</span>
-          ${name ? `<span class="sub">${escHtml(name)}</span>` : ""}
-          ${tags ? `<span class="sub">${escHtml(tags)}</span>` : ""}
-        </div>
-        <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
-      </div>
-    `;
-  }).join("");
-}
-
-function removeProvider(index){
-  const providers = loadProviders();
-  providers.splice(index, 1);
-  saveProviders(providers);
-  renderProviders();
-}
-
-async function addProvider(){
-  const email = normalizeEmail($("providerEmail").value);
-  const name = ($("providerName").value || "").trim();
-  const is_sales_manager = !!($("providerIsManager") && $("providerIsManager").checked);
-  const is_vendor = !!($("providerIsVendor") && $("providerIsVendor").checked);
-
-  if(!email){ alert("Saisis un e-mail."); return; }
-  if(!emailLooksValid(email)){ alert("E-mail invalide."); return; }
-
-  const providers = loadProviders();
-  if(providers.some(p => normalizeEmail(p.email || p.provider_email) === email)){
-    alert("Déjà enregistré."); return;
-  }
-
-  providers.push({ name, email, is_sales_manager, is_vendor });
-  saveProviders(providers);
-
-  // push en base si admin actif
-  if(ADMIN_TOKEN){
-    await fetchJson(`${SUPABASE_URL}/functions/v1/admin-provider-upsert`, {
-      method:"POST",
-      headers:{
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: "Bearer " + SUPABASE_ANON_KEY,
-        "Content-Type":"application/json",
-        "x-admin-token": ADMIN_TOKEN
-      },
-      body: JSON.stringify({
-        provider_email: email,
-        provider_name: name || null,
-        is_sales_manager,
-        is_vendor
-      })
-    });
-  }
-
-  $("providerEmail").value = "";
-  $("providerName").value = "";
-  if($("providerIsManager")) $("providerIsManager").checked = false;
-  if($("providerIsVendor")) $("providerIsVendor").checked = false;
-
-  renderProviders();
-}
-
-function checkAll(on){ document.querySelectorAll(".providerCheck").forEach(c=>c.checked=!!on); }
-
-async function exportProviders(){
-  const providers = loadProviders();
-  const lines = providers.map(p => {
-    const email = normalizeEmail(p.email || p.provider_email || "");
-    const name = String(p.name || p.provider_name || "").trim();
-    return name ? `${name} <${email}>` : email;
-  }).join("\n");
-  await navigator.clipboard.writeText(lines || "");
-  alert("Liste copiée dans le presse-papiers.");
-}
-
-function clearProviders(){
-  if(!confirm("Supprimer tous les prestataires enregistrés sur cet ordinateur ?")) return;
-  saveProviders([]);
-  renderProviders();
-}
-
-function extractEmailAndName(line){
-  const s = (line || "").trim();
-  if(!s) return null;
-  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
-  if(m){
-    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
-    const email = (m[2] || "").trim().toLowerCase();
-    return { name, email };
-  }
-  const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
-  if(emailLooksValid(only)) return { name:"", email: only };
-  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  if(em) return { name:"", email: em[0].toLowerCase() };
-  return null;
-}
-
-function importProviders(){
-  const raw = ($("importArea").value || "").replace(/\r/g,"").trim();
-  if(!raw){ alert("Colle une liste."); return; }
-
-  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
-  const providers = loadProviders();
-  const existing = new Set(providers.map(p => normalizeEmail(p.email || p.provider_email)));
-
-  let added=0, ignored=0;
-  for(const line of lines){
-    const parsed = extractEmailAndName(line);
-    if(!parsed || !emailLooksValid(parsed.email)){ ignored++; continue; }
-    if(existing.has(parsed.email)){ ignored++; continue; }
-    providers.push({ name: parsed.name || "", email: parsed.email, is_sales_manager:false, is_vendor:false });
-    existing.add(parsed.email);
-    added++;
-  }
-
-  saveProviders(providers);
-  renderProviders();
-  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
-}
-
-/* =========================
-   PARSE COPY-PASTE (corrigé)
-========================= */
-function parsePaste(text){
-  const t = (text || "").replace(/\r/g, "").trim();
-  const rawLines = t.split("\n").map(l => l.trim());
-  const lines = rawLines.filter(Boolean);
-
-  const out = {
-    client_name: "",
-    address: "",
-    postcode: "",
-    city: "",
-    country: "",
-    siret: "",
-    vat: "",
-    contact_name: "",
-    contact_email: "",
-    contact_phone: ""
-  };
-  if (!lines.length) return out;
-
-  const norm = (s) => String(s || "").trim();
-  const low  = (s) => norm(s).toLowerCase();
-
-  const isUselessLine = (l) => {
-    const x = low(l);
-    if (!x) return true;
-    return (
-      x === "client" ||
-      x === "contacts" ||
-      x === "contact" ||
-      x === "responsable" ||
-      x === "mf autosud" ||
-      x.includes("responsable mf autosud") ||
-      x.includes("obtenir un lien") ||
-      x.includes("mandat de prélèvement sepa") ||
-      x.includes("mandat de prelevement sepa") ||
-      x.includes("prelevement sepa") ||
-      x.includes("prélèvement sepa")
-    );
-  };
-
-  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l));
-
-  const parseZipCityCountry = (l) => {
-    const m = norm(l).match(/\b(\d{5})\b\s+(.+)$/);
-    if (!m) return null;
-    const postcode = m[1];
-    let rest = norm(m[2]);
-    let country = "";
-    if (/france$/i.test(rest)) {
-      country = "France";
-      rest = rest.replace(/france$/i, "").trim();
-    }
-    return { postcode, city: rest, country };
-  };
-
-  const looksLikeStreet = (l) => {
-    const x = low(l);
-    return (
-      /\b\d{1,5}\b/.test(x) &&
-      (x.includes("rue") || x.includes("avenue") || x.includes("av ") || x.includes("boulevard") ||
-       x.includes("bd ") || x.includes("chemin") || x.includes("route") || x.includes("impasse") || x.includes("place"))
-    );
-  };
-
-  const extractSiretValue = (l) => {
-    const m = norm(l).match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
-    if (!m) return "";
-    return norm(m[1]).replace(/\s+/g, "");
-  };
-
-  const extractVatValue = (l) => {
-    const m = norm(l).match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
-    if (!m) return "";
-    return norm(m[1]).replace(/\s+/g, "");
-  };
-
-  const extractEmailValue = (l) => {
-    const m = norm(l).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-    return m ? m[0].toLowerCase() : "";
-  };
-
-  const extractPhoneValue = (l) => {
-    const m = norm(l).match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
-    return m ? m[0].replace(/[\s.\-]/g, "") : "";
-  };
-
-  // client name = première ligne non "inutile"
-  let firstMeaningful = "";
-  for (const l of lines) {
-    if (isUselessLine(l)) continue;
-    firstMeaningful = l; break;
-  }
-  out.client_name = firstMeaningful || lines[0];
-
-  let pending = null; // "siret" | "vat" | null
-
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i];
-    const x = low(l);
-    if (!l || isUselessLine(l) || looksLikeShortCode(l)) continue;
-
-    if (pending) {
-      if (pending === "siret") {
-        const v = norm(l).replace(/\s+/g, "");
-        if (/^\d{10,20}$/.test(v)) out.siret = v;
-      }
-      if (pending === "vat") {
-        const v = norm(l).replace(/\s+/g, "");
-        if (/^[A-Z]{2}[0-9A-Z]{6,}$/.test(v)) out.vat = v;
-      }
-      pending = null;
-      continue;
-    }
-
-    // labels sans valeur => pending
-    if (!out.siret && /siret\s*[:\-]?\s*$/i.test(l)) { pending = "siret"; continue; }
-    if (!out.vat && /tva\s*[:\-]?\s*$/i.test(l)) { pending = "vat"; continue; }
-
-    if (!out.siret) { const v = extractSiretValue(l); if (v) { out.siret = v; continue; } }
-    if (!out.vat) { const v = extractVatValue(l); if (v) { out.vat = v; continue; } }
-
-    if (!out.contact_email) { const v = extractEmailValue(l); if (v) { out.contact_email = v; continue; } }
-    if (!out.contact_phone) { const v = extractPhoneValue(l); if (v) { out.contact_phone = v; continue; } }
-
-    if (!out.address && looksLikeStreet(l)) {
-      out.address = l;
-      const next = lines[i + 1] || "";
-      const z = parseZipCityCountry(next);
-      if (z) {
-        out.postcode = z.postcode; out.city = z.city;
-        if (z.country) out.country = z.country;
-      }
-      continue;
-    }
-
-    if (!out.address) {
-      const z = parseZipCityCountry(l);
-      if (z) {
-        out.address = l;
-        out.postcode = z.postcode; out.city = z.city;
-        if (z.country) out.country = z.country;
-        continue;
-      }
-    }
-
-    if (!out.contact_name) {
-      const forbidden = x.includes("siret") || x.includes("tva") || x.includes("n°") || x.includes("no ");
-      if (!forbidden && !/\d/.test(l) && !l.includes("@") && l.length <= 45) {
-        const w = l.split(/\s+/).filter(Boolean);
-        if (w.length >= 2 && w.length <= 5) out.contact_name = l;
-      }
-    }
-  }
-
-  if (!out.country && /france/i.test(t)) out.country = "France";
-  return out;
-}
-
-/* =========================
-   REQUEST creation / send / thread
-========================= */
-async function createRequest(){
-  const vehicle = $("vehicle").value.trim();
-  const paste = ($("pasteBlock").value || "").trim();
-  if(!vehicle || !paste){ alert("Véhicule + bloc client obligatoires."); return; }
-
-  const parsed = parsePaste(paste);
-  if(!parsed.client_name){ alert("Nom client introuvable (1ère ligne)."); return; }
-
-  RID = "";
-  CODE = randomCode();
-
-  const payload = {
-    status: "draft",
-    prescriber_email: PRESCRIBER_EMAIL,
-    client_name: parsed.client_name,
-    vehicle,
-    fin_type: "LLD",
-    recipients: [PRESCRIBER_EMAIL],
-    access_code: CODE,
-    address: parsed.address || null,
-    postcode: parsed.postcode || null,
-    city: parsed.city || null,
-    country: parsed.country || null,
-    siret: parsed.siret || null,
-    vat: parsed.vat || null,
-    contact_name: parsed.contact_name || null,
-    contact_email: parsed.contact_email || null,
-    contact_phone: parsed.contact_phone || null
-  };
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json",
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if(!res.ok){ console.log(res.status, data); alert("Erreur création (console)."); return; }
-
-  RID = data[0].id;
-  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
-  $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
-
-  $("sendBox").style.display = "block";
-  $("prescriberReplyBox").style.display = "block";
-  renderProviders();
-  await loadThread();
-}
-
-async function copyThreadLink(){
-  if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
-  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
-  await navigator.clipboard.writeText(link);
-  alert("Lien copié.");
-}
-
-async function sendToSelected(){
-  if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
-
-  const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
-  const emails = checks.map(c => (c.getAttribute("data-email")||"").trim().toLowerCase()).filter(Boolean);
-  if(!emails.length){ alert("Sélectionne au moins 1 prestataire."); return; }
-
-  $("sendStatus").textContent = "Envoi…";
-  const custom = ($("customMessage").value || "").trim();
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
-    method: "POST",
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ request_id: RID, access_code: CODE, provider_emails: emails, custom_message: custom })
-  });
-
-  if(!res.ok){ console.log(res.status, data); $("sendStatus").textContent = "❌ Erreur (console)."; return; }
-  $("sendStatus").textContent = "✅ Envoyé";
-}
-
-/* =========================
-   THREAD
-========================= */
-function renderMessageFiles(files){
-  if(!Array.isArray(files) || !files.length) return "";
-  return files.map(f => {
-    const name = escHtml(f?.name || "fichier");
-    const url = f?.url;
-    if(!url) return `<div class="hint">📎 ${name} (lien indisponible)</div>`;
-    return `<div><a class="file" href="${url}" target="_blank" rel="noopener">📎 Télécharger : ${name}</a></div>`;
-  }).join("");
-}
-
-function renderThreadProvider(data){
-  const el = $("threadProvider");
-  if(!el) return;
-
-  el.innerHTML = "";
-  (data.responses || []).forEach(x=>{
-    const isYou = PROVIDER_EMAIL && (String(x.responder_email||"").toLowerCase() === PROVIDER_EMAIL);
-    el.innerHTML += `
-      <div class="msg ${isYou ? "you":"them"}">
-        <div class="msgHead">
-          <div class="msgWho">${escHtml(x.responder_email || "MF Auto Sud")}</div>
-          <div class="msgMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-        </div>
-        <div class="msgBody">
-          ${escHtml(x.message || "").replaceAll("\n","<br>")}
-          ${renderMessageFiles(x.files)}
-        </div>
-      </div>`;
-  });
-}
-
-async function loadThread(){
-  if(!RID || !CODE) return;
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
-    method: "POST",
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ request_id: RID, access_code: CODE })
-  });
-
-  const target = $("thread") || $("threadProvider");
-  if(!res.ok){
-    console.log("get-thread failed:", res.status, data);
-    if(target) target.innerHTML = `<div class="hint">❌ Erreur chargement conversation</div>`;
-    return;
-  }
-
-  // prescriber thread
-  if($("thread")){
-    const el = $("thread");
-    el.innerHTML = "";
-    (data.responses || []).forEach(x=>{
-      const isThem = !!x.responder_email;
-      el.innerHTML += `
-        <div class="msg ${isThem ? "them":"you"}">
-          <div class="msgHead">
-            <div class="msgWho">${isThem ? escHtml(x.responder_email || "Prestataire") : "Vous"}</div>
-            <div class="msgMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          </div>
-          <div class="msgBody">
-            ${escHtml(x.message || "").replaceAll("\n","<br>")}
-            ${renderMessageFiles(x.files)}
-          </div>
-        </div>`;
-    });
-  }
-
-  // provider thread + info
-  if($("threadProvider")) renderThreadProvider(data);
-
-  if($("requestInfo") && data.request){
-    const r = data.request;
-    const addrLine = formatAddress(r);
-
-    $("requestInfo").innerHTML = `
-      <div class="card">
-        <div class="gridInfo">
-          <div class="kv"><b>Client</b><div>${escHtml(r.client_name || "-")}</div></div>
-          <div class="kv"><b>Véhicule</b><div>${escHtml(r.vehicle || "-")}</div></div>
-
-          <div class="kv"><b>Adresse</b><div>${escHtml(addrLine || "-")}</div></div>
-          <div class="kv"><b>Contact</b><div>${escHtml(r.contact_name || "-")}</div></div>
-
-          <div class="kv"><b>E-mail</b><div>${escHtml(r.contact_email || "-")}</div></div>
-          <div class="kv"><b>Téléphone</b><div>${escHtml(r.contact_phone || "-")}</div></div>
-
-          <div class="kv"><b>SIRET</b><div>${escHtml(r.siret || "-")}</div></div>
-          <div class="kv"><b>TVA</b><div>${escHtml(r.vat || "-")}</div></div>
-
-          <div class="kv"><b>Assigné à</b><div>${escHtml(r.assigned_to_email || "-")}</div></div>
-        </div>
-      </div>
-    `;
-  }
-}
-
-/* =========================
-   CHEF DES VENTES : équipe + assignation
-========================= */
-async function providerRoleAndTeam(){
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
-    method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
-  });
-
-  if(!res.ok){
-    console.log("vendor-list:", res.status, data);
-    return { is_manager:false, vendors:[] };
-  }
+function authHeaders(){
+  const tok = getToken();
   return {
-    is_manager: data.is_sales_manager === true,
-    vendors: Array.isArray(data.vendors) ? data.vendors : []
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: "Bearer " + SUPABASE_ANON_KEY,
+    "Content-Type": "application/json",
+    "x-admin-token": tok
   };
 }
 
-/* ✅ FIX #1 : pré-sélection du 1er vendeur pour éviter "Attribuer" sans radio cochée */
-function renderAssignList(vendors){
-  const el = $("assignList");
-  const hint = $("assignHint");
+function setAuthStatus(ok, msg){
+  const el = $("authStatus");
   if(!el) return;
+  el.innerHTML = ok
+    ? `<span class="tag ok">Token OK</span> ${escHtml(msg||"")}`
+    : `<span class="tag bad">Token requis / invalide</span> ${escHtml(msg||"")}`;
+}
 
-  if(!vendors.length){
-    if(hint) hint.textContent = "Aucun vendeur rattaché à ce chef des ventes.";
-    el.innerHTML = "";
+/* ========================= ADMIN API ========================= */
+async function adminProviderList(){
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-provider-list`, {
+    method:"POST",
+    headers: authHeaders(),
+    body: JSON.stringify({})
+  });
+
+  const box = $("adminList");
+  if(!box) return;
+
+  if(!res.ok){
+    console.log("admin-provider-list:", res.status, data);
+    box.innerHTML = `❌ admin-provider-list indisponible ou token invalide.`;
+    setAuthStatus(false, "Vérifie le token.");
     return;
   }
 
-  if(hint) hint.textContent = "Choisis un vendeur de l’équipe :";
-  el.innerHTML = vendors.map((v, i)=>{
-    const email = String(v.vendor_email || "").trim().toLowerCase();
-    const name = String(v.vendor_name || "").trim();
-    const label = name ? `${name} — ${email}` : email;
+  setAuthStatus(true, "Accès admin actif.");
+
+  const rows = Array.isArray(data?.providers) ? data.providers : [];
+  if(!rows.length){
+    box.innerHTML = `<div class="hint">Aucun prestataire en base.</div>`;
+    return;
+  }
+
+  box.innerHTML = rows.map(r=>{
+    const email = escHtml(r.provider_email || "");
+    const name = escHtml(r.provider_name || "");
+    const tags = [
+      r.is_sales_manager ? "✅ Chef des ventes" : "",
+      r.is_vendor ? "✅ Vendeur" : ""
+    ].filter(Boolean).join(" • ") || "—";
 
     return `
       <div class="providerRow">
-        <input type="radio" name="assignVendor" value="${escHtml(email)}" ${i===0 ? "checked" : ""}>
         <div class="txt">
-          <span class="main">${escHtml(label)}</span>
-          <span class="sub">Attribuer ce dossier à ce vendeur</span>
+          <span class="main">${email}</span>
+          ${name ? `<span class="sub">${name}</span>` : ""}
+          <span class="sub">${escHtml(tags)}</span>
         </div>
       </div>
     `;
   }).join("");
 }
 
-async function assignRequestToSelectedVendor(){
-  const status = $("assignStatus");
-  const picked = document.querySelector('input[name="assignVendor"]:checked');
-  if(!picked){
-    if(status) status.textContent = "❌ Sélectionne un vendeur.";
-    return;
-  }
-  const vendor_email = String(picked.value || "").trim().toLowerCase();
-  if(status) status.textContent = "Attribution en cours…";
+async function adminProviderUpsert(){
+  const email = normalizeEmail($("adminEmail").value);
+  const name = ($("adminName").value || "").trim();
+  const is_sales_manager = !!$("adminIsManager").checked;
+  const is_vendor = !!$("adminIsVendor").checked;
 
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/request-assign`, {
+  if(!emailLooksValid(email)){ alert("Email invalide"); return; }
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-provider-upsert`, {
     method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({
-      request_id: RID,
-      access_code: CODE,
-      manager_email: PROVIDER_EMAIL,
-      vendor_email
-    })
+    headers: authHeaders(),
+    body: JSON.stringify({ provider_email: email, provider_name: name || null, is_sales_manager, is_vendor })
   });
 
   if(!res.ok){
-    console.log("request-assign:", res.status, data);
-    if(status) status.textContent = "❌ Erreur attribution (voir console).";
+    console.log("admin-provider-upsert:", res.status, data);
+    alert("Erreur admin-provider-upsert (voir console)");
+    setAuthStatus(false, "Token invalide ?");
     return;
   }
 
-  if(status) status.textContent = "✅ Dossier attribué.";
-  await loadThread();
+  $("adminEmail").value = "";
+  $("adminName").value = "";
+  $("adminIsManager").checked = false;
+  $("adminIsVendor").checked = false;
+
+  await refreshAll();
 }
 
-/* =========================
-   Vendor directory (chef des ventes)
-========================= */
-function vendorExtractLine(line){
-  const s = (line || "").trim();
-  if(!s) return null;
+async function adminManagerVendorList(){
+  const box = $("teamBox");
+  if(!box) return;
 
-  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
-  if(m){
-    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
-    const email = (m[2] || "").trim().toLowerCase();
-    return { name, email };
-  }
-
-  const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
-  if(emailLooksValid(only)) return { name:"", email: only };
-
-  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  if(em) return { name:"", email: em[0].toLowerCase() };
-
-  return null;
-}
-
-async function vendorFetchList(){
-  showVendorBox(false);
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-manager-vendor-list`, {
     method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
+    headers: authHeaders(),
+    body: JSON.stringify({})
   });
 
   if(!res.ok){
-    console.log("vendor-list error:", res.status, data);
+    console.log("admin-manager-vendor-list:", res.status, data);
+    box.innerHTML = `❌ admin-manager-vendor-list indisponible (ou token invalide).`;
+    setAuthStatus(false, "Vérifie le token.");
     return;
   }
 
-  VENDOR_IS_MANAGER = (data && data.is_sales_manager === true);
-  if(!VENDOR_IS_MANAGER){
-    showVendorBox(false);
+  setAuthStatus(true, "Accès admin actif.");
+
+  const managers = Array.isArray(data?.managers) ? data.managers : [];
+  if(!managers.length){
+    box.innerHTML = `<div class="hint">Aucun chef des ventes trouvé.</div>`;
     return;
   }
 
-  showVendorBox(true);
-  $("vendorRoleHint").innerHTML = `<span class="tag ok">Chef des ventes</span> Répertoire équipe disponible.`;
+  box.innerHTML = managers.map(m=>{
+    const me = String(m.manager_email || "").trim().toLowerCase();
+    const mn = String(m.manager_name || "").trim();
+    const vendors = Array.isArray(m.vendors) ? m.vendors : [];
 
-  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
-  const el = $("vendorList");
-  if(!el) return;
+    const vendorHtml = vendors.length
+      ? vendors.map(v=>{
+          const ve = String(v.vendor_email || "").trim().toLowerCase();
+          const vn = String(v.vendor_name || "").trim();
+          const label = vn ? `${vn} — ${ve}` : ve;
 
-  if(!vendors.length){
-    el.innerHTML = `<div class="hint">Aucun vendeur enregistré.</div>`;
-    return;
-  }
-
-  el.innerHTML = vendors.map(v=>{
-    const email = String(v.vendor_email || "").trim().toLowerCase();
-    const name  = String(v.vendor_name || "").trim();
-    const label = name ? `${name} — ${email}` : email;
+          return `
+            <div class="providerRow">
+              <div class="txt">
+                <span class="main">${escHtml(label)}</span>
+                <span class="sub">${escHtml(ve)}</span>
+              </div>
+              <button class="small secondary" data-del="${escHtml(me)}||${escHtml(ve)}">Suppr.</button>
+            </div>
+          `;
+        }).join("")
+      : `<div class="hint">Aucun vendeur rattaché.</div>`;
 
     return `
-      <div class="providerRow">
-        <div class="txt">
-          <span class="main">${escHtml(label)}</span>
-          <span class="sub">${escHtml(email)}</span>
+      <div class="box" style="margin-top:12px">
+        <h3>${escHtml(mn ? `${mn} — ${me}` : me)}</h3>
+        ${vendorHtml}
+        <div class="divider"></div>
+
+        <div class="grid2">
+          <div>
+            <label>Ajouter vendeur (email)</label>
+            <input data-add-email="${escHtml(me)}" placeholder="vendeur@domaine.com">
+          </div>
+          <div>
+            <label>Nom (optionnel)</label>
+            <input data-add-name="${escHtml(me)}" placeholder="Jean Dupont">
+          </div>
         </div>
-        <button class="small secondary" data-del="${escHtml(email)}">Suppr.</button>
+
+        <div class="row">
+          <button class="secondary" data-add-btn="${escHtml(me)}">Ajouter</button>
+        </div>
       </div>
     `;
   }).join("");
 
-  el.querySelectorAll("button[data-del]").forEach(btn=>{
+  // bind delete
+  box.querySelectorAll("button[data-del]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
-      const ve = String(btn.getAttribute("data-del")||"").trim().toLowerCase();
-      if(!ve) return;
-      if(!confirm("Supprimer ce vendeur ?")) return;
+      const raw = String(btn.getAttribute("data-del")||"");
+      const [manager_email, vendor_email] = raw.split("||").map(x=>String(x||"").trim().toLowerCase());
+      if(!manager_email || !vendor_email) return;
+      if(!confirm("Supprimer ce vendeur de l’équipe ?")) return;
 
-      const { res: r2, data: d2 } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-delete`, {
+      const { res: r2, data: d2 } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-vendor-delete`, {
         method:"POST",
-        headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-        body: JSON.stringify({ provider_email: PROVIDER_EMAIL, vendor_email: ve, request_id: RID, access_code: CODE })
+        headers: authHeaders(),
+        body: JSON.stringify({ manager_email, vendor_email })
       });
 
       if(!r2.ok){
-        console.log("vendor-delete:", r2.status, d2);
+        console.log("admin-vendor-delete:", r2.status, d2);
         alert("Erreur suppression (console)");
         return;
       }
-      await vendorFetchList();
-      const role = await providerRoleAndTeam();
-      renderAssignList(role.vendors);
+
+      await adminManagerVendorList();
     });
   });
-}
 
-async function vendorAddDb(){
-  if(!VENDOR_IS_MANAGER){
-    alert("Action réservée au Chef des ventes.");
-    return;
-  }
-  const email = normalizeEmail($("vendorEmail").value);
-  const name = ($("vendorName").value || "").trim();
-  if(!emailLooksValid(email)){ alert("E-mail vendeur invalide."); return; }
+  // bind add
+  box.querySelectorAll("button[data-add-btn]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const manager_email = String(btn.getAttribute("data-add-btn")||"").trim().toLowerCase();
+      const emailInput = box.querySelector(`input[data-add-email="${CSS.escape(manager_email)}"]`);
+      const nameInput  = box.querySelector(`input[data-add-name="${CSS.escape(manager_email)}"]`);
 
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-upsert`, {
-    method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, vendor_email: email, vendor_name: name || "", request_id: RID, access_code: CODE })
-  });
+      const vendor_email = normalizeEmail(emailInput ? emailInput.value : "");
+      const vendor_name  = String(nameInput ? nameInput.value : "").trim();
 
-  if(!res.ok){
-    console.log("vendor-upsert:", res.status, data);
-    alert("Erreur ajout vendeur (console)");
-    return;
-  }
+      if(!emailLooksValid(vendor_email)){ alert("Email vendeur invalide"); return; }
 
-  $("vendorEmail").value = "";
-  $("vendorName").value = "";
-  await vendorFetchList();
-  const role = await providerRoleAndTeam();
-  renderAssignList(role.vendors);
-}
+      const { res: r2, data: d2 } = await fetchJson(`${SUPABASE_URL}/functions/v1/admin-vendor-upsert`, {
+        method:"POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ manager_email, vendor_email, vendor_name: vendor_name || null })
+      });
 
-async function vendorImportList(){
-  if(!VENDOR_IS_MANAGER){
-    alert("Action réservée au Chef des ventes.");
-    return;
-  }
-  const raw = ($("vendorImport").value || "").replace(/\r/g,"").trim();
-  if(!raw){ alert("Colle une liste."); return; }
-
-  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
-
-  let added = 0, ignored = 0;
-  for(const line of lines){
-    const p = vendorExtractLine(line);
-    if(!p || !emailLooksValid(p.email)){ ignored++; continue; }
-
-    const { res } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-upsert`, {
-      method:"POST",
-      headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-      body: JSON.stringify({ provider_email: PROVIDER_EMAIL, vendor_email: p.email, vendor_name: p.name || "", request_id: RID, access_code: CODE })
-    });
-
-    if(res.ok) added++; else ignored++;
-  }
-
-  $("vendorImport").value = "";
-  await vendorFetchList();
-  const role = await providerRoleAndTeam();
-  renderAssignList(role.vendors);
-  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
-}
-
-async function vendorExport(){
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
-    method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
-  });
-
-  if(!res.ok){
-    console.log("vendor-export vendor-list:", res.status, data);
-    alert("Erreur export (console)");
-    return;
-  }
-
-  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
-  const lines = vendors.map(v=>{
-    const email = String(v.vendor_email || "");
-    const name = String(v.vendor_name || "").trim();
-    return name ? `${name} <${email}>` : email;
-  }).join("\n");
-
-  await navigator.clipboard.writeText(lines || "");
-  alert("Répertoire vendeurs copié.");
-}
-
-async function vendorClear(){
-  if(!VENDOR_IS_MANAGER){ alert("Action réservée au Chef des ventes."); return; }
-  if(!confirm("Supprimer tout le répertoire vendeurs (en base) ?")) return;
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
-    method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
-  });
-
-  if(!res.ok){
-    console.log("vendor-clear vendor-list:", res.status, data);
-    alert("Erreur chargement vendeurs (console)");
-    return;
-  }
-
-  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
-  for(const v of vendors){
-    const ve = String(v.vendor_email || "").toLowerCase();
-    await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-delete`, {
-      method:"POST",
-      headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-      body: JSON.stringify({ provider_email: PROVIDER_EMAIL, vendor_email: ve, request_id: RID, access_code: CODE })
-    });
-  }
-
-  await vendorFetchList();
-  renderAssignList([]);
-}
-
-/* =========================
-   ADMIN (roles + équipes)
-   (laisse tel quel : nécessite tes Edge Functions admin-*)
-========================= */
-function showAdminBox(show){ const b=$("adminBox"); if(b) b.style.display = show ? "" : "none"; }
-
-async function adminList(){ /* ... (inchangé, volontairement) ... */ }
-async function adminSave(){ /* ... (inchangé, volontairement) ... */ }
-async function adminTeamList(){ /* ... (inchangé, volontairement) ... */ }
-
-/* =========================
-   INIT
-========================= */
-(function init(){
-  // binds prescriber
-  $("createBtn").addEventListener("click", createRequest);
-  $("copyLinkBtn").addEventListener("click", copyThreadLink);
-  $("copyLinkBtn2").addEventListener("click", copyThreadLink);
-  $("copyLinkBtn3").addEventListener("click", copyThreadLink);
-
-  $("addProviderBtn").addEventListener("click", addProvider);
-  $("checkAllBtn").addEventListener("click", ()=>checkAll(true));
-  $("uncheckAllBtn").addEventListener("click", ()=>checkAll(false));
-  $("exportProvidersBtn").addEventListener("click", exportProviders);
-  $("clearProvidersBtn").addEventListener("click", clearProviders);
-  $("importProvidersBtn").addEventListener("click", importProviders);
-  $("sendBtn").addEventListener("click", sendToSelected);
-  $("refreshThreadBtn").addEventListener("click", loadThread);
-
-  // provider buttons
-  $("refreshThreadProviderBtn").addEventListener("click", loadThread);
-  $("assignBtn").addEventListener("click", assignRequestToSelectedVendor);
-
-  $("vendorAddBtn").addEventListener("click", vendorAddDb);
-  $("vendorImportBtn").addEventListener("click", vendorImportList);
-  $("vendorExportBtn").addEventListener("click", vendorExport);
-  $("vendorClearBtn").addEventListener("click", vendorClear);
-
-  // UI initial
-  renderProviders();
-
-  const { rid, code, pe, admin, token } = getAllParams();
-
-  // admin activation
-  ADMIN_TOKEN = token || DEFAULT_ADMIN_TOKEN || "";
-  if(String(admin) === "1" && ADMIN_TOKEN){
-    showAdminBox(true);
-    $("adminHint").innerHTML = `<span class="tag ok">Admin activé</span>`;
-    // ⚠️ tes fonctions adminList/adminTeamList doivent exister (sinon commente ces 2 lignes)
-    // $("adminSave").addEventListener("click", adminSave);
-    // $("adminRefresh").addEventListener("click", async ()=>{ await adminList(); await adminTeamList(); });
-    // adminList(); adminTeamList();
-  }else{
-    showAdminBox(false);
-  }
-
-  // 1) Mode prestataire si pe existe (prioritaire)
-  if (rid && code && pe && String(pe).trim()) {
-    RID = rid;
-    CODE = code;
-    PROVIDER_EMAIL = decodeURIComponent(String(pe)).trim().toLowerCase();
-
-    $("prescriberUI").style.display = "none";
-    $("providerUI").style.display = "block";
-    setModeChip("Prestataire");
-
-    // par défaut: cache les features manager
-    showVendorBox(false);
-    showAssignBox(false);
-
-    // charge thread + décide si manager
-    loadThread().then(async ()=>{
-      const role = await providerRoleAndTeam();
-      if(role.is_manager){
-        showVendorBox(true);
-        showAssignBox(true);
-        renderAssignList(role.vendors);
-        await vendorFetchList();
-      }else{
-        showVendorBox(false);
-        showAssignBox(false);
+      if(!r2.ok){
+        console.log("admin-vendor-upsert:", r2.status, d2);
+        alert("Erreur ajout vendeur (console)");
+        return;
       }
+
+      if(emailInput) emailInput.value = "";
+      if(nameInput) nameInput.value = "";
+      await adminManagerVendorList();
     });
+  });
+}
 
+async function refreshAll(){
+  const tok = getToken();
+  $("tokenInput").value = tok || "";
+  if(!tok){
+    setAuthStatus(false, "Ajoute ?token=... ou colle le token ci-dessus.");
+    $("adminList").innerHTML = `<div class="hint">Token requis.</div>`;
+    $("teamBox").innerHTML = `<div class="hint">Token requis.</div>`;
     return;
   }
 
-  // 2) Mode prescripteur dossier
-  if (rid && code) {
-    RID = rid;
-    CODE = code;
+  await adminProviderList();
+  await adminManagerVendorList();
+}
 
-    $("prescriberUI").style.display = "block";
-    $("providerUI").style.display = "none";
-
-    $("sendBox").style.display = "block";
-    $("prescriberReplyBox").style.display = "block";
-
-    setModeChip("Prescripteur (dossier)");
-    loadThread();
-    return;
+/* ========================= INIT ========================= */
+(function init(){
+  // récup token URL si présent
+  const tUrl = getTokenFromUrl();
+  if(tUrl){
+    setToken(tUrl);
   }
 
-  // 3) Mode prescripteur accueil
-  $("prescriberUI").style.display = "block";
-  $("providerUI").style.display = "none";
-  setModeChip("Prescripteur");
+  $("saveTokenBtn").addEventListener("click", async ()=>{
+    const t = String($("tokenInput").value || "").trim();
+    if(!t){ alert("Colle un token."); return; }
+    setToken(t);
+    await refreshAll();
+  });
+
+  $("clearTokenBtn").addEventListener("click", async ()=>{
+    clearToken();
+    await refreshAll();
+  });
+
+  $("refreshAllBtn").addEventListener("click", refreshAll);
+
+  $("adminSave").addEventListener("click", adminProviderUpsert);
+  $("adminRefresh").addEventListener("click", refreshAll);
+
+  refreshAll();
 })();
 </script>
 
