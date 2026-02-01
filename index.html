@@ -667,50 +667,58 @@ function importProviders(){
 ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
-  const lines = t.split("\n").map(l => l.trim()).filter(Boolean);
+  const rawLines = t.split("\n").map(l => l.trim());
+  const lines = rawLines.filter(Boolean);
 
   const out = {
-    client_name:"",
-    address:"",
-    postcode:"",
-    city:"",
-    country:"",
-    siret:"",
-    vat:"",
-    contact_name:"",
-    contact_email:"",
-    contact_phone:""
+    client_name: "",
+    address: "",
+    postcode: "",
+    city: "",
+    country: "",
+    siret: "",
+    vat: "",
+    contact_name: "",
+    contact_email: "",
+    contact_phone: ""
   };
+
   if (!lines.length) return out;
 
-  out.client_name = lines[0];
+  // ---------- Helpers ----------
+  const norm = (s) => String(s || "").trim();
+  const low  = (s) => norm(s).toLowerCase();
 
   const isUselessLine = (l) => {
-    const x = l.toLowerCase();
+    const x = low(l);
+    if (!x) return true;
+
     return (
+      x === "client" ||
+      x === "contacts" ||
+      x === "contact" ||
+      x === "responsable" ||
+      x === "mf autosud" ||
+      x === "mf autosud " ||
+      x.includes("responsable mf autosud") ||
       x.includes("obtenir un lien") ||
       x.includes("mandat de prélèvement sepa") ||
       x.includes("mandat de prelevement sepa") ||
       x.includes("prelevement sepa") ||
-      x.includes("prélèvement sepa") ||
-      x.includes("responsable mf autosud") ||
-      x === "responsable" ||
-      x === "mf autosud" ||
-      x === "client" ||
-      x === "contacts" ||
-      x === "contact"
+      x.includes("prélèvement sepa")
     );
   };
 
-  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(l.trim());
+  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l));
 
   const parseZipCityCountry = (l) => {
-    const m = l.match(/\b(\d{5})\b\s+(.+)$/);
-    if(!m) return null;
+    // "06200 Nice France" / "06200 NICE"
+    const m = norm(l).match(/\b(\d{5})\b\s+(.+)$/);
+    if (!m) return null;
     const postcode = m[1];
-    let rest = (m[2] || "").trim();
+    let rest = norm(m[2]);
     let country = "";
-    if(/france$/i.test(rest)){
+    if (/france$/i.test(rest)) {
       country = "France";
       rest = rest.replace(/france$/i, "").trim();
     }
@@ -718,94 +726,161 @@ function parsePaste(text){
   };
 
   const looksLikeStreet = (l) => {
-    const x = l.toLowerCase();
+    const x = low(l);
     return (
       /\b\d{1,5}\b/.test(x) &&
-      (x.includes("rue") || x.includes("avenue") || x.includes("av ") || x.includes("boulevard") ||
-       x.includes("bd ") || x.includes("chemin") || x.includes("route") || x.includes("impasse") || x.includes("place"))
+      (
+        x.includes("rue") ||
+        x.includes("avenue") ||
+        x.includes("av ") ||
+        x.includes("boulevard") ||
+        x.includes("bd ") ||
+        x.includes("chemin") ||
+        x.includes("route") ||
+        x.includes("impasse") ||
+        x.includes("place")
+      )
     );
   };
 
-  const looksLikeSiretNumber = (l) => /^[0-9 ]{10,30}$/.test(l.trim());
-  const looksLikeVatNumber = (l) => /^[A-Z]{2}\s*[0-9A-Z ]{6,}$/.test(l.trim());
+  const extractSiretValue = (l) => {
+    // accepte "N° Siret :" / "Siret :" / "SIRET : 123"
+    const m = norm(l).match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
+    if (!m) return "";
+    return norm(m[1]).replace(/\s+/g, "");
+  };
 
-  for (let i = 1; i < lines.length; i++) {
+  const extractVatValue = (l) => {
+    // "N° de TVA :" / "TVA :" / "TVA : FR..."
+    const m = norm(l).match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
+    if (!m) return "";
+    return norm(m[1]).replace(/\s+/g, "");
+  };
+
+  const extractEmailValue = (l) => {
+    const m = norm(l).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    return m ? m[0].toLowerCase() : "";
+  };
+
+  const extractPhoneValue = (l) => {
+    const m = norm(l).match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
+    return m ? m[0].replace(/[\s.\-]/g, "") : "";
+  };
+
+  // ---------- Client name ----------
+  // 1ère ligne non "utile" => client_name
+  let firstMeaningful = "";
+  for (const l of lines) {
+    if (isUselessLine(l)) continue;
+    firstMeaningful = l;
+    break;
+  }
+  out.client_name = firstMeaningful || lines[0];
+
+  // ---------- Scan lines with "pending label" mechanism ----------
+  // Si on voit "N° Siret :" sans valeur => on prend la valeur sur la ligne suivante.
+  let pending: null | "siret" | "vat" = null;
+
+  // petite aide: parfois l’utilisateur met "N° Siret :" puis une ligne vide => on saute les vides déjà filtrés
+
+  for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
-    const low = l.toLowerCase();
+    const x = low(l);
 
-    if (isUselessLine(l) || looksLikeShortCode(l)) continue;
+    if (!l || isUselessLine(l) || looksLikeShortCode(l)) continue;
 
-    // ✅ SIRET (sur la même ligne)
-    let siretMatch = l.match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
-    if (siretMatch) { out.siret = siretMatch[1].replace(/\s+/g, ""); continue; }
-
-    // ✅ SIRET (label sur une ligne puis valeur sur la ligne suivante)
-    if (!out.siret && (low === "n° siret :" || low === "no siret :" || low === "n° siret" || low === "no siret" || low.startsWith("siret"))) {
-      const next = lines[i+1] || "";
-      if (looksLikeSiretNumber(next)) {
-        out.siret = next.replace(/\s+/g, "");
-        i++; // on saute la ligne suivante
-        continue;
+    // Si on attend une valeur (ligne précédente = "N° Siret :" / "N° TVA :")
+    if (pending) {
+      if (pending === "siret") {
+        const v = norm(l).replace(/\s+/g, "");
+        // On accepte uniquement une valeur "numérique" plausible
+        if (/^\d{10,20}$/.test(v)) out.siret = v;
       }
+      if (pending === "vat") {
+        const v = norm(l).replace(/\s+/g, "");
+        // On accepte FR + alphanum
+        if (/^[A-Z]{2}[0-9A-Z]{6,}$/.test(v)) out.vat = v;
+      }
+      pending = null;
+      // on continue quand même pour ne pas bloquer le reste
+      continue;
     }
 
-    // ✅ TVA (sur la même ligne)
-    let vatMatch = l.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
-    if (vatMatch) { out.vat = vatMatch[1].replace(/\s+/g, ""); continue; }
-
-    // ✅ TVA (label sur une ligne puis valeur sur la ligne suivante)
-    if (!out.vat && (low === "n° de tva :" || low === "no de tva :" || low === "n° tva :" || low === "no tva :" || low.startsWith("tva"))) {
-      const next = lines[i+1] || "";
-      if (looksLikeVatNumber(next)) {
-        out.vat = next.replace(/\s+/g, "");
-        i++;
-        continue;
-      }
+    // 1) Labels SIRET / TVA (sans valeur)
+    // Ex: "N° Siret :" / "Siret :" => pending
+    if (!out.siret && /siret\s*[:\-]?\s*$/i.test(l)) {
+      pending = "siret";
+      continue;
+    }
+    if (!out.vat && /tva\s*[:\-]?\s*$/i.test(l)) {
+      pending = "vat";
+      continue;
     }
 
-    // Email
-    const emailMatch = l.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-    if (emailMatch && !out.contact_email) { out.contact_email = emailMatch[0].toLowerCase(); continue; }
+    // 2) SIRET inline
+    if (!out.siret) {
+      const v = extractSiretValue(l);
+      if (v) { out.siret = v; continue; }
+    }
 
-    // Phone FR
-    const phoneMatch = l.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
-    if (phoneMatch && !out.contact_phone) { out.contact_phone = phoneMatch[0].replace(/[\s.\-]/g,""); continue; }
+    // 3) TVA inline
+    if (!out.vat) {
+      const v = extractVatValue(l);
+      if (v) { out.vat = v; continue; }
+    }
 
-    // Adresse (rue + CP ville pays sur la ligne suivante)
-    if(!out.address && looksLikeStreet(l)){
+    // 4) Email
+    if (!out.contact_email) {
+      const v = extractEmailValue(l);
+      if (v) { out.contact_email = v; continue; }
+    }
+
+    // 5) Phone
+    if (!out.contact_phone) {
+      const v = extractPhoneValue(l);
+      if (v) { out.contact_phone = v; continue; }
+    }
+
+    // 6) Adresse (rue puis CP ville)
+    if (!out.address && looksLikeStreet(l)) {
       out.address = l;
-      const next = lines[i+1] || "";
+      // check next line for zip/city/country
+      const next = lines[i + 1] || "";
       const z = parseZipCityCountry(next);
-      if(z){
+      if (z) {
         out.postcode = z.postcode;
         out.city = z.city;
-        if(z.country) out.country = z.country;
+        if (z.country) out.country = z.country;
       }
       continue;
     }
 
-    // Adresse (CP ville pays sur la même ligne)
-    if(!out.postcode){
+    // 7) Adresse (tout sur une ligne avec CP)
+    if (!out.address) {
       const z = parseZipCityCountry(l);
-      if(z){
-        if(!out.address) out.address = ""; // adresse inconnue si pas de rue
+      if (z) {
+        out.address = l;
         out.postcode = z.postcode;
         out.city = z.city;
-        if(z.country) out.country = z.country;
+        if (z.country) out.country = z.country;
         continue;
       }
     }
 
-    // Nom contact (heuristique) => on évite de capturer "N° Siret :" etc
+    // 8) Nom contact (éviter les lignes du type "N° Siret :" / "N° TVA :" etc.)
     if (!out.contact_name) {
-      if (!/\d/.test(l) && !l.includes("@") && l.length <= 45) {
+      const forbidden =
+        x.includes("siret") || x.includes("tva") || x.includes("n°") || x.includes("no ");
+      if (!forbidden && !/\d/.test(l) && !l.includes("@") && l.length <= 45) {
         const w = l.split(/\s+/).filter(Boolean);
         if (w.length >= 2 && w.length <= 5) out.contact_name = l;
       }
     }
   }
 
+  // ---------- Fallback country ----------
   if (!out.country && /france/i.test(t)) out.country = "France";
+
   return out;
 }
 
