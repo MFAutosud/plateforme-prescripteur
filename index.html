@@ -686,7 +686,7 @@ function parsePaste(text){
   out.client_name = lines[0];
 
   const isUselessLine = (l) => {
-    const x = l.toLowerCase().trim();
+    const x = l.toLowerCase();
     return (
       x.includes("obtenir un lien") ||
       x.includes("mandat de prélèvement sepa") ||
@@ -696,18 +696,13 @@ function parsePaste(text){
       x.includes("responsable mf autosud") ||
       x === "responsable" ||
       x === "mf autosud" ||
-      x === "client"
+      x === "client" ||
+      x === "contacts" ||
+      x === "contact"
     );
   };
 
-  const looksLikeStreet = (l) => {
-    const x = l.toLowerCase();
-    return (
-      /\b\d{1,5}\b/.test(x) &&
-      (x.includes("rue") || x.includes("avenue") || x.includes("av ") || x.includes("boulevard") || x.includes("bd ") ||
-       x.includes("chemin") || x.includes("route") || x.includes("impasse") || x.includes("place"))
-    );
-  };
+  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(l.trim());
 
   const parseZipCityCountry = (l) => {
     const m = l.match(/\b(\d{5})\b\s+(.+)$/);
@@ -722,40 +717,78 @@ function parsePaste(text){
     return { postcode, city: rest, country };
   };
 
+  const looksLikeStreet = (l) => {
+    const x = l.toLowerCase();
+    return (
+      /\b\d{1,5}\b/.test(x) &&
+      (x.includes("rue") || x.includes("avenue") || x.includes("av ") || x.includes("boulevard") ||
+       x.includes("bd ") || x.includes("chemin") || x.includes("route") || x.includes("impasse") || x.includes("place"))
+    );
+  };
+
+  const looksLikeSiretNumber = (l) => /^[0-9 ]{10,30}$/.test(l.trim());
+  const looksLikeVatNumber = (l) => /^[A-Z]{2}\s*[0-9A-Z ]{6,}$/.test(l.trim());
+
   for (let i = 1; i < lines.length; i++) {
     const l = lines[i];
-    if (isUselessLine(l)) continue;
+    const low = l.toLowerCase();
 
-    const siretMatch = l.match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
+    if (isUselessLine(l) || looksLikeShortCode(l)) continue;
+
+    // ✅ SIRET (sur la même ligne)
+    let siretMatch = l.match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
     if (siretMatch) { out.siret = siretMatch[1].replace(/\s+/g, ""); continue; }
 
-    const vatMatch = l.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
+    // ✅ SIRET (label sur une ligne puis valeur sur la ligne suivante)
+    if (!out.siret && (low === "n° siret :" || low === "no siret :" || low === "n° siret" || low === "no siret" || low.startsWith("siret"))) {
+      const next = lines[i+1] || "";
+      if (looksLikeSiretNumber(next)) {
+        out.siret = next.replace(/\s+/g, "");
+        i++; // on saute la ligne suivante
+        continue;
+      }
+    }
+
+    // ✅ TVA (sur la même ligne)
+    let vatMatch = l.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
     if (vatMatch) { out.vat = vatMatch[1].replace(/\s+/g, ""); continue; }
 
+    // ✅ TVA (label sur une ligne puis valeur sur la ligne suivante)
+    if (!out.vat && (low === "n° de tva :" || low === "no de tva :" || low === "n° tva :" || low === "no tva :" || low.startsWith("tva"))) {
+      const next = lines[i+1] || "";
+      if (looksLikeVatNumber(next)) {
+        out.vat = next.replace(/\s+/g, "");
+        i++;
+        continue;
+      }
+    }
+
+    // Email
     const emailMatch = l.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     if (emailMatch && !out.contact_email) { out.contact_email = emailMatch[0].toLowerCase(); continue; }
 
+    // Phone FR
     const phoneMatch = l.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
     if (phoneMatch && !out.contact_phone) { out.contact_phone = phoneMatch[0].replace(/[\s.\-]/g,""); continue; }
 
+    // Adresse (rue + CP ville pays sur la ligne suivante)
     if(!out.address && looksLikeStreet(l)){
       out.address = l;
-      if(i+1 < lines.length){
-        const next = lines[i+1];
-        const z = parseZipCityCountry(next);
-        if(z){
-          out.postcode = z.postcode;
-          out.city = z.city;
-          if(z.country) out.country = z.country;
-        }
+      const next = lines[i+1] || "";
+      const z = parseZipCityCountry(next);
+      if(z){
+        out.postcode = z.postcode;
+        out.city = z.city;
+        if(z.country) out.country = z.country;
       }
       continue;
     }
 
-    if(!out.address){
+    // Adresse (CP ville pays sur la même ligne)
+    if(!out.postcode){
       const z = parseZipCityCountry(l);
       if(z){
-        out.address = l;
+        if(!out.address) out.address = ""; // adresse inconnue si pas de rue
         out.postcode = z.postcode;
         out.city = z.city;
         if(z.country) out.country = z.country;
@@ -763,6 +796,7 @@ function parsePaste(text){
       }
     }
 
+    // Nom contact (heuristique) => on évite de capturer "N° Siret :" etc
     if (!out.contact_name) {
       if (!/\d/.test(l) && !l.includes("@") && l.length <= 45) {
         const w = l.split(/\s+/).filter(Boolean);
