@@ -117,7 +117,6 @@
     .divider{height:1px;background:var(--divider);margin:14px 0}
     a{color:var(--link)}
 
-    /* ✅ FIX affichage lignes prestataires */
     .providerRow{
       display:flex;align-items:flex-start;gap:10px;
       padding:10px 10px;border-radius:14px;
@@ -297,6 +296,12 @@ Lignes supprimées automatiquement :
         </div>
       </div>
 
+      <!-- ✅ AJOUT : choix rôle au moment d'ajouter -->
+      <div class="row">
+        <label class="checkline"><input type="checkbox" id="providerIsManager"> Chef des ventes</label>
+        <label class="checkline"><input type="checkbox" id="providerIsVendor"> Vendeur</label>
+      </div>
+
       <div class="row">
         <button id="addProviderBtn">Ajouter au répertoire</button>
       </div>
@@ -358,69 +363,11 @@ Lignes supprimées automatiquement :
       <div id="threadProvider" style="margin-top:10px"></div>
     </div>
 
-    <!-- VendorBox masqué si pas chef des ventes -->
+    <!-- VendorBox masqué si pas chef des ventes (inchangé ici) -->
     <div class="box" id="vendorBox" style="display:none;">
       <h2>Répertoire vendeurs (Chef des ventes)</h2>
       <div class="hint" id="vendorRoleHint">Chargement…</div>
-
-      <div class="row">
-        <button class="secondary" id="vendorCheckAllBtn">Tout cocher</button>
-        <button class="secondary" id="vendorUncheckAllBtn">Tout décocher</button>
-        <button class="secondary" id="vendorExportBtn">Exporter</button>
-        <button class="secondary" id="vendorClearBtn">Tout effacer</button>
-      </div>
-
-      <div id="vendorList" style="margin-top:10px"></div>
-
-      <div class="divider"></div>
-
-      <h3>Ajouter / importer des vendeurs</h3>
-
-      <div class="grid2">
-        <div>
-          <label>E-mail vendeur</label>
-          <input id="vendorEmail" placeholder="vendeur@domaine.com">
-        </div>
-        <div>
-          <label>Nom (optionnel)</label>
-          <input id="vendorName" placeholder="Ex. : Jean Dupont">
-        </div>
-      </div>
-
-      <div class="row">
-        <button id="vendorAddBtn">Ajouter</button>
-      </div>
-
-      <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
-      <textarea id="vendorImport" style="height:110px" placeholder="Ex. : Jean Dupont <vendeur@domaine.com>"></textarea>
-      <div class="row">
-        <button class="secondary" id="vendorImportBtn">Importer</button>
-      </div>
-    </div>
-
-    <div class="box">
-      <h2>Transférer la demande</h2>
-
-      <label>Note (optionnel)</label>
-      <textarea id="forwardNote" style="height:90px" placeholder="Ex. : Peux-tu traiter ce dossier ? Merci !"></textarea>
-
-      <div class="divider"></div>
-
-      <h3>Transférer à un vendeur (un seul)</h3>
-      <label>E-mail du nouveau destinataire</label>
-      <input id="forwardTo" placeholder="vendeur@domaine.com">
-      <div class="row">
-        <button class="secondary" id="forwardBtn">Transférer</button>
-      </div>
-
-      <div class="divider"></div>
-
-      <h3>Transférer à plusieurs vendeurs (répertoire)</h3>
-      <div class="row">
-        <button class="secondary" id="forwardSelectedBtn">Transférer aux vendeurs cochés</button>
-      </div>
-
-      <div id="forwardStatus" class="hint"></div>
+      <div class="hint">⚠️ (vendorBox non branché dans ce fichier)</div>
     </div>
 
     <div class="box">
@@ -441,15 +388,15 @@ Lignes supprimées automatiquement :
 
 <script>
 /* =========================
-   CONFIG (à modifier)
+   CONFIG
 ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
 const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
 const PROVIDERS_KEY = "mfautosud_providers_v2";
 
-/* (optionnel) si tu veux admin sans passer par l'URL */
-const DEFAULT_ADMIN_TOKEN = ""; // ex: "REPLACE_ME_ADMIN_TOKEN"
+/* ✅ optionnel: admin sans URL spéciale */
+const DEFAULT_ADMIN_TOKEN = ""; // ex: "mfautosud_admin_2026_9F3kL8pXqZ"
 
 /* =========================
    THEME
@@ -491,7 +438,6 @@ function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
 function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
 function setModeChip(txt){ const c=$("modeChip"); if(c) c.textContent = "Mode : " + txt; }
 function baseUrl(){
-  // On enlève hash ET query, pour repartir proprement sur /index.html
   return window.location.origin + window.location.pathname;
 }
 function randomCode(){
@@ -499,11 +445,8 @@ function randomCode(){
   return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 function getAllParams(){
-  // Query string (recommandé, robuste)
   const url = new URL(window.location.href);
   const qs = url.searchParams;
-
-  // Hash (fallback ancien format)
   const hs = new URLSearchParams(window.location.hash.replace("#",""));
 
   const rid   = qs.get("rid")   || hs.get("rid");
@@ -544,14 +487,22 @@ function renderProviders(){
   }
 
   listEl.innerHTML = providers.map((p, idx) => {
-    const email = String(p.email || "").trim().toLowerCase();
-    const name  = String(p.name || "").trim();
+    // ✅ compat: anciens formats éventuels
+    const email = normalizeEmail(p.email || p.provider_email || "");
+    const name  = String(p.name || p.provider_name || "").trim();
+
+    const tags = [
+      p.is_sales_manager ? "Chef des ventes" : "",
+      p.is_vendor ? "Vendeur" : ""
+    ].filter(Boolean).join(" • ");
+
     return `
       <div class="providerRow">
         <input type="checkbox" class="providerCheck" data-email="${escHtml(email)}">
         <div class="txt">
-          <span class="main">${escHtml(email)}</span>
+          <span class="main">${escHtml(email || "(email manquant)")}</span>
           ${name ? `<span class="sub">${escHtml(name)}</span>` : ""}
+          ${tags ? `<span class="sub">${escHtml(tags)}</span>` : ""}
         </div>
         <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
       </div>
@@ -566,20 +517,53 @@ function removeProvider(index){
   renderProviders();
 }
 
-function addProvider(){
+async function addProvider(){
   const email = normalizeEmail($("providerEmail").value);
   const name = ($("providerName").value || "").trim();
+
+  const is_sales_manager = !!($("providerIsManager") && $("providerIsManager").checked);
+  const is_vendor = !!($("providerIsVendor") && $("providerIsVendor").checked);
+
   if(!email){ alert("Saisis un e-mail."); return; }
   if(!emailLooksValid(email)){ alert("E-mail invalide."); return; }
 
   const providers = loadProviders();
-  if(providers.some(p => normalizeEmail(p.email) === email)){ alert("Déjà enregistré."); return; }
+  if(providers.some(p => normalizeEmail(p.email || p.provider_email) === email)){
+    alert("Déjà enregistré.");
+    return;
+  }
 
-  providers.push({ name, email });
+  // ✅ stock local
+  providers.push({ name, email, is_sales_manager, is_vendor });
   saveProviders(providers);
+
+  // ✅ si admin activé => push en base (roles)
+  if(ADMIN_TOKEN){
+    try{
+      await fetchJson(`${SUPABASE_URL}/functions/v1/admin-provider-upsert`, {
+        method:"POST",
+        headers:{
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: "Bearer " + SUPABASE_ANON_KEY,
+          "Content-Type":"application/json",
+          "x-admin-token": ADMIN_TOKEN
+        },
+        body: JSON.stringify({
+          provider_email: email,
+          provider_name: name || null,
+          is_sales_manager,
+          is_vendor
+        })
+      });
+      // on ne bloque pas si erreur (local storage reste OK)
+    }catch(e){}
+  }
 
   $("providerEmail").value = "";
   $("providerName").value = "";
+  if($("providerIsManager")) $("providerIsManager").checked = false;
+  if($("providerIsVendor")) $("providerIsVendor").checked = false;
+
   renderProviders();
 }
 
@@ -587,7 +571,11 @@ function checkAll(on){ document.querySelectorAll(".providerCheck").forEach(c=>c.
 
 async function exportProviders(){
   const providers = loadProviders();
-  const lines = providers.map(p => p.name ? `${p.name} <${p.email}>` : p.email).join("\n");
+  const lines = providers.map(p => {
+    const email = normalizeEmail(p.email || p.provider_email || "");
+    const name = String(p.name || p.provider_name || "").trim();
+    return name ? `${name} <${email}>` : email;
+  }).join("\n");
   await navigator.clipboard.writeText(lines || "");
   alert("Liste copiée dans le presse-papiers.");
 }
@@ -620,14 +608,14 @@ function importProviders(){
 
   const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
   const providers = loadProviders();
-  const existing = new Set(providers.map(p => normalizeEmail(p.email)));
+  const existing = new Set(providers.map(p => normalizeEmail(p.email || p.provider_email)));
 
   let added=0, ignored=0;
   for(const line of lines){
     const parsed = extractEmailAndName(line);
     if(!parsed || !emailLooksValid(parsed.email)){ ignored++; continue; }
     if(existing.has(parsed.email)){ ignored++; continue; }
-    providers.push({ name: parsed.name || "", email: parsed.email });
+    providers.push({ name: parsed.name || "", email: parsed.email, is_sales_manager:false, is_vendor:false });
     existing.add(parsed.email);
     added++;
   }
@@ -638,17 +626,31 @@ function importProviders(){
 }
 
 /* =========================
-   REQUEST creation / send / thread (ton existant)
+   PARSE COPY-PASTE (✅ CORRIGÉ)
+   - support adresse sur 1 ligne OU sur 2 lignes
+   - capture SIRET / TVA / email / téléphone
 ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
   const lines = t.split("\n").map(l => l.trim()).filter(Boolean);
 
-  const out = { client_name:"", address:"", postcode:"", city:"", country:"", siret:"", vat:"", contact_name:"", contact_email:"", contact_phone:"" };
+  const out = {
+    client_name:"",
+    address:"",
+    postcode:"",
+    city:"",
+    country:"",
+    siret:"",
+    vat:"",
+    contact_name:"",
+    contact_email:"",
+    contact_phone:""
+  };
   if (!lines.length) return out;
+
   out.client_name = lines[0];
 
-  const isTitleLine = (l) => ["client","contacts","contact"].includes(l.toLowerCase());
+  const isTitleLine = (l) => ["client","contacts","contact","responsable","responsable mf autosud","responsable mf autosud"].includes(l.toLowerCase());
   const isUselessLine = (l) => {
     const x = l.toLowerCase();
     return (
@@ -657,39 +659,86 @@ function parsePaste(text){
       x.includes("mandat de prelevement sepa") ||
       x.includes("prelevement sepa") ||
       x.includes("prélèvement sepa") ||
-      x.includes("responsable mf autosud")
+      x.includes("responsable mf autosud") ||
+      x === "mf autosud" ||
+      x === "mf autosud "
     );
   };
   const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(l.trim());
+
+  const looksLikeStreet = (l) => {
+    const x = l.toLowerCase();
+    // heuristique: num + rue/avenue/bd/etc ou contient "rue"/"avenue"/"boulevard"/"chemin"
+    return (
+      /\b\d{1,5}\b/.test(x) &&
+      (x.includes("rue") || x.includes("avenue") || x.includes("av ") || x.includes("boulevard") || x.includes("bd ") || x.includes("chemin") || x.includes("route") || x.includes("impasse") || x.includes("place"))
+    );
+  };
+
+  const parseZipCityCountry = (l) => {
+    // ex: "06200 Nice France" ou "06200 NICE"
+    const m = l.match(/\b(\d{5})\b\s+(.+)$/);
+    if(!m) return null;
+    const postcode = m[1];
+    let rest = (m[2] || "").trim();
+    let country = "";
+    if(/france$/i.test(rest)){
+      country = "France";
+      rest = rest.replace(/france$/i, "").trim();
+    }
+    return { postcode, city: rest, country };
+  };
 
   for (let i = 1; i < lines.length; i++) {
     const l = lines[i];
     if (isTitleLine(l) || isUselessLine(l) || looksLikeShortCode(l)) continue;
 
-    if (!out.address && /\b\d{5}\b/.test(l)) {
+    // SIRET
+    const siretMatch = l.match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
+    if (siretMatch) { out.siret = siretMatch[1].replace(/\s+/g, ""); continue; }
+
+    // TVA
+    const vatMatch = l.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
+    if (vatMatch) { out.vat = vatMatch[1].replace(/\s+/g, ""); continue; }
+
+    // Email
+    const emailMatch = l.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    if (emailMatch && !out.contact_email) { out.contact_email = emailMatch[0].toLowerCase(); continue; }
+
+    // Phone FR
+    const phoneMatch = l.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
+    if (phoneMatch && !out.contact_phone) { out.contact_phone = phoneMatch[0].replace(/[\s.\-]/g,""); continue; }
+
+    // Adresse (cas "ligne rue" puis "CP ville pays")
+    if(!out.address && looksLikeStreet(l)){
       out.address = l;
-      const m = l.match(/\b(\d{5})\b\s+(.+)$/);
-      if (m) {
-        out.postcode = m[1];
-        let rest = m[2].trim();
-        if (/france$/i.test(rest)) { out.country = "France"; rest = rest.replace(/france$/i, "").trim(); }
-        out.city = rest;
+      // regarde la ligne suivante si elle contient CP
+      if(i+1 < lines.length){
+        const next = lines[i+1];
+        const z = parseZipCityCountry(next);
+        if(z){
+          out.postcode = z.postcode;
+          out.city = z.city;
+          if(z.country) out.country = z.country;
+        }
       }
       continue;
     }
 
-    const siretMatch = l.match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
-    if (siretMatch) { out.siret = siretMatch[1].replace(/\s+/g, ""); continue; }
+    // Adresse (cas "tout sur une ligne" contient CP)
+    if(!out.address){
+      const z = parseZipCityCountry(l);
+      if(z){
+        // si pas d'adresse rue avant, on stocke cette ligne dans address (fallback)
+        out.address = l;
+        out.postcode = z.postcode;
+        out.city = z.city;
+        if(z.country) out.country = z.country;
+        continue;
+      }
+    }
 
-    const vatMatch = l.match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
-    if (vatMatch) { out.vat = vatMatch[1].replace(/\s+/g, ""); continue; }
-
-    const emailMatch = l.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-    if (emailMatch && !out.contact_email) { out.contact_email = emailMatch[0].toLowerCase(); continue; }
-
-    const phoneMatch = l.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
-    if (phoneMatch && !out.contact_phone) { out.contact_phone = phoneMatch[0].replace(/[\s.\-]/g,""); continue; }
-
+    // Nom contact (heuristique)
     if (!out.contact_name) {
       if (!/\d/.test(l) && !l.includes("@") && l.length <= 45) {
         const w = l.split(/\s+/).filter(Boolean);
@@ -697,10 +746,16 @@ function parsePaste(text){
       }
     }
   }
+
+  // Fallback pays
   if (!out.country && /france/i.test(t)) out.country = "France";
+
   return out;
 }
 
+/* =========================
+   REQUEST creation / send / thread
+========================= */
 async function createRequest(){
   const vehicle = $("vehicle").value.trim();
   const paste = ($("pasteBlock").value || "").trim();
@@ -745,7 +800,7 @@ async function createRequest(){
   if(!res.ok){ console.log(res.status, data); alert("Erreur création (console)."); return; }
 
   RID = data[0].id;
-const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
+  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
   $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
 
   $("sendBox").style.display = "block";
@@ -810,6 +865,7 @@ async function loadThread(){
     return;
   }
 
+  // prescriber thread
   if($("thread")){
     const el = $("thread");
     el.innerHTML = "";
@@ -829,15 +885,25 @@ async function loadThread(){
     });
   }
 
+  // provider request info (✅ COMPLET)
   if($("requestInfo") && data.request){
     const r = data.request;
+
+    const addrLine = [r.address, r.postcode, r.city, r.country].filter(Boolean).join(" ");
     $("requestInfo").innerHTML = `
       <div class="card">
         <div class="gridInfo">
           <div class="kv"><b>Client</b><div>${escHtml(r.client_name || "-")}</div></div>
           <div class="kv"><b>Véhicule</b><div>${escHtml(r.vehicle || "-")}</div></div>
+
+          <div class="kv"><b>Adresse</b><div>${escHtml(addrLine || "-")}</div></div>
           <div class="kv"><b>Contact</b><div>${escHtml(r.contact_name || "-")}</div></div>
+
           <div class="kv"><b>E-mail</b><div>${escHtml(r.contact_email || "-")}</div></div>
+          <div class="kv"><b>Téléphone</b><div>${escHtml(r.contact_phone || "-")}</div></div>
+
+          <div class="kv"><b>SIRET</b><div>${escHtml(r.siret || "-")}</div></div>
+          <div class="kv"><b>TVA</b><div>${escHtml(r.vat || "-")}</div></div>
         </div>
       </div>
     `;
@@ -845,9 +911,7 @@ async function loadThread(){
 }
 
 /* =========================
-   ADMIN (roles) — nécessite 2 Edge Functions
-   - admin-provider-list
-   - admin-provider-upsert
+   ADMIN (roles)
 ========================= */
 function showAdminBox(show){
   $("adminBox").style.display = show ? "" : "none";
@@ -947,51 +1011,11 @@ async function adminSave(){
   $("sendBtn").addEventListener("click", sendToSelected);
   $("refreshThreadBtn").addEventListener("click", loadThread);
 
-  // load providers list right away
   renderProviders();
 
-  // mode based on hash
- const { rid, code, pe, admin, token } = getAllParams();
+  const { rid, code, pe, admin, token } = getAllParams();
 
-// 1) Mode prestataire si pe existe (prioritaire)
-if (rid && code && pe && String(pe).trim()) {
-  RID = rid;
-  CODE = code;
-  PROVIDER_EMAIL = decodeURIComponent(String(pe)).trim().toLowerCase();
-
-  // On bascule UI
-  $("prescriberUI").style.display = "none";
-  $("providerUI").style.display = "block";
-  setModeChip("Prestataire");
-
-  // (Optionnel) charger le vendorBox si tu as la fonction vendorFetchList()
-  // vendorFetchList();
-
-  loadThread();
-} 
-// 2) Mode prescripteur dossier
-else if (rid && code) {
-  RID = rid;
-  CODE = code;
-
-  $("prescriberUI").style.display = "block";
-  $("providerUI").style.display = "none";
-
-  $("sendBox").style.display = "block";
-  $("prescriberReplyBox").style.display = "block";
-
-  setModeChip("Prescripteur (dossier)");
-  loadThread();
-} 
-// 3) Mode prescripteur (accueil)
-else {
-  $("prescriberUI").style.display = "block";
-  $("providerUI").style.display = "none";
-  setModeChip("Prescripteur");
-}
-
-  // admin activation:
-  // open with: #admin=1&token=TON_ADMIN_TOKEN
+  // admin activation (query ou hash)
   ADMIN_TOKEN = token || DEFAULT_ADMIN_TOKEN || "";
   if(String(admin) === "1" && ADMIN_TOKEN){
     showAdminBox(true);
@@ -1002,6 +1026,41 @@ else {
   }else{
     showAdminBox(false);
   }
+
+  // 1) Mode prestataire si pe existe (prioritaire)
+  if (rid && code && pe && String(pe).trim()) {
+    RID = rid;
+    CODE = code;
+    PROVIDER_EMAIL = decodeURIComponent(String(pe)).trim().toLowerCase();
+
+    $("prescriberUI").style.display = "none";
+    $("providerUI").style.display = "block";
+    setModeChip("Prestataire");
+
+    loadThread();
+    return;
+  }
+
+  // 2) Mode prescripteur dossier
+  if (rid && code) {
+    RID = rid;
+    CODE = code;
+
+    $("prescriberUI").style.display = "block";
+    $("providerUI").style.display = "none";
+
+    $("sendBox").style.display = "block";
+    $("prescriberReplyBox").style.display = "block";
+
+    setModeChip("Prescripteur (dossier)");
+    loadThread();
+    return;
+  }
+
+  // 3) Mode prescripteur accueil
+  $("prescriberUI").style.display = "block";
+  $("providerUI").style.display = "none";
+  setModeChip("Prescripteur");
 })();
 </script>
 
