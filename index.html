@@ -89,7 +89,6 @@
       background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.92));
       border:1px solid rgba(2,6,23,.10);
     }
-
     h2{margin:0 0 10px;font-size:16px}
     h3{margin:8px 0 8px;font-size:14px}
     label{display:block;margin-top:10px;font-size:13px;color:var(--muted)}
@@ -119,14 +118,21 @@
     a{color:var(--link)}
 
     .providerRow{
-      display:flex;align-items:flex-start;gap:10px;
+      display:flex;align-items:center;gap:10px;
       padding:10px 10px;border-radius:14px;
       background:var(--rowBg);
       border:1px solid var(--rowBorder);
       margin:8px 0;
+      min-height:46px;
     }
-    .providerRow input{margin-top:3px}
-    .providerRow .txt{flex:1; min-width:0}
+    .providerRow input{margin-top:0}
+    .providerRow .txt{
+      flex:1;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
     .providerRow .main{
       display:block; font-size:13px; font-weight:800; color:var(--text);
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -167,6 +173,7 @@
 
 <body>
 <div class="wrap">
+
   <div class="topbar">
     <div class="brand">
       <div class="brandLogo">
@@ -184,8 +191,9 @@
     </div>
   </div>
 
-  <!-- PRESCRIPTEUR UI -->
+  <!-- ========================= PRESCRIPTEUR UI ========================= -->
   <div id="prescriberUI">
+
     <div class="box">
       <h2>1) Créer une demande</h2>
 
@@ -285,7 +293,7 @@ Lignes supprimées automatiquement :
     </div>
   </div>
 
-  <!-- PRESTATAIRE UI -->
+  <!-- ========================= PRESTATAIRE UI ========================= -->
   <div id="providerUI" style="display:none;">
     <div class="box">
       <h2>Demande reçue <span class="tag">Prestataire</span></h2>
@@ -300,43 +308,6 @@ Lignes supprimées automatiquement :
         <button class="secondary" id="assignBtn">Attribuer</button>
       </div>
       <div class="hint" id="assignStatus"></div>
-    </div>
-
-    <div class="box" id="vendorBox" style="display:none;">
-      <h2>Répertoire vendeurs (Chef des ventes)</h2>
-      <div class="hint" id="vendorRoleHint">Chargement…</div>
-
-      <div class="row">
-        <button class="secondary" id="vendorExportBtn">Exporter</button>
-        <button class="secondary" id="vendorClearBtn">Tout effacer</button>
-      </div>
-
-      <div id="vendorList" style="margin-top:10px"></div>
-
-      <div class="divider"></div>
-
-      <h3>Ajouter / importer des vendeurs</h3>
-
-      <div class="grid2">
-        <div>
-          <label>E-mail vendeur</label>
-          <input id="vendorEmail" placeholder="vendeur@domaine.com">
-        </div>
-        <div>
-          <label>Nom (optionnel)</label>
-          <input id="vendorName" placeholder="Ex. : Jean Dupont">
-        </div>
-      </div>
-
-      <div class="row">
-        <button id="vendorAddBtn">Ajouter</button>
-      </div>
-
-      <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
-      <textarea id="vendorImport" style="height:110px" placeholder="Ex. : Jean Dupont <vendeur@domaine.com>"></textarea>
-      <div class="row">
-        <button class="secondary" id="vendorImportBtn">Importer</button>
-      </div>
     </div>
 
     <div class="box">
@@ -356,24 +327,22 @@ Lignes supprimées automatiquement :
       <label>Documents (PDF, images…)</label>
       <input type="file" id="respFiles" multiple>
 
-      <button id="providerReplyBtn" class="secondary">Envoyer la réponse (à brancher)</button>
+      <button id="providerReplyBtn">Envoyer la réponse</button>
       <div id="respStatus" class="hint"></div>
-
-      <div class="hint">⚠️ Ici il faut brancher ta fonction “provider-reply” si tu l’utilises. (Je n’ai pas ton code dans ce fil.)</div>
     </div>
   </div>
+
 </div>
 
 <script>
 /* ========================= CONFIG ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
+const SUPABASE_ANON_KEY = "REPLACE_ME_WITH_YOUR_ANON_KEY";
 const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
-
-const PROVIDERS_KEY = "mfautosud_providers_v3"; // ✅ nouvelle clé (évite les vieux objets cassés)
-const THEME_KEY = "mfautosud_theme";
+const PROVIDERS_KEY = "mfautosud_providers_v2";
 
 /* ========================= THEME ========================= */
+const THEME_KEY = "mfautosud_theme";
 function applyTheme(theme){
   const t = (theme === "light") ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", t);
@@ -395,40 +364,33 @@ function toggleTheme(){
 let RID = "";
 let CODE = "";
 let PROVIDER_EMAIL = "";
-let VENDOR_IS_MANAGER = false;
 
 /* ========================= UTILS ========================= */
 function $(id){ return document.getElementById(id); }
 function escHtml(s){
-  return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
 }
-function normalizeEmail(email){
-  return String(email || "")
-    .replace(/\u00A0/g, " ")
-    .trim()
-    .toLowerCase();
-}
-function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(e)); }
+function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
+function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
 function setModeChip(txt){ const c=$("modeChip"); if(c) c.textContent = "Mode : " + txt; }
-
 function baseUrl(){ return window.location.origin + window.location.pathname; }
 function randomCode(){
   const a = crypto.getRandomValues(new Uint8Array(16));
   return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
-
 function getAllParams(){
   const url = new URL(window.location.href);
   const qs = url.searchParams;
   const hs = new URLSearchParams(window.location.hash.replace("#",""));
-
   const rid   = qs.get("rid")   || hs.get("rid");
   const code  = qs.get("code")  || hs.get("code");
   const pe    = qs.get("pe")    || hs.get("pe");
-
   return { rid, code, pe };
 }
-
 async function fetchJson(url, options){
   const res = await fetch(url, options);
   let data = null;
@@ -436,15 +398,7 @@ async function fetchJson(url, options){
   return { res, data };
 }
 
-function showVendorBox(show){
-  const box = $("vendorBox");
-  if(box) box.style.display = show ? "" : "none";
-}
-function showAssignBox(show){
-  const box = $("assignBox");
-  if(box) box.style.display = show ? "" : "none";
-}
-
+/* ✅ FIX adresse : évite "France France" */
 function formatAddress(r){
   const addr = String(r.address || "").trim();
   const postcode = String(r.postcode || "").trim();
@@ -453,6 +407,7 @@ function formatAddress(r){
 
   const addrHasFrance = /france/i.test(addr);
   const parts = [];
+
   if(addr) parts.push(addr);
   if(postcode || city) parts.push([postcode, city].filter(Boolean).join(" "));
   if(country && !addrHasFrance) parts.push(country);
@@ -470,50 +425,43 @@ function loadProviders(){
 }
 function saveProviders(arr){ localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr)); }
 
-function providerToView(p){
-  // ✅ compat ultra-large
-  const email = normalizeEmail(
-    p?.email || p?.provider_email || p?.providerEmail || p?.providerEmailAddress || ""
-  );
-  const name = String(p?.name || p?.provider_name || p?.providerName || "").trim();
-  const is_sales_manager = !!(p?.is_sales_manager || p?.isManager || p?.sales_manager);
-  const is_vendor = !!(p?.is_vendor || p?.isVendor || p?.vendor);
-  return { email, name, is_sales_manager, is_vendor };
-}
-
+/* ✅ FIX affichage mail dans la ligne */
 function renderProviders(){
   const listEl = $("providersList");
   if(!listEl) return;
 
-  const providers = loadProviders().map(providerToView).filter(p => p.email);
-
+  const providers = loadProviders();
   if(!providers.length){
     listEl.innerHTML = `<div class="hint">Aucun prestataire enregistré.</div>`;
     return;
   }
 
   listEl.innerHTML = providers.map((p, idx) => {
+    const email = normalizeEmail(p.email || p.provider_email || "");
+    const name  = String(p.name || p.provider_name || "").trim();
     const tags = [
       p.is_sales_manager ? "Chef des ventes" : "",
       p.is_vendor ? "Vendeur" : ""
     ].filter(Boolean).join(" • ");
 
+    const main = email ? email : "(email manquant)";
+
     return `
       <div class="providerRow">
-        <input type="checkbox" class="providerCheck" data-email="${escHtml(p.email)}">
+        <input type="checkbox" class="providerCheck" data-email="${escHtml(email)}" aria-label="Sélection prestataire">
         <div class="txt">
-          <span class="main">${escHtml(p.email)}</span>
-          ${p.name ? `<span class="sub">${escHtml(p.name)}</span>` : ""}
+          <span class="main">${escHtml(main)}</span>
+          ${name ? `<span class="sub">${escHtml(name)}</span>` : ""}
           ${tags ? `<span class="sub">${escHtml(tags)}</span>` : ""}
         </div>
-        <button class="small secondary" onclick="removeProvider(${idx})">Suppr.</button>
+        <button class="small secondary" type="button" onclick="removeProvider(${idx})">Suppr.</button>
       </div>
     `;
   }).join("");
 }
 
 function removeProvider(index){
-  const providers = loadProviders().map(providerToView).filter(p => p.email);
+  const providers = loadProviders();
   providers.splice(index, 1);
   saveProviders(providers);
   renderProviders();
@@ -528,13 +476,12 @@ async function addProvider(){
   if(!email){ alert("Saisis un e-mail."); return; }
   if(!emailLooksValid(email)){ alert("E-mail invalide."); return; }
 
-  const providers = loadProviders().map(providerToView).filter(p => p.email);
-  if(providers.some(p => p.email === email)){
-    alert("Déjà enregistré.");
-    return;
+  const providers = loadProviders();
+  if(providers.some(p => normalizeEmail(p.email || p.provider_email) === email)){
+    alert("Déjà enregistré."); return;
   }
 
-  providers.push({ email, name, is_sales_manager, is_vendor });
+  providers.push({ name, email, is_sales_manager, is_vendor });
   saveProviders(providers);
 
   $("providerEmail").value = "";
@@ -548,8 +495,12 @@ async function addProvider(){
 function checkAll(on){ document.querySelectorAll(".providerCheck").forEach(c=>c.checked=!!on); }
 
 async function exportProviders(){
-  const providers = loadProviders().map(providerToView).filter(p => p.email);
-  const lines = providers.map(p => p.name ? `${p.name} <${p.email}>` : p.email).join("\n");
+  const providers = loadProviders();
+  const lines = providers.map(p => {
+    const email = normalizeEmail(p.email || p.provider_email || "");
+    const name = String(p.name || p.provider_name || "").trim();
+    return name ? `${name} <${email}>` : email;
+  }).join("\n");
   await navigator.clipboard.writeText(lines || "");
   alert("Liste copiée dans le presse-papiers.");
 }
@@ -561,35 +512,35 @@ function clearProviders(){
 }
 
 function extractEmailAndName(line){
-  const s = String(line || "").replace(/\u00A0/g," ").trim();
+  const s = (line || "").trim();
   if(!s) return null;
   const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
   if(m){
     const name = m[1].replace(/^['"]|['"]$/g,"").trim();
-    const email = normalizeEmail(m[2]);
+    const email = (m[2] || "").trim().toLowerCase();
     return { name, email };
   }
-  const only = normalizeEmail(s.replace(/^['"]|['"]$/g,""));
+  const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
   if(emailLooksValid(only)) return { name:"", email: only };
   const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  if(em) return { name:"", email: normalizeEmail(em[0]) };
+  if(em) return { name:"", email: em[0].toLowerCase() };
   return null;
 }
 
 function importProviders(){
-  const raw = String($("importArea").value || "").replace(/\r/g,"").trim();
+  const raw = ($("importArea").value || "").replace(/\r/g,"").trim();
   if(!raw){ alert("Colle une liste."); return; }
 
   const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
-  const providers = loadProviders().map(providerToView).filter(p => p.email);
-  const existing = new Set(providers.map(p => p.email));
+  const providers = loadProviders();
+  const existing = new Set(providers.map(p => normalizeEmail(p.email || p.provider_email)));
 
   let added=0, ignored=0;
   for(const line of lines){
     const parsed = extractEmailAndName(line);
     if(!parsed || !emailLooksValid(parsed.email)){ ignored++; continue; }
     if(existing.has(parsed.email)){ ignored++; continue; }
-    providers.push({ email: parsed.email, name: parsed.name || "", is_sales_manager:false, is_vendor:false });
+    providers.push({ name: parsed.name || "", email: parsed.email, is_sales_manager:false, is_vendor:false });
     existing.add(parsed.email);
     added++;
   }
@@ -601,13 +552,9 @@ function importProviders(){
 
 /* ========================= PARSE COPY-PASTE (blindé) ========================= */
 function parsePaste(text){
-  const t = String(text || "")
-    .replace(/\r/g, "")
-    .replace(/\u00A0/g, " ")
-    .trim();
-
-  const rawLines = t.split("\n").map(l => l.trim());
-  const lines = rawLines.filter(Boolean);
+  const t = (text || "").replace(/\r/g, "").trim();
+  const rawLines = t.split("\n").map(l => l.replace(/\u00A0/g," ").trim()); // nbsp -> space
+  const lines = rawLines.filter(l => l && l.length);
 
   const out = {
     client_name: "",
@@ -621,26 +568,30 @@ function parsePaste(text){
     contact_email: "",
     contact_phone: ""
   };
-  if(!lines.length) return out;
+  if (!lines.length) return out;
 
   const norm = (s) => String(s || "").replace(/\u00A0/g," ").trim();
   const low  = (s) => norm(s).toLowerCase();
 
   const isUselessLine = (l) => {
     const x = low(l);
+    if (!x) return true;
     return (
       x === "client" ||
       x === "contacts" ||
       x === "contact" ||
+      x === "responsable" ||
+      x === "mf autosud" ||
+      x.includes("responsable mf autosud") ||
       x.includes("obtenir un lien") ||
       x.includes("mandat de prélèvement sepa") ||
       x.includes("mandat de prelevement sepa") ||
-      x.includes("responsable mf autosud") ||
-      x === "mf autosud"
+      x.includes("prelevement sepa") ||
+      x.includes("prélèvement sepa")
     );
   };
 
-  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l));
+  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l)); // ex: "Fr"
 
   const parseZipCityCountry = (l) => {
     const m = norm(l).match(/\b(\d{5})\b\s+(.+)$/);
@@ -665,94 +616,92 @@ function parsePaste(text){
   };
 
   const extractSiretValue = (l) => {
-    const m = norm(l).match(/siret\s*[:\-]?\s*([0-9 ]{10,30})/i);
-    return m ? norm(m[1]).replace(/\s+/g, "") : "";
+    const m = norm(l).match(/siret\s*[:\-]?\s*([0-9 .]{10,30})/i);
+    if (!m) return "";
+    return norm(m[1]).replace(/[ .]/g, "");
   };
 
   const extractVatValue = (l) => {
-    const m = norm(l).match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z ]{6,})/i);
-    return m ? norm(m[1]).replace(/\s+/g, "") : "";
+    const m = norm(l).match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z .]{6,})/i);
+    if (!m) return "";
+    return norm(m[1]).replace(/[ .]/g, "");
   };
 
   const extractEmailValue = (l) => {
     const m = norm(l).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-    return m ? normalizeEmail(m[0]) : "";
+    return m ? m[0].toLowerCase() : "";
   };
 
   const extractPhoneValue = (l) => {
-    // accepte : 06 12 34 56 78 / 06.12.34.56.78 / 06-12-34-56-78 / +33...
-    const s = norm(l);
-    const m = s.match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
-    if(!m) return "";
-    return m[0].replace(/[\s.\-]/g, "");
+    // accepte 06.59.92.85.69 / 06 59 92 85 69 / +33 ...
+    const m = norm(l).match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
+    return m ? m[0].replace(/[\s.\-]/g, "") : "";
   };
 
-  // client name: première ligne non "inutile"
+  // client name = 1ère ligne utile
   let firstMeaningful = "";
-  for(const l of lines){
-    if(isUselessLine(l)) continue;
+  for (const l of lines) {
+    if (isUselessLine(l)) continue;
     firstMeaningful = l; break;
   }
   out.client_name = firstMeaningful || lines[0];
 
   let pending = null; // "siret" | "vat" | null
 
-  for(let i=0;i<lines.length;i++){
+  for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     const x = low(l);
-    if(!l || isUselessLine(l) || looksLikeShortCode(l)) continue;
+    if (!l || isUselessLine(l) || looksLikeShortCode(l)) continue;
 
-    // pending label
-    if(pending){
-      const v = norm(l).replace(/\s+/g,"");
-      if(pending==="siret" && /^\d{10,20}$/.test(v)) out.siret = v;
-      if(pending==="vat" && /^[A-Z]{2}[0-9A-Z]{6,}$/.test(v)) out.vat = v;
+    if (pending) {
+      const v = norm(l).replace(/[ .]/g, "");
+      if (pending === "siret" && /^\d{10,20}$/.test(v)) out.siret = v;
+      if (pending === "vat" && /^[A-Z]{2}[0-9A-Z]{6,}$/.test(v)) out.vat = v;
       pending = null;
       continue;
     }
 
-    // label lines "N° Siret :" sans valeur
-    if(!out.siret && /siret\s*[:\-]?\s*$/i.test(l)){ pending="siret"; continue; }
-    if(!out.vat && /tva\s*[:\-]?\s*$/i.test(l)){ pending="vat"; continue; }
+    // labels sans valeur => pending
+    if (!out.siret && /siret\s*[:\-]?\s*$/i.test(l)) { pending = "siret"; continue; }
+    if (!out.vat && /tva\s*[:\-]?\s*$/i.test(l)) { pending = "vat"; continue; }
 
-    if(!out.siret){ const v = extractSiretValue(l); if(v){ out.siret=v; continue; } }
-    if(!out.vat){ const v = extractVatValue(l); if(v){ out.vat=v; continue; } }
+    if (!out.siret) { const v = extractSiretValue(l); if (v) { out.siret = v; continue; } }
+    if (!out.vat) { const v = extractVatValue(l); if (v) { out.vat = v; continue; } }
 
-    if(!out.contact_email){ const v = extractEmailValue(l); if(v){ out.contact_email=v; continue; } }
-    if(!out.contact_phone){ const v = extractPhoneValue(l); if(v){ out.contact_phone=v; continue; } }
+    if (!out.contact_email) { const v = extractEmailValue(l); if (v) { out.contact_email = v; continue; } }
+    if (!out.contact_phone) { const v = extractPhoneValue(l); if (v) { out.contact_phone = v; continue; } }
 
-    if(!out.address && looksLikeStreet(l)){
+    if (!out.address && looksLikeStreet(l)) {
       out.address = l;
-      const z = parseZipCityCountry(lines[i+1] || "");
-      if(z){
-        out.postcode = z.postcode;
-        out.city = z.city;
-        if(z.country) out.country = z.country;
+      const next = lines[i + 1] || "";
+      const z = parseZipCityCountry(next);
+      if (z) {
+        out.postcode = z.postcode; out.city = z.city;
+        if (z.country) out.country = z.country;
       }
       continue;
     }
 
-    if(!out.address){
+    if (!out.address) {
       const z = parseZipCityCountry(l);
-      if(z){
+      if (z) {
         out.address = l;
-        out.postcode = z.postcode;
-        out.city = z.city;
-        if(z.country) out.country = z.country;
+        out.postcode = z.postcode; out.city = z.city;
+        if (z.country) out.country = z.country;
         continue;
       }
     }
 
-    if(!out.contact_name){
+    if (!out.contact_name) {
       const forbidden = x.includes("siret") || x.includes("tva") || x.includes("n°") || x.includes("no ");
-      if(!forbidden && !/\d/.test(l) && !l.includes("@") && l.length <= 60){
+      if (!forbidden && !/\d/.test(l) && !l.includes("@") && l.length <= 60) {
         const w = l.split(/\s+/).filter(Boolean);
-        if(w.length >= 2 && w.length <= 6) out.contact_name = l;
+        if (w.length >= 2 && w.length <= 6) out.contact_name = l;
       }
     }
   }
 
-  if(!out.country && /france/i.test(t)) out.country = "France";
+  if (!out.country && /france/i.test(t)) out.country = "France";
   return out;
 }
 
@@ -763,6 +712,8 @@ async function createRequest(){
   if(!vehicle || !paste){ alert("Véhicule + bloc client obligatoires."); return; }
 
   const parsed = parsePaste(paste);
+  console.log("PARSE:", parsed);
+
   if(!parsed.client_name){ alert("Nom client introuvable (1ère ligne)."); return; }
 
   RID = "";
@@ -798,7 +749,11 @@ async function createRequest(){
     body: JSON.stringify(payload)
   });
 
-  if(!res.ok){ console.log(res.status, data); alert("Erreur création (console)."); return; }
+  if(!res.ok){
+    console.log("create request failed:", res.status, data);
+    alert("Erreur création (console).");
+    return;
+  }
 
   RID = data[0].id;
   const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
@@ -820,7 +775,10 @@ async function sendToSelected(){
   if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
 
   const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
-  const emails = checks.map(c => normalizeEmail(c.getAttribute("data-email")||"")).filter(Boolean);
+  const emails = checks
+    .map(c => (c.getAttribute("data-email")||"").trim().toLowerCase())
+    .filter(Boolean);
+
   if(!emails.length){ alert("Sélectionne au moins 1 prestataire."); return; }
 
   $("sendStatus").textContent = "Envoi…";
@@ -828,14 +786,23 @@ async function sendToSelected(){
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
     method: "POST",
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({ request_id: RID, access_code: CODE, provider_emails: emails, custom_message: custom })
   });
 
-  if(!res.ok){ console.log(res.status, data); $("sendStatus").textContent = "❌ Erreur (console)."; return; }
+  if(!res.ok){
+    console.log("send-request failed:", res.status, data);
+    $("sendStatus").textContent = "❌ Erreur (console).";
+    return;
+  }
   $("sendStatus").textContent = "✅ Envoyé";
 }
 
+/* ========================= THREAD ========================= */
 function renderMessageFiles(files){
   if(!Array.isArray(files) || !files.length) return "";
   return files.map(f => {
@@ -852,7 +819,7 @@ function renderThreadProvider(data){
 
   el.innerHTML = "";
   (data.responses || []).forEach(x=>{
-    const isYou = PROVIDER_EMAIL && (normalizeEmail(x.responder_email||"") === PROVIDER_EMAIL);
+    const isYou = PROVIDER_EMAIL && (String(x.responder_email||"").toLowerCase() === PROVIDER_EMAIL);
     el.innerHTML += `
       <div class="msg ${isYou ? "you":"them"}">
         <div class="msgHead">
@@ -907,17 +874,22 @@ async function loadThread(){
   if($("requestInfo") && data.request){
     const r = data.request;
     const addrLine = formatAddress(r);
+
     $("requestInfo").innerHTML = `
       <div class="card">
         <div class="gridInfo">
           <div class="kv"><b>Client</b><div>${escHtml(r.client_name || "-")}</div></div>
           <div class="kv"><b>Véhicule</b><div>${escHtml(r.vehicle || "-")}</div></div>
+
           <div class="kv"><b>Adresse</b><div>${escHtml(addrLine || "-")}</div></div>
           <div class="kv"><b>Contact</b><div>${escHtml(r.contact_name || "-")}</div></div>
+
           <div class="kv"><b>E-mail</b><div>${escHtml(r.contact_email || "-")}</div></div>
           <div class="kv"><b>Téléphone</b><div>${escHtml(r.contact_phone || "-")}</div></div>
+
           <div class="kv"><b>SIRET</b><div>${escHtml(r.siret || "-")}</div></div>
           <div class="kv"><b>TVA</b><div>${escHtml(r.vat || "-")}</div></div>
+
           <div class="kv"><b>Assigné à</b><div>${escHtml(r.assigned_to_email || "-")}</div></div>
         </div>
       </div>
@@ -925,238 +897,8 @@ async function loadThread(){
   }
 }
 
-/* ========================= CHEF DES VENTES : rôle + vendors + assign ========================= */
-async function providerRoleAndTeam(){
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
-    method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
-  });
-
-  if(!res.ok){
-    console.log("vendor-list:", res.status, data);
-    return { is_manager:false, vendors:[] };
-  }
-  return {
-    is_manager: data.is_sales_manager === true,
-    vendors: Array.isArray(data.vendors) ? data.vendors : []
-  };
-}
-
-function renderAssignList(vendors){
-  const el = $("assignList");
-  const hint = $("assignHint");
-  if(!el) return;
-
-  if(!vendors.length){
-    if(hint) hint.textContent = "Aucun vendeur rattaché à ce chef des ventes.";
-    el.innerHTML = "";
-    return;
-  }
-
-  if(hint) hint.textContent = "Choisis un vendeur de l’équipe :";
-  el.innerHTML = vendors.map((v, i)=>{
-    const email = normalizeEmail(v.vendor_email || "");
-    const name = String(v.vendor_name || "").trim();
-    const label = name ? `${name} — ${email}` : email;
-
-    return `
-      <div class="providerRow">
-        <input type="radio" name="assignVendor" value="${escHtml(email)}" ${i===0 ? "checked" : ""}>
-        <div class="txt">
-          <span class="main">${escHtml(label)}</span>
-          <span class="sub">Attribuer ce dossier à ce vendeur</span>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-async function assignRequestToSelectedVendor(){
-  const status = $("assignStatus");
-  const picked = document.querySelector('input[name="assignVendor"]:checked');
-  if(!picked){
-    if(status) status.textContent = "❌ Sélectionne un vendeur.";
-    return;
-  }
-  const vendor_email = normalizeEmail(picked.value);
-  if(status) status.textContent = "Attribution en cours…";
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/request-assign`, {
-    method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ request_id: RID, access_code: CODE, manager_email: PROVIDER_EMAIL, vendor_email })
-  });
-
-  if(!res.ok){
-    console.log("request-assign:", res.status, data);
-    if(status) status.textContent = "❌ Erreur attribution (voir console).";
-    return;
-  }
-
-  if(status) status.textContent = "✅ Dossier attribué.";
-  await loadThread();
-}
-
-/* ========================= Vendors directory (chef) ========================= */
-function vendorExtractLine(line){
-  const s = String(line || "").replace(/\u00A0/g," ").trim();
-  if(!s) return null;
-
-  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
-  if(m){
-    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
-    const email = normalizeEmail(m[2]);
-    return { name, email };
-  }
-  const only = normalizeEmail(s.replace(/^['"]|['"]$/g,""));
-  if(emailLooksValid(only)) return { name:"", email: only };
-  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  if(em) return { name:"", email: normalizeEmail(em[0]) };
-  return null;
-}
-
-async function vendorFetchList(){
-  showVendorBox(false);
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
-    method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
-  });
-
-  if(!res.ok){
-    console.log("vendor-list error:", res.status, data);
-    return;
-  }
-
-  VENDOR_IS_MANAGER = (data && data.is_sales_manager === true);
-  if(!VENDOR_IS_MANAGER){
-    showVendorBox(false);
-    return;
-  }
-
-  showVendorBox(true);
-  $("vendorRoleHint").innerHTML = `<span class="tag ok">Chef des ventes</span> Répertoire équipe disponible.`;
-
-  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
-  const el = $("vendorList");
-  if(!el) return;
-
-  if(!vendors.length){
-    el.innerHTML = `<div class="hint">Aucun vendeur enregistré.</div>`;
-    return;
-  }
-
-  el.innerHTML = vendors.map(v=>{
-    const email = normalizeEmail(v.vendor_email || "");
-    const name  = String(v.vendor_name || "").trim();
-    const label = name ? `${name} — ${email}` : email;
-
-    return `
-      <div class="providerRow">
-        <div class="txt">
-          <span class="main">${escHtml(label)}</span>
-          <span class="sub">${escHtml(email)}</span>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-async function vendorAddDb(){
-  if(!VENDOR_IS_MANAGER){
-    alert("Action réservée au Chef des ventes.");
-    return;
-  }
-  const email = normalizeEmail($("vendorEmail").value);
-  const name = ($("vendorName").value || "").trim();
-  if(!emailLooksValid(email)){ alert("E-mail vendeur invalide."); return; }
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-upsert`, {
-    method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, vendor_email: email, vendor_name: name || "", request_id: RID, access_code: CODE })
-  });
-
-  if(!res.ok){
-    console.log("vendor-upsert:", res.status, data);
-    alert("Erreur ajout vendeur (console)");
-    return;
-  }
-
-  $("vendorEmail").value = "";
-  $("vendorName").value = "";
-  await vendorFetchList();
-
-  const role = await providerRoleAndTeam();
-  renderAssignList(role.vendors);
-}
-
-async function vendorImportList(){
-  if(!VENDOR_IS_MANAGER){
-    alert("Action réservée au Chef des ventes.");
-    return;
-  }
-  const raw = String($("vendorImport").value || "").replace(/\r/g,"").trim();
-  if(!raw){ alert("Colle une liste."); return; }
-
-  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
-
-  let added = 0, ignored = 0;
-  for(const line of lines){
-    const p = vendorExtractLine(line);
-    if(!p || !emailLooksValid(p.email)){ ignored++; continue; }
-
-    const { res } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-upsert`, {
-      method:"POST",
-      headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-      body: JSON.stringify({ provider_email: PROVIDER_EMAIL, vendor_email: p.email, vendor_name: p.name || "", request_id: RID, access_code: CODE })
-    });
-
-    if(res.ok) added++; else ignored++;
-  }
-
-  $("vendorImport").value = "";
-  await vendorFetchList();
-
-  const role = await providerRoleAndTeam();
-  renderAssignList(role.vendors);
-
-  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
-}
-
-async function vendorExport(){
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
-    method:"POST",
-    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
-  });
-
-  if(!res.ok){
-    console.log("vendor-export vendor-list:", res.status, data);
-    alert("Erreur export (console)");
-    return;
-  }
-
-  const vendors = Array.isArray(data.vendors) ? data.vendors : [];
-  const lines = vendors.map(v=>{
-    const email = normalizeEmail(v.vendor_email || "");
-    const name = String(v.vendor_name || "").trim();
-    return name ? `${name} <${email}>` : email;
-  }).join("\n");
-
-  await navigator.clipboard.writeText(lines || "");
-  alert("Répertoire vendeurs copié.");
-}
-
-async function vendorClear(){
-  alert("vendorClear désactivé ici (par sécurité). Si tu le veux, je te le remets avec confirmation + vendor-delete en boucle.");
-}
-
 /* ========================= INIT ========================= */
 (function init(){
-  // binds prescriber
   $("createBtn").addEventListener("click", createRequest);
   $("copyLinkBtn").addEventListener("click", copyThreadLink);
   $("copyLinkBtn2").addEventListener("click", copyThreadLink);
@@ -1171,63 +913,37 @@ async function vendorClear(){
   $("sendBtn").addEventListener("click", sendToSelected);
   $("refreshThreadBtn").addEventListener("click", loadThread);
 
-  // provider buttons
+  // provider mode
   $("refreshThreadProviderBtn").addEventListener("click", loadThread);
-  $("assignBtn").addEventListener("click", assignRequestToSelectedVendor);
-  $("vendorAddBtn").addEventListener("click", vendorAddDb);
-  $("vendorImportBtn").addEventListener("click", vendorImportList);
-  $("vendorExportBtn").addEventListener("click", vendorExport);
-  $("vendorClearBtn").addEventListener("click", vendorClear);
 
   renderProviders();
 
   const { rid, code, pe } = getAllParams();
 
-  // 1) Mode prestataire si pe existe
   if (rid && code && pe && String(pe).trim()) {
     RID = rid;
     CODE = code;
-    PROVIDER_EMAIL = normalizeEmail(decodeURIComponent(String(pe)));
+    PROVIDER_EMAIL = decodeURIComponent(String(pe)).trim().toLowerCase();
 
     $("prescriberUI").style.display = "none";
     $("providerUI").style.display = "block";
     setModeChip("Prestataire");
-
-    showVendorBox(false);
-    showAssignBox(false);
-
-    loadThread().then(async ()=>{
-      const role = await providerRoleAndTeam();
-      if(role.is_manager){
-        showVendorBox(true);
-        showAssignBox(true);
-        renderAssignList(role.vendors);
-        await vendorFetchList();
-      }
-    });
-
+    loadThread();
     return;
   }
 
-  // 2) Mode prescripteur dossier
   if (rid && code) {
     RID = rid;
     CODE = code;
-
-    $("prescriberUI").style.display = "block";
-    $("providerUI").style.display = "none";
     $("sendBox").style.display = "block";
-
     setModeChip("Prescripteur (dossier)");
     loadThread();
     return;
   }
 
-  // 3) Accueil prescripteur
-  $("prescriberUI").style.display = "block";
-  $("providerUI").style.display = "none";
   setModeChip("Prescripteur");
 })();
 </script>
+
 </body>
 </html>
