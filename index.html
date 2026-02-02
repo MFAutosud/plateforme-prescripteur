@@ -198,6 +198,7 @@
 
   <!-- ========================= PRESCRIPTEUR UI ========================= -->
   <div id="prescriberUI">
+    <!-- (inchangé) -->
     <div class="box">
       <h2>1) Créer une demande</h2>
 
@@ -320,6 +321,13 @@
     <div class="box">
       <h2>Demande reçue <span class="tag">Prestataire</span></h2>
       <div id="requestInfo" class="hint">Chargement…</div>
+
+      <!-- ✅ AJOUT: liens de test (utile pour vérifier manager/vendor) -->
+      <div class="row" style="margin-top:10px">
+        <button class="secondary" id="copyManagerLinkBtn" type="button">Copier lien portail Chef</button>
+        <button class="secondary" id="copyVendorLinkBtn" type="button">Copier lien portail Vendeur</button>
+      </div>
+      <div class="hint" id="portalLinksHint"></div>
     </div>
 
     <!-- ✅ Chef des ventes : attribution + gestion vendeurs -->
@@ -510,10 +518,20 @@ function formatAddress(r){
   return parts.join(" ").replace(/\s+/g," ").trim();
 }
 
+/* ========================= PORTAL LINKS (test) ========================= */
+function buildManagerLink(email){
+  // futur: /manager.html ; pour l'instant on garde index.html mais avec pe
+  const base = window.location.origin + window.location.pathname.replace(/\/index\.html$/,"/");
+  // si tu crées manager.html plus tard: return `${base}manager.html?...`
+  return `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(email)}`;
+}
+function buildVendorLink(email){
+  const base = window.location.origin + window.location.pathname.replace(/\/index\.html$/,"/");
+  return `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(email)}`;
+}
+
 /* =========================================================
    UPLOAD FILES via Edge Function: upload-attachment
-   - form-data: file, request_id
-   - returns: { name, url }
 ========================================================= */
 async function uploadFiles(requestId, fileInput){
   const uploaded = [];
@@ -906,7 +924,7 @@ async function sendToSelected(){
   $("sendStatus").textContent = "Envoi…";
   const custom = String($("customMessage")?.value || "").trim();
 
-  // ✅ on envoie aussi les rôles (si ta function send-request veut les utiliser plus tard)
+  // ✅ envoie aussi rôles (utile côté send-request si tu veux router vers manager/vendor plus tard)
   const providers = loadProviders().filter(p => emails.includes(normalizeEmail(p.email)));
   const provider_roles = providers.map(p => ({
     email: normalizeEmail(p.email),
@@ -1048,9 +1066,7 @@ async function prescriberReply(){
 }
 
 /* =========================================================
-   ✅ MANAGER: vendor-manage (ton code existant)
-   actions: list | add | remove
-   payload: { action, provider_email, request_id, access_code, vendor_email, vendor_name }
+   ✅ MANAGER: vendor-manage (list/add/remove)
 ========================================================= */
 async function vendorManage(action, extra={}){
   return await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-manage`, {
@@ -1070,18 +1086,23 @@ async function vendorManage(action, extra={}){
   });
 }
 
-/* ========================= MANAGER: load vendors + show assign ========================= */
 async function managerLoadVendors(){
   const hint = $("assignHint");
   const status = $("assignStatus");
-
   if(hint) hint.textContent = "Chargement vendeurs…";
   if(status) status.textContent = "";
 
   const { res, data } = await vendorManage("list");
 
-  // si 403 => pas manager
   if(!res.ok){
+    // ✅ message clair pour comprendre pourquoi il ne voit pas l’attribution
+    const msg = data?.error ? String(data.error) : `HTTP ${res.status}`;
+    if(hint) hint.textContent =
+      "❌ Accès Chef des ventes non valide.\n" +
+      "- Vérifie que cet email a bien is_sales_manager=true dans provider_roles\n" +
+      "- Vérifie qu'il est bien invité dans provider_invites pour ce dossier\n" +
+      `Détail: ${msg}\n` +
+      "Active le debug : ajoute &debug=1 au lien.";
     debugLog("vendor-manage list failed", res.status, data);
     return { is_manager:false, vendors:[] };
   }
@@ -1102,8 +1123,8 @@ function renderAssignList(vendors){
 
   if(hint) hint.textContent = "Choisis un vendeur de l’équipe :";
   el.innerHTML = vendors.map((v, i)=>{
-    const email = String(v.vendor_email || v.email || "").trim().toLowerCase();
-    const name = String(v.vendor_name || v.name || "").trim();
+    const email = String(v.vendor_email || "").trim().toLowerCase();
+    const name = String(v.vendor_name || "").trim();
     const label = name ? `${name} — ${email}` : email;
 
     return `
@@ -1141,7 +1162,8 @@ async function assignRequestToSelectedVendor(){
 
   if(!res.ok){
     debugLog("request-assign failed", res.status, data);
-    if(status) status.textContent = `❌ Erreur attribution (HTTP ${res.status})`;
+    const msg = data?.error ? String(data.error) : `HTTP ${res.status}`;
+    if(status) status.textContent = `❌ Erreur attribution: ${msg}`;
     return;
   }
 
@@ -1149,7 +1171,6 @@ async function assignRequestToSelectedVendor(){
   await loadThread();
 }
 
-/* ========================= MANAGER: add/remove vendor UI ========================= */
 async function managerAddVendor(){
   const st = $("mgrVendorStatus");
   const email = normalizeEmail($("mgrVendorEmail")?.value || "");
@@ -1165,7 +1186,8 @@ async function managerAddVendor(){
 
   if(!res.ok){
     debugLog("vendor-manage add failed", res.status, data);
-    if(st) st.textContent = `❌ Erreur ajout (HTTP ${res.status})`;
+    const msg = data?.error ? String(data.error) : `HTTP ${res.status}`;
+    if(st) st.textContent = `❌ Erreur ajout: ${msg}`;
     return;
   }
 
@@ -1174,7 +1196,7 @@ async function managerAddVendor(){
   $("mgrVendorName").value = "";
 
   const role = await managerLoadVendors();
-  renderAssignList(role.vendors);
+  if(role.is_manager) renderAssignList(role.vendors);
 }
 
 async function managerRemoveVendor(){
@@ -1191,13 +1213,14 @@ async function managerRemoveVendor(){
 
   if(!res.ok){
     debugLog("vendor-manage remove failed", res.status, data);
-    if(st) st.textContent = `❌ Erreur suppression (HTTP ${res.status})`;
+    const msg = data?.error ? String(data.error) : `HTTP ${res.status}`;
+    if(st) st.textContent = `❌ Erreur suppression: ${msg}`;
     return;
   }
 
   if(st) st.textContent = "✅ Vendeur supprimé.";
   const role = await managerLoadVendors();
-  renderAssignList(role.vendors);
+  if(role.is_manager) renderAssignList(role.vendors);
 }
 
 /* ========================= RENDER FILES ========================= */
@@ -1246,7 +1269,6 @@ async function loadThread(){
   const seen = getSeen(mode);
   updateNewBadge(latest > seen);
 
-  // Prescriber thread
   if($("thread")){
     const el = $("thread");
     el.innerHTML = "";
@@ -1266,7 +1288,6 @@ async function loadThread(){
     });
   }
 
-  // Provider thread
   if($("threadProvider")){
     const el = $("threadProvider");
     el.innerHTML = "";
@@ -1286,22 +1307,38 @@ async function loadThread(){
     });
   }
 
-  // request info (provider)
+  // ✅ Afficher toutes les infos (corrige ton "il manque des informations")
   if($("requestInfo") && data.request){
     const r = data.request;
     const addrLine = formatAddress(r);
+
     $("requestInfo").innerHTML = `
       <div class="card">
         <div class="gridInfo">
           <div class="kv"><b>Client</b><div>${escHtml(r.client_name || "-")}</div></div>
           <div class="kv"><b>Véhicule</b><div>${escHtml(r.vehicle || "-")}</div></div>
+
           <div class="kv"><b>Adresse</b><div>${escHtml(addrLine || "-")}</div></div>
+          <div class="kv"><b>Contact</b><div>${escHtml(r.contact_name || "-")}</div></div>
+
           <div class="kv"><b>E-mail</b><div>${escHtml(r.contact_email || "-")}</div></div>
           <div class="kv"><b>Téléphone</b><div>${escHtml(r.contact_phone || "-")}</div></div>
+
+          <div class="kv"><b>SIRET</b><div>${escHtml(r.siret || "-")}</div></div>
+          <div class="kv"><b>TVA</b><div>${escHtml(r.vat || "-")}</div></div>
+
           <div class="kv"><b>Assigné à</b><div>${escHtml(r.assigned_to_email || "-")}</div></div>
         </div>
       </div>
     `;
+
+    const portalHint = $("portalLinksHint");
+    if(portalHint){
+      portalHint.textContent =
+        `RID: ${RID}\nCODE: ${CODE}\nPE: ${PROVIDER_EMAIL}\n` +
+        `Lien Chef (test): ${buildManagerLink(PROVIDER_EMAIL)}\n` +
+        `Lien Vendeur (test): ${buildVendorLink(PROVIDER_EMAIL)}`;
+    }
   }
 }
 
@@ -1340,10 +1377,22 @@ async function loadThread(){
   $("assignBtn")?.addEventListener("click", assignRequestToSelectedVendor);
   $("refreshVendorsBtn")?.addEventListener("click", async ()=>{
     const role = await managerLoadVendors();
-    renderAssignList(role.vendors);
+    if(role.is_manager) renderAssignList(role.vendors);
   });
   $("mgrAddVendorBtn")?.addEventListener("click", managerAddVendor);
   $("mgrRemoveVendorBtn")?.addEventListener("click", managerRemoveVendor);
+
+  // portal link buttons
+  $("copyManagerLinkBtn")?.addEventListener("click", async ()=>{
+    if(!RID || !CODE || !PROVIDER_EMAIL) return alert("Lien indisponible.");
+    await navigator.clipboard.writeText(buildManagerLink(PROVIDER_EMAIL));
+    alert("Lien portail Chef copié.");
+  });
+  $("copyVendorLinkBtn")?.addEventListener("click", async ()=>{
+    if(!RID || !CODE || !PROVIDER_EMAIL) return alert("Lien indisponible.");
+    await navigator.clipboard.writeText(buildVendorLink(PROVIDER_EMAIL));
+    alert("Lien portail Vendeur copié.");
+  });
 
   renderProviders();
 
@@ -1359,7 +1408,7 @@ async function loadThread(){
 
     await loadThread();
 
-    // manager?
+    // ✅ manager detection via vendor-manage(list)
     const role = await managerLoadVendors();
     if(role.is_manager){
       showAssignBox(true);
