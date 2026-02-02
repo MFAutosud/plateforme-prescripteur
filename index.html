@@ -89,8 +89,9 @@
       background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.92));
       border:1px solid rgba(2,6,23,.10);
     }
+
     h2{margin:0 0 10px;font-size:16px}
-    h3{margin:8px 0 8px;font-size:14px}
+    h3{margin:10px 0 8px;font-size:14px}
     label{display:block;margin-top:10px;font-size:13px;color:var(--muted)}
     input,textarea{
       width:100%; padding:10px 12px; border-radius:12px;
@@ -169,8 +170,6 @@
       display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px;
       border:1px solid var(--line); background:var(--rowBg); color:var(--text);
     }
-    .tag.ok{border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.10)}
-    .tag.bad{border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.10)}
     .checkline{display:flex;align-items:center;gap:8px;margin-top:0;color:var(--muted)}
     .checkline input{width:auto}
   </style>
@@ -323,14 +322,39 @@
       <div id="requestInfo" class="hint">Chargement…</div>
     </div>
 
+    <!-- ✅ Chef des ventes : attribution + gestion vendeurs -->
     <div class="box" id="assignBox" style="display:none;">
       <h2>Chef des ventes — Attribuer à un vendeur</h2>
       <div class="hint" id="assignHint">Chargement…</div>
       <div id="assignList" style="margin-top:10px"></div>
+
       <div class="row">
         <button class="secondary" id="assignBtn" type="button">Attribuer</button>
+        <button class="secondary" id="refreshVendorsBtn" type="button">🔄 Recharger vendeurs</button>
       </div>
       <div class="hint" id="assignStatus"></div>
+
+      <div class="divider"></div>
+
+      <h3>Gestion des vendeurs</h3>
+      <div class="hint">Ajoute / supprime des vendeurs rattachés à ton compte (ceux-ci apparaîtront dans la liste d’attribution).</div>
+
+      <div class="grid2">
+        <div>
+          <label>Email vendeur</label>
+          <input id="mgrVendorEmail" placeholder="vendeur@domaine.com">
+        </div>
+        <div>
+          <label>Nom vendeur (optionnel)</label>
+          <input id="mgrVendorName" placeholder="Prénom Nom">
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="mgrAddVendorBtn" type="button">➕ Ajouter vendeur</button>
+        <button class="secondary" id="mgrRemoveVendorBtn" type="button">🗑️ Supprimer vendeur (email ci-dessus)</button>
+      </div>
+      <div class="hint" id="mgrVendorStatus"></div>
     </div>
 
     <div class="box">
@@ -514,7 +538,7 @@ async function uploadFiles(requestId, fileInput){
 
     if(!res.ok){
       debugLog("upload-attachment failed", res.status, data);
-      throw new Error("upload-attachment failed");
+      throw new Error(`upload-attachment failed: ${res.status}`);
     }
 
     uploaded.push({
@@ -662,7 +686,7 @@ function importProviders(){
   alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
 }
 
-/* ========================= PARSE PASTE (repris) ========================= */
+/* ========================= PARSE PASTE ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
   const rawLines = t.split("\n").map(l => l.replace(/\u00A0/g," ").trim());
@@ -839,11 +863,18 @@ async function createRequest(){
 
   if(!res.ok){
     debugLog("create request failed", res.status, data);
-    alert("Erreur création (debug si ?debug=1).");
+    const details = data ? JSON.stringify(data, null, 2) : "(no body)";
+    alert(`❌ Erreur création demande\nHTTP ${res.status}\n\n${details}`);
     return;
   }
 
-  RID = data[0].id;
+  RID = data?.[0]?.id;
+  if(!RID){
+    alert("❌ Demande créée mais ID introuvable (réponse Supabase inattendue).");
+    debugLog("create request response unexpected", data);
+    return;
+  }
+
   const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
   $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
 
@@ -875,6 +906,15 @@ async function sendToSelected(){
   $("sendStatus").textContent = "Envoi…";
   const custom = String($("customMessage")?.value || "").trim();
 
+  // ✅ on envoie aussi les rôles (si ta function send-request veut les utiliser plus tard)
+  const providers = loadProviders().filter(p => emails.includes(normalizeEmail(p.email)));
+  const provider_roles = providers.map(p => ({
+    email: normalizeEmail(p.email),
+    name: String(p.name||"").trim() || null,
+    is_sales_manager: !!p.is_sales_manager,
+    is_vendor: !!p.is_vendor
+  }));
+
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
     method: "POST",
     headers: {
@@ -882,12 +922,18 @@ async function sendToSelected(){
       Authorization: "Bearer " + SUPABASE_ANON_KEY,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ request_id: RID, access_code: CODE, provider_emails: emails, custom_message: custom })
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      provider_emails: emails,
+      custom_message: custom,
+      provider_roles
+    })
   });
 
   if(!res.ok){
     debugLog("send-request failed", res.status, data);
-    $("sendStatus").textContent = "❌ Erreur (debug si ?debug=1).";
+    $("sendStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
     return;
   }
   $("sendStatus").textContent = "✅ Envoyé";
@@ -911,7 +957,11 @@ async function providerReply(){
   $("respStatus").textContent = "Upload fichiers…";
   let files = [];
   try{ files = await uploadFiles(RID, fileInput); }
-  catch{ $("respStatus").textContent = "❌ Erreur upload fichier."; return; }
+  catch(e){
+    $("respStatus").textContent = "❌ Erreur upload fichier.";
+    debugLog("upload error", String(e));
+    return;
+  }
 
   $("respStatus").textContent = "Envoi…";
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
@@ -932,7 +982,7 @@ async function providerReply(){
 
   if(!res.ok){
     debugLog("provider-reply failed", res.status, data);
-    $("respStatus").textContent = "❌ Erreur envoi (debug si ?debug=1).";
+    $("respStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
     return;
   }
 
@@ -962,7 +1012,11 @@ async function prescriberReply(){
   $("prescStatus").textContent = "Upload fichiers…";
   let files = [];
   try{ files = await uploadFiles(RID, fileInput); }
-  catch{ $("prescStatus").textContent = "❌ Erreur upload fichier."; return; }
+  catch(e){
+    $("prescStatus").textContent = "❌ Erreur upload fichier.";
+    debugLog("upload error", String(e));
+    return;
+  }
 
   $("prescStatus").textContent = "Envoi…";
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/prescriber-reply`, {
@@ -983,7 +1037,7 @@ async function prescriberReply(){
 
   if(!res.ok){
     debugLog("prescriber-reply failed", res.status, data);
-    $("prescStatus").textContent = "❌ Erreur envoi (debug si ?debug=1).";
+    $("prescStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
     return;
   }
 
@@ -993,27 +1047,47 @@ async function prescriberReply(){
   await loadThread();
 }
 
-/* ========================= VENDOR LIST (manager) ========================= */
-async function providerRoleAndTeam(){
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
+/* =========================================================
+   ✅ MANAGER: vendor-manage (ton code existant)
+   actions: list | add | remove
+   payload: { action, provider_email, request_id, access_code, vendor_email, vendor_name }
+========================================================= */
+async function vendorManage(action, extra={}){
+  return await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-manage`, {
     method:"POST",
     headers:{
       apikey: SUPABASE_ANON_KEY,
-      Authorization:"Bearer " + SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
       "Content-Type":"application/json"
     },
-    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
+    body: JSON.stringify({
+      action,
+      provider_email: PROVIDER_EMAIL,
+      request_id: RID,
+      access_code: CODE,
+      ...extra
+    })
   });
+}
 
+/* ========================= MANAGER: load vendors + show assign ========================= */
+async function managerLoadVendors(){
+  const hint = $("assignHint");
+  const status = $("assignStatus");
+
+  if(hint) hint.textContent = "Chargement vendeurs…";
+  if(status) status.textContent = "";
+
+  const { res, data } = await vendorManage("list");
+
+  // si 403 => pas manager
   if(!res.ok){
-    debugLog("vendor-list failed", res.status, data);
+    debugLog("vendor-manage list failed", res.status, data);
     return { is_manager:false, vendors:[] };
   }
 
-  return {
-    is_manager: data?.is_sales_manager === true,
-    vendors: Array.isArray(data?.vendors) ? data.vendors : []
-  };
+  const vendors = Array.isArray(data?.vendors) ? data.vendors : [];
+  return { is_manager:true, vendors };
 }
 
 function renderAssignList(vendors){
@@ -1021,15 +1095,15 @@ function renderAssignList(vendors){
   const hint = $("assignHint");
 
   if(!vendors?.length){
-    if(hint) hint.textContent = "Aucun vendeur rattaché à ce chef des ventes.";
+    if(hint) hint.textContent = "Aucun vendeur rattaché à ce chef des ventes. Ajoute-en ci-dessous.";
     if(el) el.innerHTML = "";
     return;
   }
 
   if(hint) hint.textContent = "Choisis un vendeur de l’équipe :";
   el.innerHTML = vendors.map((v, i)=>{
-    const email = String(v.vendor_email || "").trim().toLowerCase();
-    const name = String(v.vendor_name || "").trim();
+    const email = String(v.vendor_email || v.email || "").trim().toLowerCase();
+    const name = String(v.vendor_name || v.name || "").trim();
     const label = name ? `${name} — ${email}` : email;
 
     return `
@@ -1048,12 +1122,12 @@ async function assignRequestToSelectedVendor(){
   const status = $("assignStatus");
   const picked = document.querySelector('input[name="assignVendor"]:checked');
   if(!picked){
-    status.textContent = "❌ Sélectionne un vendeur.";
+    if(status) status.textContent = "❌ Sélectionne un vendeur.";
     return;
   }
 
   const vendor_email = String(picked.value || "").trim().toLowerCase();
-  status.textContent = "Attribution en cours…";
+  if(status) status.textContent = "Attribution en cours…";
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/request-assign`, {
     method:"POST",
@@ -1067,12 +1141,63 @@ async function assignRequestToSelectedVendor(){
 
   if(!res.ok){
     debugLog("request-assign failed", res.status, data);
-    status.textContent = "❌ Erreur attribution.";
+    if(status) status.textContent = `❌ Erreur attribution (HTTP ${res.status})`;
     return;
   }
 
-  status.textContent = "✅ Dossier attribué.";
+  if(status) status.textContent = "✅ Dossier attribué (mail envoyé au vendeur).";
   await loadThread();
+}
+
+/* ========================= MANAGER: add/remove vendor UI ========================= */
+async function managerAddVendor(){
+  const st = $("mgrVendorStatus");
+  const email = normalizeEmail($("mgrVendorEmail")?.value || "");
+  const name = String($("mgrVendorName")?.value || "").trim();
+
+  if(!emailLooksValid(email)){
+    if(st) st.textContent = "❌ Email vendeur invalide.";
+    return;
+  }
+
+  if(st) st.textContent = "Ajout en cours…";
+  const { res, data } = await vendorManage("add", { vendor_email: email, vendor_name: name });
+
+  if(!res.ok){
+    debugLog("vendor-manage add failed", res.status, data);
+    if(st) st.textContent = `❌ Erreur ajout (HTTP ${res.status})`;
+    return;
+  }
+
+  if(st) st.textContent = "✅ Vendeur ajouté.";
+  $("mgrVendorEmail").value = "";
+  $("mgrVendorName").value = "";
+
+  const role = await managerLoadVendors();
+  renderAssignList(role.vendors);
+}
+
+async function managerRemoveVendor(){
+  const st = $("mgrVendorStatus");
+  const email = normalizeEmail($("mgrVendorEmail")?.value || "");
+
+  if(!emailLooksValid(email)){
+    if(st) st.textContent = "❌ Mets l’email du vendeur à supprimer.";
+    return;
+  }
+
+  if(st) st.textContent = "Suppression en cours…";
+  const { res, data } = await vendorManage("remove", { vendor_email: email });
+
+  if(!res.ok){
+    debugLog("vendor-manage remove failed", res.status, data);
+    if(st) st.textContent = `❌ Erreur suppression (HTTP ${res.status})`;
+    return;
+  }
+
+  if(st) st.textContent = "✅ Vendeur supprimé.";
+  const role = await managerLoadVendors();
+  renderAssignList(role.vendors);
 }
 
 /* ========================= RENDER FILES ========================= */
@@ -1109,7 +1234,7 @@ async function loadThread(){
   const target = $("thread") || $("threadProvider");
   if(!res.ok){
     debugLog("get-thread failed", res.status, data);
-    if(target) target.innerHTML = `<div class="hint">❌ Erreur chargement conversation</div>`;
+    if(target) target.innerHTML = `<div class="hint">❌ Erreur chargement conversation (HTTP ${res.status})</div>`;
     return;
   }
 
@@ -1119,7 +1244,6 @@ async function loadThread(){
   const providerVisible = $("providerUI") && $("providerUI").style.display !== "none";
   const mode = providerVisible ? "provider" : "prescriber";
   const seen = getSeen(mode);
-
   updateNewBadge(latest > seen);
 
   // Prescriber thread
@@ -1211,7 +1335,15 @@ async function loadThread(){
   $("refreshThreadProviderBtn")?.addEventListener("click", loadThread);
   $("markReadProviderBtn")?.addEventListener("click", ()=>markSeen("provider"));
   $("providerReplyBtn")?.addEventListener("click", providerReply);
+
+  // manager buttons
   $("assignBtn")?.addEventListener("click", assignRequestToSelectedVendor);
+  $("refreshVendorsBtn")?.addEventListener("click", async ()=>{
+    const role = await managerLoadVendors();
+    renderAssignList(role.vendors);
+  });
+  $("mgrAddVendorBtn")?.addEventListener("click", managerAddVendor);
+  $("mgrRemoveVendorBtn")?.addEventListener("click", managerRemoveVendor);
 
   renderProviders();
 
@@ -1227,11 +1359,13 @@ async function loadThread(){
 
     await loadThread();
 
-    // if manager: show assign box
-    const role = await providerRoleAndTeam();
+    // manager?
+    const role = await managerLoadVendors();
     if(role.is_manager){
       showAssignBox(true);
       renderAssignList(role.vendors);
+      $("mgrVendorStatus").textContent = "";
+      $("assignStatus").textContent = "";
     }else{
       showAssignBox(false);
     }
