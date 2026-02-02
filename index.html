@@ -192,6 +192,7 @@
 
     <div class="topbarRight">
       <div class="chip" id="modeChip">Mode : Prescripteur</div>
+      <div class="chip" id="newMsgChip" style="display:none;">🔔 Nouveau message</div>
       <button class="secondary" id="themeBtn" type="button" style="white-space:nowrap">🌙 Mode sombre</button>
     </div>
   </div>
@@ -218,14 +219,6 @@
 
       <label>Bloc client (copier-coller) — 1ʳᵉ ligne = nom du client</label>
       <textarea id="pasteBlock" style="height:180px" placeholder="Colle ici le bloc complet…"></textarea>
-
-      <div class="hint">
-La 1ʳᵉ ligne devient automatiquement le nom du client.
-Lignes supprimées automatiquement :
-- « Obtenir un lien à envoyer au client pour signer un mandat de prélèvement SEPA »
-- « Responsable MF Autosud »
-- variantes « prélèvement / prelevement »
-      </div>
 
       <div class="row">
         <button id="createBtn" type="button">Créer la demande</button>
@@ -291,12 +284,12 @@ Lignes supprimées automatiquement :
       <h2>3) Conversation</h2>
       <div class="row">
         <button class="secondary" id="refreshThreadBtn" type="button">🔄 Rafraîchir</button>
+        <button class="secondary" id="markReadBtn" type="button">✅ Marquer comme lu</button>
         <button class="secondary" id="copyLinkBtn3" type="button">Copier le lien</button>
       </div>
       <div id="thread" style="margin-top:10px"></div>
     </div>
 
-    <!-- ✅ MF Auto Sud répondre (message + fichiers) -->
     <div class="box" id="prescriberReplyBox" style="display:none;">
       <h2>4) Répondre (MF Auto Sud)</h2>
 
@@ -344,6 +337,7 @@ Lignes supprimées automatiquement :
       <h2>Conversation</h2>
       <div class="row">
         <button class="secondary" id="refreshThreadProviderBtn" type="button">🔄 Rafraîchir</button>
+        <button class="secondary" id="markReadProviderBtn" type="button">✅ Marquer comme lu</button>
       </div>
       <div id="threadProvider" style="margin-top:10px"></div>
     </div>
@@ -359,13 +353,8 @@ Lignes supprimées automatiquement :
 
       <button id="providerReplyBtn" type="button">Envoyer la réponse</button>
       <div id="respStatus" class="hint"></div>
-
-      <div class="hint" id="replyHint" style="margin-top:10px">
-        ✅ Envoi message + pièces jointes via <b>upload-attachment</b> puis <b>provider-reply</b>.
-      </div>
     </div>
 
-    <!-- Debug (visible seulement si ?debug=1) -->
     <div class="box" id="debugBox" style="display:none;">
       <h2>Debug (sans console)</h2>
       <div id="debugOut" class="hint">—</div>
@@ -381,9 +370,9 @@ Lignes supprimées automatiquement :
 <script>
 /* ========================= CONFIG ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
+const SUPABASE_ANON_KEY = "REPLACE_WITH_YOUR_ANON_IF_NEEDED"; // <-- tu peux laisser ta valeur actuelle
 const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
-const PROVIDERS_KEY = "mfautosud_providers_v2";
+const PROVIDERS_KEY = "mfautosud_providers_v3";
 
 /* ========================= THEME ========================= */
 const THEME_KEY = "mfautosud_theme";
@@ -444,16 +433,13 @@ async function fetchJson(url, options){
   return { res, data };
 }
 
-/* ========================= DEBUG (sans console) ========================= */
+/* ========================= DEBUG ========================= */
 let DEBUG_ON = false;
 function debugShow(show){
   const box = $("debugBox");
   if(box) box.style.display = show ? "" : "none";
 }
-function debugClear(){
-  const out = $("debugOut");
-  if(out) out.textContent = "—";
-}
+function debugClear(){ const out = $("debugOut"); if(out) out.textContent = "—"; }
 function debugLog(...args){
   if(!DEBUG_ON) return;
   const out = $("debugOut");
@@ -464,10 +450,21 @@ function debugLog(...args){
   }).join(" ");
   out.textContent = (out.textContent === "—" ? "" : out.textContent + "\n\n") + txt;
 }
-function syncState(){
-  window.RID = RID;
-  window.CODE = CODE;
-  window.PROVIDER_EMAIL = PROVIDER_EMAIL;
+
+/* ========================= NEW MESSAGE BADGE ========================= */
+function seenKey(mode){ return `mf_seen_${mode}_${RID}`; }
+function markSeen(mode){
+  if(!RID) return;
+  localStorage.setItem(seenKey(mode), new Date().toISOString());
+  updateNewBadge(false);
+}
+function getSeen(mode){
+  const v = localStorage.getItem(seenKey(mode));
+  return v ? new Date(v).getTime() : 0;
+}
+function updateNewBadge(show){
+  const chip = $("newMsgChip");
+  if(chip) chip.style.display = show ? "" : "none";
 }
 
 /* ========================= UI Helpers ========================= */
@@ -475,8 +472,6 @@ function showAssignBox(show){
   const box = $("assignBox");
   if(box) box.style.display = show ? "" : "none";
 }
-
-/* ✅ FIX adresse : évite "France France" */
 function formatAddress(r){
   const addr = String(r.address || "").trim();
   const postcode = String(r.postcode || "").trim();
@@ -485,22 +480,16 @@ function formatAddress(r){
 
   const addrHasFrance = /france/i.test(addr);
   const parts = [];
-
   if(addr) parts.push(addr);
   if(postcode || city) parts.push([postcode, city].filter(Boolean).join(" "));
   if(country && !addrHasFrance) parts.push(country);
-
   return parts.join(" ").replace(/\s+/g," ").trim();
 }
 
 /* =========================================================
-   ✅ UPLOAD (IMPORTANT)
-   Utilise ta Edge Function: upload-attachment
-   Elle doit accepter un FormData:
-   - file
-   - request_id
-   Retour JSON attendu:
-   { name: "...", url: "https://..." }
+   UPLOAD FILES via Edge Function: upload-attachment
+   - form-data: file, request_id
+   - returns: { name, url }
 ========================================================= */
 async function uploadFiles(requestId, fileInput){
   const uploaded = [];
@@ -547,11 +536,133 @@ function loadProviders(){
 }
 function saveProviders(arr){ localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr)); }
 
-/* ... (le reste de tes fonctions providers / parsePaste / createRequest / sendToSelected)
-   -> inchangé pour gagner du temps (je n'ai pas modifié ta logique)
-*/
+function removeProvider(index){
+  const providers = loadProviders();
+  providers.splice(index, 1);
+  saveProviders(providers);
+  renderProviders();
+}
 
-/* ========================= PARSE COPY-PASTE (inchangé) ========================= */
+function renderProviders(){
+  const listEl = $("providersList");
+  if(!listEl) return;
+
+  const providers = loadProviders();
+  if(!providers.length){
+    listEl.innerHTML = `<div class="hint">Aucun prestataire enregistré.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = providers.map((p, idx) => {
+    const email = normalizeEmail(p.email || "");
+    const name  = String(p.name || "").trim();
+    const tags = [
+      p.is_sales_manager ? "Chef des ventes" : "",
+      p.is_vendor ? "Vendeur" : ""
+    ].filter(Boolean).join(" • ");
+
+    return `
+      <div class="providerRow">
+        <input type="checkbox" class="providerCheck" data-email="${escHtml(email)}" aria-label="Sélection prestataire">
+        <div class="txt">
+          <span class="main">${escHtml(email)}</span>
+          ${name ? `<span class="sub">${escHtml(name)}</span>` : ""}
+          ${tags ? `<span class="sub">${escHtml(tags)}</span>` : ""}
+        </div>
+        <button class="small secondary" type="button" onclick="removeProvider(${idx})">Suppr.</button>
+      </div>
+    `;
+  }).join("");
+}
+
+async function addProvider(){
+  const email = normalizeEmail($("providerEmail")?.value || "");
+  const name = String($("providerName")?.value || "").trim();
+  const is_sales_manager = !!$("providerIsManager")?.checked;
+  const is_vendor = !!$("providerIsVendor")?.checked;
+
+  if(!email){ alert("Saisis un e-mail."); return; }
+  if(!emailLooksValid(email)){ alert("E-mail invalide."); return; }
+  if(!is_sales_manager && !is_vendor){
+    alert("Coche au moins un rôle : Chef des ventes ou Vendeur.");
+    return;
+  }
+
+  const providers = loadProviders();
+  if(providers.some(p => normalizeEmail(p.email) === email)){
+    alert("Déjà enregistré."); return;
+  }
+
+  providers.push({ name, email, is_sales_manager, is_vendor });
+  saveProviders(providers);
+
+  $("providerEmail").value = "";
+  $("providerName").value = "";
+  $("providerIsManager").checked = false;
+  $("providerIsVendor").checked = false;
+
+  renderProviders();
+}
+
+function checkAll(on){ document.querySelectorAll(".providerCheck").forEach(c=>c.checked=!!on); }
+
+async function exportProviders(){
+  const providers = loadProviders();
+  const lines = providers.map(p => {
+    const email = normalizeEmail(p.email || "");
+    const name = String(p.name || "").trim();
+    return name ? `${name} <${email}>` : email;
+  }).join("\n");
+  await navigator.clipboard.writeText(lines || "");
+  alert("Liste copiée dans le presse-papiers.");
+}
+
+function clearProviders(){
+  if(!confirm("Supprimer tous les prestataires enregistrés sur cet ordinateur ?")) return;
+  saveProviders([]);
+  renderProviders();
+}
+
+function extractEmailAndName(line){
+  const s = (line || "").trim();
+  if(!s) return null;
+  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
+  if(m){
+    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
+    const email = (m[2] || "").trim().toLowerCase();
+    return { name, email };
+  }
+  const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
+  if(emailLooksValid(only)) return { name:"", email: only };
+  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if(em) return { name:"", email: em[0].toLowerCase() };
+  return null;
+}
+
+function importProviders(){
+  const raw = String($("importArea")?.value || "").replace(/\r/g,"").trim();
+  if(!raw){ alert("Colle une liste."); return; }
+
+  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
+  const providers = loadProviders();
+  const existing = new Set(providers.map(p => normalizeEmail(p.email)));
+
+  let added=0, ignored=0;
+  for(const line of lines){
+    const parsed = extractEmailAndName(line);
+    if(!parsed || !emailLooksValid(parsed.email)){ ignored++; continue; }
+    if(existing.has(parsed.email)){ ignored++; continue; }
+    providers.push({ name: parsed.name || "", email: parsed.email, is_sales_manager:false, is_vendor:false });
+    existing.add(parsed.email);
+    added++;
+  }
+
+  saveProviders(providers);
+  renderProviders();
+  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
+}
+
+/* ========================= PARSE PASTE (repris) ========================= */
 function parsePaste(text){
   const t = (text || "").replace(/\r/g, "").trim();
   const rawLines = t.split("\n").map(l => l.replace(/\u00A0/g," ").trim());
@@ -593,17 +704,13 @@ function parsePaste(text){
   };
 
   const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l));
-
   const parseZipCityCountry = (l) => {
     const m = norm(l).match(/\b(\d{5})\b\s+(.+)$/);
     if (!m) return null;
     const postcode = m[1];
     let rest = norm(m[2]);
     let country = "";
-    if (/france$/i.test(rest)) {
-      country = "France";
-      rest = rest.replace(/france$/i, "").trim();
-    }
+    if (/france$/i.test(rest)) { country = "France"; rest = rest.replace(/france$/i, "").trim(); }
     return { postcode, city: rest, country };
   };
 
@@ -621,32 +728,25 @@ function parsePaste(text){
     if (!m) return "";
     return norm(m[1]).replace(/[ .]/g, "");
   };
-
   const extractVatValue = (l) => {
     const m = norm(l).match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z .]{6,})/i);
     if (!m) return "";
     return norm(m[1]).replace(/[ .]/g, "");
   };
-
   const extractEmailValue = (l) => {
     const m = norm(l).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     return m ? m[0].toLowerCase() : "";
   };
-
   const extractPhoneValue = (l) => {
     const m = norm(l).match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
     return m ? m[0].replace(/[\s.\-]/g, "") : "";
   };
 
   let firstMeaningful = "";
-  for (const l of lines) {
-    if (isUselessLine(l)) continue;
-    firstMeaningful = l; break;
-  }
+  for (const l of lines) { if (isUselessLine(l)) continue; firstMeaningful = l; break; }
   out.client_name = firstMeaningful || lines[0];
 
   let pending = null;
-
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     const x = low(l);
@@ -673,21 +773,13 @@ function parsePaste(text){
       out.address = l;
       const next = lines[i + 1] || "";
       const z = parseZipCityCountry(next);
-      if (z) {
-        out.postcode = z.postcode; out.city = z.city;
-        if (z.country) out.country = z.country;
-      }
+      if (z) { out.postcode = z.postcode; out.city = z.city; if (z.country) out.country = z.country; }
       continue;
     }
 
     if (!out.address) {
       const z = parseZipCityCountry(l);
-      if (z) {
-        out.address = l;
-        out.postcode = z.postcode; out.city = z.city;
-        if (z.country) out.country = z.country;
-        continue;
-      }
+      if (z) { out.address = l; out.postcode = z.postcode; out.city = z.city; if (z.country) out.country = z.country; continue; }
     }
 
     if (!out.contact_name) {
@@ -703,19 +795,17 @@ function parsePaste(text){
   return out;
 }
 
-/* ========================= REQUEST creation (inchangé) ========================= */
+/* ========================= CREATE REQUEST ========================= */
 async function createRequest(){
   const vehicle = String($("vehicle")?.value || "").trim();
   const paste = String($("pasteBlock")?.value || "").trim();
   if(!vehicle || !paste){ alert("Véhicule + bloc client obligatoires."); return; }
 
   const parsed = parsePaste(paste);
-  debugLog("PARSE =", parsed);
   if(!parsed.client_name){ alert("Nom client introuvable (1ère ligne)."); return; }
 
   RID = "";
   CODE = randomCode();
-  syncState();
 
   const payload = {
     status: "draft",
@@ -754,17 +844,16 @@ async function createRequest(){
   }
 
   RID = data[0].id;
-  syncState();
-
   const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
-  if($("link")) $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
+  $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
 
-  if($("sendBox")) $("sendBox").style.display = "block";
-  if($("prescriberReplyBox")) $("prescriberReplyBox").style.display = "block";
+  $("sendBox").style.display = "block";
+  $("prescriberReplyBox").style.display = "block";
+  renderProviders();
   await loadThread();
 }
 
-/* ========================= COPIER LIEN ========================= */
+/* ========================= COPY LINK ========================= */
 async function copyThreadLink(){
   if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
   const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
@@ -772,33 +861,59 @@ async function copyThreadLink(){
   alert("Lien copié.");
 }
 
-/* ========================= PROVIDER REPLY (✅ message OU fichiers + upload) ========================= */
+/* ========================= SEND TO SELECTED (send-request) ========================= */
+async function sendToSelected(){
+  if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
+
+  const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
+  const emails = checks
+    .map(c => (c.getAttribute("data-email")||"").trim().toLowerCase())
+    .filter(Boolean);
+
+  if(!emails.length){ alert("Sélectionne au moins 1 prestataire."); return; }
+
+  $("sendStatus").textContent = "Envoi…";
+  const custom = String($("customMessage")?.value || "").trim();
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ request_id: RID, access_code: CODE, provider_emails: emails, custom_message: custom })
+  });
+
+  if(!res.ok){
+    debugLog("send-request failed", res.status, data);
+    $("sendStatus").textContent = "❌ Erreur (debug si ?debug=1).";
+    return;
+  }
+  $("sendStatus").textContent = "✅ Envoyé";
+}
+
+/* ========================= PROVIDER REPLY ========================= */
 async function providerReply(){
   if(!RID || !CODE || !PROVIDER_EMAIL){
-    if($("respStatus")) $("respStatus").textContent = "❌ Lien invalide (rid/code/pe manquant).";
+    $("respStatus").textContent = "❌ Lien invalide (rid/code/pe manquant).";
     return;
   }
 
   const msg = String($("respMsg")?.value || "").trim();
   const fileInput = $("respFiles");
 
-  if(!msg && (!fileInput || !fileInput.files || !fileInput.files.length)){
-    if($("respStatus")) $("respStatus").textContent = "❌ Mets un message ou un fichier.";
+  if(!msg && (!fileInput?.files?.length)){
+    $("respStatus").textContent = "❌ Mets un message ou un fichier.";
     return;
   }
 
-  if($("respStatus")) $("respStatus").textContent = "Upload fichiers…";
-
+  $("respStatus").textContent = "Upload fichiers…";
   let files = [];
-  try{
-    files = await uploadFiles(RID, fileInput);
-  }catch(e){
-    if($("respStatus")) $("respStatus").textContent = "❌ Erreur upload fichier.";
-    return;
-  }
+  try{ files = await uploadFiles(RID, fileInput); }
+  catch{ $("respStatus").textContent = "❌ Erreur upload fichier."; return; }
 
-  if($("respStatus")) $("respStatus").textContent = "Envoi…";
-
+  $("respStatus").textContent = "Envoi…";
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
     method:"POST",
     headers:{
@@ -817,45 +932,39 @@ async function providerReply(){
 
   if(!res.ok){
     debugLog("provider-reply failed", res.status, data);
-    if($("respStatus")) $("respStatus").textContent = "❌ Erreur envoi (debug si ?debug=1).";
+    $("respStatus").textContent = "❌ Erreur envoi (debug si ?debug=1).";
     return;
   }
 
-  if($("respMsg")) $("respMsg").value = "";
-  if($("respFiles")) $("respFiles").value = "";
-  if($("respStatus")) $("respStatus").textContent = "✅ Envoyé";
+  $("respMsg").value = "";
+  $("respFiles").value = "";
+  $("respStatus").textContent = "✅ Envoyé";
   await loadThread();
 }
 
-/* ========================= PRESCRIBER REPLY (✅ message OU fichiers + upload) ========================= */
+/* ========================= PRESCRIBER REPLY ========================= */
 async function prescriberReply(){
   if(!RID || !CODE){
-    if($("prescStatus")) $("prescStatus").textContent = "❌ Ouvre d’abord une demande (rid+code).";
+    $("prescStatus").textContent = "❌ Ouvre d’abord une demande (rid+code).";
     return;
   }
 
   const msg = String($("prescMsg")?.value || "").trim();
   const fileInput = $("prescFiles");
 
-  if(!msg && (!fileInput || !fileInput.files || !fileInput.files.length)){
-    if($("prescStatus")) $("prescStatus").textContent = "❌ Mets un message ou un fichier.";
+  if(!msg && (!fileInput?.files?.length)){
+    $("prescStatus").textContent = "❌ Mets un message ou un fichier.";
     return;
   }
 
   const notifyAssignedOnly = !!$("notifyAssignedOnly")?.checked;
 
-  if($("prescStatus")) $("prescStatus").textContent = "Upload fichiers…";
-
+  $("prescStatus").textContent = "Upload fichiers…";
   let files = [];
-  try{
-    files = await uploadFiles(RID, fileInput);
-  }catch(e){
-    if($("prescStatus")) $("prescStatus").textContent = "❌ Erreur upload fichier.";
-    return;
-  }
+  try{ files = await uploadFiles(RID, fileInput); }
+  catch{ $("prescStatus").textContent = "❌ Erreur upload fichier."; return; }
 
-  if($("prescStatus")) $("prescStatus").textContent = "Envoi…";
-
+  $("prescStatus").textContent = "Envoi…";
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/prescriber-reply`, {
     method:"POST",
     headers:{
@@ -874,42 +983,126 @@ async function prescriberReply(){
 
   if(!res.ok){
     debugLog("prescriber-reply failed", res.status, data);
-    if($("prescStatus")) $("prescStatus").textContent = "❌ Erreur envoi (debug si ?debug=1).";
+    $("prescStatus").textContent = "❌ Erreur envoi (debug si ?debug=1).";
     return;
   }
 
-  if($("prescMsg")) $("prescMsg").value = "";
-  if($("prescFiles")) $("prescFiles").value = "";
-  if($("prescStatus")) $("prescStatus").textContent = "✅ Envoyé";
+  $("prescMsg").value = "";
+  $("prescFiles").value = "";
+  $("prescStatus").textContent = "✅ Envoyé";
   await loadThread();
 }
 
-/* ========================= THREAD RENDER FILES (✅ liens + preview images) ========================= */
-function isImageUrl(url){
-  const u = String(url || "").toLowerCase();
-  return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image");
+/* ========================= VENDOR LIST (manager) ========================= */
+async function providerRoleAndTeam(){
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-list`, {
+    method:"POST",
+    headers:{
+      apikey: SUPABASE_ANON_KEY,
+      Authorization:"Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({ provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE })
+  });
+
+  if(!res.ok){
+    debugLog("vendor-list failed", res.status, data);
+    return { is_manager:false, vendors:[] };
+  }
+
+  return {
+    is_manager: data?.is_sales_manager === true,
+    vendors: Array.isArray(data?.vendors) ? data.vendors : []
+  };
 }
 
+function renderAssignList(vendors){
+  const el = $("assignList");
+  const hint = $("assignHint");
+
+  if(!vendors?.length){
+    if(hint) hint.textContent = "Aucun vendeur rattaché à ce chef des ventes.";
+    if(el) el.innerHTML = "";
+    return;
+  }
+
+  if(hint) hint.textContent = "Choisis un vendeur de l’équipe :";
+  el.innerHTML = vendors.map((v, i)=>{
+    const email = String(v.vendor_email || "").trim().toLowerCase();
+    const name = String(v.vendor_name || "").trim();
+    const label = name ? `${name} — ${email}` : email;
+
+    return `
+      <div class="providerRow">
+        <input type="radio" name="assignVendor" value="${escHtml(email)}" ${i===0 ? "checked" : ""}>
+        <div class="txt">
+          <span class="main">${escHtml(label)}</span>
+          <span class="sub">Attribuer ce dossier à ce vendeur</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function assignRequestToSelectedVendor(){
+  const status = $("assignStatus");
+  const picked = document.querySelector('input[name="assignVendor"]:checked');
+  if(!picked){
+    status.textContent = "❌ Sélectionne un vendeur.";
+    return;
+  }
+
+  const vendor_email = String(picked.value || "").trim().toLowerCase();
+  status.textContent = "Attribution en cours…";
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/request-assign`, {
+    method:"POST",
+    headers:{
+      apikey: SUPABASE_ANON_KEY,
+      Authorization:"Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({ request_id: RID, access_code: CODE, manager_email: PROVIDER_EMAIL, vendor_email })
+  });
+
+  if(!res.ok){
+    debugLog("request-assign failed", res.status, data);
+    status.textContent = "❌ Erreur attribution.";
+    return;
+  }
+
+  status.textContent = "✅ Dossier attribué.";
+  await loadThread();
+}
+
+/* ========================= RENDER FILES ========================= */
+function isImageUrl(url){
+  const u = String(url || "").toLowerCase();
+  return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp");
+}
 function renderMessageFiles(files){
   if(!Array.isArray(files) || !files.length) return "";
   return files.map(f => {
     const name = escHtml(f?.name || "fichier");
     const url = f?.url;
     if(!url) return `<div class="hint">📎 ${name} (lien indisponible)</div>`;
-
     const link = `<div><a class="file" href="${url}" target="_blank" rel="noopener">📎 Télécharger : ${name}</a></div>`;
     const preview = isImageUrl(url) ? `<img class="thumb" src="${url}" alt="${name}">` : "";
     return link + preview;
   }).join("");
 }
 
-/* ========================= LOAD THREAD (inchangé sauf affichage files) ========================= */
+/* ========================= THREAD ========================= */
 async function loadThread(){
   if(!RID || !CODE) return;
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
     method: "POST",
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({ request_id: RID, access_code: CODE })
   });
 
@@ -920,10 +1113,20 @@ async function loadThread(){
     return;
   }
 
+  const responses = Array.isArray(data?.responses) ? data.responses : [];
+  const latest = responses.length ? new Date(responses[responses.length-1].created_at).getTime() : 0;
+
+  const providerVisible = $("providerUI") && $("providerUI").style.display !== "none";
+  const mode = providerVisible ? "provider" : "prescriber";
+  const seen = getSeen(mode);
+
+  updateNewBadge(latest > seen);
+
+  // Prescriber thread
   if($("thread")){
     const el = $("thread");
     el.innerHTML = "";
-    (data.responses || []).forEach(x=>{
+    responses.forEach(x=>{
       const isProvider = !!x.responder_email;
       el.innerHTML += `
         <div class="msg ${isProvider ? "them":"you"}">
@@ -939,10 +1142,11 @@ async function loadThread(){
     });
   }
 
+  // Provider thread
   if($("threadProvider")){
     const el = $("threadProvider");
     el.innerHTML = "";
-    (data.responses || []).forEach(x=>{
+    responses.forEach(x=>{
       const isYou = PROVIDER_EMAIL && (String(x.responder_email||"").toLowerCase() === PROVIDER_EMAIL);
       el.innerHTML += `
         <div class="msg ${isYou ? "you":"them"}">
@@ -958,10 +1162,10 @@ async function loadThread(){
     });
   }
 
+  // request info (provider)
   if($("requestInfo") && data.request){
     const r = data.request;
     const addrLine = formatAddress(r);
-
     $("requestInfo").innerHTML = `
       <div class="card">
         <div class="gridInfo">
@@ -975,12 +1179,6 @@ async function loadThread(){
       </div>
     `;
   }
-
-  // afficher box MF reply si contexte prescripteur
-  if($("prescriberReplyBox")){
-    const providerVisible = $("providerUI") && $("providerUI").style.display !== "none";
-    $("prescriberReplyBox").style.display = providerVisible ? "none" : (RID && CODE ? "" : "none");
-  }
 }
 
 /* ========================= INIT ========================= */
@@ -988,58 +1186,81 @@ async function loadThread(){
   const { rid, code, pe, debug } = getAllParams();
   DEBUG_ON = String(debug) === "1";
   debugShow(DEBUG_ON);
+  if($("debugClearBtn")) $("debugClearBtn").addEventListener("click", debugClear);
 
-  const dbgClear = $("debugClearBtn");
-  if(dbgClear) dbgClear.addEventListener("click", ()=>debugClear());
+  // binds prescriber
+  $("createBtn")?.addEventListener("click", createRequest);
+  $("copyLinkBtn")?.addEventListener("click", copyThreadLink);
+  $("copyLinkBtn2")?.addEventListener("click", copyThreadLink);
+  $("copyLinkBtn3")?.addEventListener("click", copyThreadLink);
 
-  const bind = (id, fn) => { const el=$(id); if(el) el.addEventListener("click", fn); };
+  $("addProviderBtn")?.addEventListener("click", addProvider);
+  $("importProvidersBtn")?.addEventListener("click", importProviders);
+  $("checkAllBtn")?.addEventListener("click", ()=>checkAll(true));
+  $("uncheckAllBtn")?.addEventListener("click", ()=>checkAll(false));
+  $("exportProvidersBtn")?.addEventListener("click", exportProviders);
+  $("clearProvidersBtn")?.addEventListener("click", clearProviders);
+  $("sendBtn")?.addEventListener("click", sendToSelected);
 
-  bind("createBtn", createRequest);
-  bind("copyLinkBtn", copyThreadLink);
-  bind("copyLinkBtn2", copyThreadLink);
-  bind("copyLinkBtn3", copyThreadLink);
+  $("refreshThreadBtn")?.addEventListener("click", loadThread);
+  $("markReadBtn")?.addEventListener("click", ()=>markSeen("prescriber"));
 
-  bind("refreshThreadBtn", loadThread);
-  bind("refreshThreadProviderBtn", loadThread);
+  $("prescReplyBtn")?.addEventListener("click", prescriberReply);
 
-  bind("providerReplyBtn", providerReply);
-  bind("prescReplyBtn", prescriberReply);
+  // binds provider
+  $("refreshThreadProviderBtn")?.addEventListener("click", loadThread);
+  $("markReadProviderBtn")?.addEventListener("click", ()=>markSeen("provider"));
+  $("providerReplyBtn")?.addEventListener("click", providerReply);
+  $("assignBtn")?.addEventListener("click", assignRequestToSelectedVendor);
 
-  // MODE PRESTATAIRE
+  renderProviders();
+
+  // Provider mode
   if (rid && code && pe && String(pe).trim()) {
     RID = String(rid);
     CODE = String(code);
     PROVIDER_EMAIL = decodeURIComponent(String(pe)).trim().toLowerCase();
-    syncState();
 
     $("prescriberUI").style.display = "none";
     $("providerUI").style.display = "block";
     setModeChip("Prestataire");
 
     await loadThread();
+
+    // if manager: show assign box
+    const role = await providerRoleAndTeam();
+    if(role.is_manager){
+      showAssignBox(true);
+      renderAssignList(role.vendors);
+    }else{
+      showAssignBox(false);
+    }
+
     return;
   }
 
-  // MODE PRESCRIPTEUR DOSSIER
+  // Prescriber dossier mode
   if (rid && code) {
     RID = String(rid);
     CODE = String(code);
-    syncState();
 
     $("prescriberUI").style.display = "block";
     $("providerUI").style.display = "none";
-    if($("sendBox")) $("sendBox").style.display = "block";
-    if($("prescriberReplyBox")) $("prescriberReplyBox").style.display = "block";
 
+    $("sendBox").style.display = "block";
+    $("prescriberReplyBox").style.display = "block";
     setModeChip("Prescripteur (dossier)");
+
+    renderProviders();
     await loadThread();
     return;
   }
 
-  // MODE PRESCRIPTEUR ACCUEIL
+  // Prescriber home
   $("prescriberUI").style.display = "block";
   $("providerUI").style.display = "none";
-  if($("prescriberReplyBox")) $("prescriberReplyBox").style.display = "none";
+  $("sendBox").style.display = "none";
+  $("prescriberReplyBox").style.display = "none";
   setModeChip("Prescripteur");
 })();
 </script>
