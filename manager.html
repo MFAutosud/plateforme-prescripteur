@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Portail Chef des ventes – MF Auto Sud</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="./assets/logo-mfautosud.png">
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#111c34; --panel2:#0f1a32;
+      --text:#ffffff; --muted:rgba(255,255,255,.75); --line:rgba(255,255,255,.10);
+      --brand:#4da3ff; --btn:#4da3ff; --btnText:#001; --btn2:#334155;
+      --shadow: 0 10px 24px rgba(0,0,0,.22);
+      --fieldBg: rgba(11,18,32,.85); --fieldBorder: rgba(255,255,255,.14); --fieldFocus: rgba(77,163,255,.55);
+      --rowBg: rgba(11,18,32,.60); --rowBorder: rgba(255,255,255,.08);
+      --msgBg: rgba(11,18,32,.75);
+      --fileBg:#334155; --fileBorder: rgba(255,255,255,.10);
+      --topbarBg: rgba(17,28,52,.85); --topbarBorder: rgba(255,255,255,.08);
+      --chipBg: rgba(77,163,255,.12); --chipBorder: rgba(77,163,255,.25); --chipText: #cfe6ff;
+      --divider: rgba(255,255,255,.10);
+      --link: #7cc0ff;
+    }
+    [data-theme="light"]{
+      --bg:#f6f8fc; --panel:#ffffff; --panel2:#ffffff;
+      --text:#0b1220; --muted:rgba(15,23,42,.72); --line:rgba(15,23,42,.12);
+      --brand:#2563eb; --btn:#2563eb; --btnText:#fff; --btn2:#e2e8f0;
+      --shadow: 0 10px 24px rgba(2,6,23,.08);
+      --fieldBg: rgba(255,255,255,.95); --fieldBorder: rgba(15,23,42,.14); --fieldFocus: rgba(37,99,235,.45);
+      --rowBg: rgba(2,6,23,.03); --rowBorder: rgba(2,6,23,.08);
+      --msgBg: rgba(2,6,23,.03);
+      --fileBg: rgba(2,6,23,.06); --fileBorder: rgba(2,6,23,.10);
+      --topbarBg: rgba(255,255,255,.85); --topbarBorder: rgba(2,6,23,.10);
+      --chipBg: rgba(37,99,235,.10); --chipBorder: rgba(37,99,235,.22); --chipText: rgba(15,23,42,.85);
+      --divider: rgba(2,6,23,.10);
+      --link: #2563eb;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Arial, sans-serif; color:var(--text); padding:24px;
+      background:
+        radial-gradient(1100px 460px at 10% -10%, rgba(77,163,255,.22), transparent 60%),
+        radial-gradient(900px 380px at 90% 0%, rgba(37,99,235,.18), transparent 60%),
+        var(--bg);
+    }
+    .wrap{max-width:1100px;margin:0 auto}
+
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 16px; border-radius:16px;
+      background: var(--topbarBg); border:1px solid var(--topbarBorder);
+      backdrop-filter: blur(6px); margin-bottom:16px; box-shadow: var(--shadow);
+    }
+    .brand{display:flex;align-items:center;gap:12px;min-width:0;}
+    .brandLogo{
+      width:44px;height:44px;border-radius:12px; background:var(--panel2); border:1px solid var(--line);
+      display:flex;align-items:center;justify-content:center; padding:6px; flex:0 0 auto;
+    }
+    .brandLogo img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+    .brandTitle h1{font-size:16px;margin:0;color:var(--brand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .brandTitle .sub{margin:2px 0 0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .topbarRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+    .chip{
+      font-size:12px; padding:6px 10px;border-radius:999px;
+      background:var(--chipBg); border:1px solid var(--chipBorder); color:var(--chipText);
+      white-space:nowrap;
+    }
+
+    .box{
+      background: linear-gradient(180deg, rgba(17,28,52,.95), rgba(15,26,50,.95));
+      border:1px solid rgba(255,255,255,.08);
+      padding:16px; border-radius:16px; margin-bottom:14px; box-shadow: var(--shadow);
+    }
+    [data-theme="light"] .box{
+      background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.92));
+      border:1px solid rgba(2,6,23,.10);
+    }
+
+    h2{margin:0 0 10px;font-size:16px}
+    h3{margin:10px 0 8px;font-size:14px}
+    label{display:block;margin-top:10px;font-size:13px;color:var(--muted)}
+    input,textarea{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid var(--fieldBorder); background:var(--fieldBg); color:var(--text); outline:none;
+    }
+    input:focus,textarea:focus{border-color:var(--fieldFocus); box-shadow:0 0 0 4px rgba(77,163,255,.12)}
+    [data-theme="light"] input:focus,[data-theme="light"] textarea:focus{box-shadow:0 0 0 4px rgba(37,99,235,.12)}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    button{
+      padding:10px 12px; border-radius:12px; border:0;
+      background:var(--btn); color:var(--btnText); font-weight:800; cursor:pointer;
+      transition:.12s transform ease, .12s opacity ease;
+    }
+    button:hover{transform: translateY(-1px)}
+    button:active{transform: translateY(0px); opacity:.92}
+    button.secondary{
+      background:var(--btn2); color: var(--text); font-weight:700; border:1px solid var(--line);
+    }
+    [data-theme="light"] button.secondary{color:#0b1220;border:1px solid rgba(2,6,23,.10)}
+    button.small{padding:8px 10px;border-radius:12px;margin-top:0}
+
+    .hint{opacity:.86;font-size:12px;margin-top:8px;white-space:pre-wrap;line-height:1.35;color:var(--muted)}
+    .divider{height:1px;background:var(--divider);margin:14px 0}
+    a{color:var(--link)}
+
+    .providerRow{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 10px;border-radius:14px;
+      background:var(--rowBg);
+      border:1px solid var(--rowBorder);
+      margin:8px 0;
+      min-height:46px;
+    }
+    .providerRow input{margin-top:0}
+    .providerRow .txt{
+      flex:1; min-width:0;
+      display:flex; flex-direction:column; justify-content:center;
+    }
+    .providerRow .main{
+      display:block; font-size:13px; font-weight:800; color:var(--text);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .providerRow .sub{
+      display:block; margin-top:2px; font-size:12px; font-weight:600; color:var(--muted);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+
+    .msg{background:var(--msgBg); padding:12px; border-radius:14px; margin-top:10px; border:1px solid var(--rowBorder)}
+    .msg.you{border-left:4px solid var(--brand)}
+    .msg.them{border-left:4px solid #22c55e}
+    .msgHead{display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .msgMeta{font-size:12px;opacity:.75;color:var(--muted)}
+    .msgWho{font-weight:800}
+    .msgBody{margin-top:8px;line-height:1.45;font-size:13px}
+
+    .file{
+      display:inline-block; margin-top:8px; padding:8px 10px; border-radius:12px;
+      background:var(--fileBg); color:var(--text); text-decoration:none; border:1px solid var(--fileBorder);
+    }
+    .thumb{
+      margin-top:8px;
+      max-width:260px;
+      border-radius:12px;
+      border:1px solid var(--fileBorder);
+      display:block;
+    }
+
+    .card{background:var(--rowBg); border:1px solid var(--rowBorder); border-radius:16px; padding:14px;}
+    .gridInfo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:720px){.gridInfo{grid-template-columns:1fr}}
+    .kv{padding:10px 10px;border-radius:14px;background:rgba(17,28,52,.35);border:1px solid var(--rowBorder);}
+    [data-theme="light"] .kv{background:rgba(2,6,23,.03)}
+    .kv b{display:block;font-size:12px;opacity:.8;margin-bottom:4px}
+    .kv div{font-size:13px;word-break:break-word}
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brandLogo">
+        <img src="./assets/logo-mfautosud.png" alt="MF Auto Sud">
+      </div>
+      <div class="brandTitle">
+        <h1>Portail Chef des ventes</h1>
+        <div class="sub">Attribuer • Gérer vendeurs • Répondre • Pièces jointes</div>
+      </div>
+    </div>
+    <div class="topbarRight">
+      <div class="chip" id="modeChip">Chef des ventes</div>
+      <div class="chip" id="newMsgChip" style="display:none;">🔔 Nouveau message</div>
+      <button class="secondary" id="themeBtn" type="button">🌙 Mode sombre</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>Dossier</h2>
+    <div class="row">
+      <button class="secondary" id="refreshBtn" type="button">🔄 Rafraîchir</button>
+      <button class="secondary" id="copyLinkBtn" type="button">Copier le lien</button>
+      <button class="secondary" id="markReadBtn" type="button">✅ Marquer comme lu</button>
+    </div>
+    <div id="requestInfo" class="hint" style="margin-top:10px">Chargement…</div>
+    <div id="accessErr" class="hint" style="margin-top:10px;display:none;"></div>
+  </div>
+
+  <div class="box" id="assignBox" style="display:none;">
+    <h2>Attribuer à un vendeur</h2>
+    <div id="assignHint" class="hint">Chargement…</div>
+    <div id="assignList" style="margin-top:10px"></div>
+    <div class="row">
+      <button class="secondary" id="assignBtn" type="button">Attribuer</button>
+      <button class="secondary" id="reloadVendorsBtn" type="button">🔄 Recharger vendeurs</button>
+    </div>
+    <div id="assignStatus" class="hint"></div>
+
+    <div class="divider"></div>
+
+    <h3>Gestion des vendeurs</h3>
+    <div class="gridInfo" style="margin-top:10px">
+      <div>
+        <label>Email vendeur</label>
+        <input id="mgrVendorEmail" placeholder="vendeur@domaine.com">
+      </div>
+      <div>
+        <label>Nom vendeur (optionnel)</label>
+        <input id="mgrVendorName" placeholder="Prénom Nom">
+      </div>
+    </div>
+    <div class="row">
+      <button id="mgrAddVendorBtn" type="button">➕ Ajouter vendeur</button>
+      <button class="secondary" id="mgrRemoveVendorBtn" type="button">🗑️ Supprimer vendeur</button>
+    </div>
+    <div id="mgrVendorStatus" class="hint"></div>
+  </div>
+
+  <div class="box">
+    <h2>Conversation</h2>
+    <div id="thread" style="margin-top:10px"></div>
+  </div>
+
+  <div class="box">
+    <h2>Répondre</h2>
+    <label>Message</label>
+    <textarea id="respMsg" style="height:120px" placeholder="Votre message…"></textarea>
+
+    <label>Documents (PDF, images…)</label>
+    <input type="file" id="respFiles" multiple>
+
+    <div class="row">
+      <button id="sendMsgBtn" type="button">Envoyer</button>
+    </div>
+    <div id="respStatus" class="hint"></div>
+  </div>
+
+  <div class="box" id="debugBox" style="display:none;">
+    <h2>Debug</h2>
+    <div id="debugOut" class="hint">—</div>
+    <div class="row"><button class="secondary" id="debugClearBtn" type="button">Vider</button></div>
+  </div>
+</div>
+
+<script>
+/* ========================= CONFIG ========================= */
+const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
+
+/* ========================= THEME ========================= */
+const THEME_KEY = "mfautosud_theme";
+function applyTheme(theme){
+  const t = (theme === "light") ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", t);
+  localStorage.setItem(THEME_KEY, t);
+  const btn = document.getElementById("themeBtn");
+  if(btn) btn.textContent = (t === "light") ? "☀️ Mode clair" : "🌙 Mode sombre";
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "dark";
+  applyTheme(cur === "dark" ? "light" : "dark");
+}
+(function(){
+  applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+  document.getElementById("themeBtn")?.addEventListener("click", toggleTheme);
+})();
+
+/* ========================= STATE ========================= */
+let RID = "";
+let CODE = "";
+let PROVIDER_EMAIL = "";
+let DEBUG_ON = false;
+
+/* ========================= UTILS ========================= */
+function $(id){ return document.getElementById(id); }
+function escHtml(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
+function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
+function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
+function baseUrl(){ return window.location.origin + window.location.pathname; }
+
+function getAllParams(){
+  const url = new URL(window.location.href);
+  const qs = url.searchParams;
+  const hs = new URLSearchParams(window.location.hash.replace("#",""));
+  const rid   = qs.get("rid")   || hs.get("rid");
+  const code  = qs.get("code")  || hs.get("code");
+  const pe    = qs.get("pe")    || hs.get("pe");
+  const debug = qs.get("debug") || hs.get("debug");
+  return { rid, code, pe, debug };
+}
+
+async function fetchJson(url, options){
+  const res = await fetch(url, options);
+  let data = null;
+  try { data = await res.json(); } catch {}
+  return { res, data };
+}
+
+/* ========================= DEBUG ========================= */
+function debugShow(show){
+  const box = $("debugBox");
+  if(box) box.style.display = show ? "" : "none";
+}
+function debugClear(){ const out = $("debugOut"); if(out) out.textContent = "—"; }
+function debugLog(...args){
+  if(!DEBUG_ON) return;
+  const out = $("debugOut");
+  if(!out) return;
+  const txt = args.map(a=>{
+    try { return (typeof a === "string") ? a : JSON.stringify(a, null, 2); }
+    catch { return String(a); }
+  }).join(" ");
+  out.textContent = (out.textContent === "—" ? "" : out.textContent + "\n\n") + txt;
+}
+
+/* ========================= NEW MESSAGE BADGE ========================= */
+function seenKey(){ return `mf_seen_manager_${RID}_${PROVIDER_EMAIL}`; }
+function markSeen(){
+  if(!RID) return;
+  localStorage.setItem(seenKey(), new Date().toISOString());
+  updateNewBadge(false);
+}
+function getSeen(){
+  const v = localStorage.getItem(seenKey());
+  return v ? new Date(v).getTime() : 0;
+}
+function updateNewBadge(show){
+  const chip = $("newMsgChip");
+  if(chip) chip.style.display = show ? "" : "none";
+}
+
+/* ========================= FILE UPLOAD ========================= */
+async function uploadFiles(requestId, fileInput){
+  const uploaded = [];
+  if(!fileInput || !fileInput.files || !fileInput.files.length) return uploaded;
+
+  for(const file of fileInput.files){
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("request_id", requestId);
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-attachment`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY },
+      body: fd,
+    });
+
+    let data = null;
+    try { data = await res.json(); } catch {}
+    if(!res.ok){
+      debugLog("upload-attachment failed", res.status, data);
+      throw new Error(`upload-attachment failed: ${res.status}`);
+    }
+
+    uploaded.push({ name: data?.name || file.name, url: data?.url || "" });
+  }
+  return uploaded;
+}
+
+/* ========================= RENDER FILES ========================= */
+function isImageUrl(url){
+  const u = String(url || "").toLowerCase();
+  return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp");
+}
+function renderMessageFiles(files){
+  if(!Array.isArray(files) || !files.length) return "";
+  return files.map(f => {
+    const name = escHtml(f?.name || "fichier");
+    const url = f?.url;
+    if(!url) return `<div class="hint">📎 ${name} (lien indisponible)</div>`;
+    const link = `<div><a class="file" href="${url}" target="_blank" rel="noopener">📎 Télécharger : ${name}</a></div>`;
+    const preview = isImageUrl(url) ? `<img class="thumb" src="${url}" alt="${name}">` : "";
+    return link + preview;
+  }).join("");
+}
+
+/* ========================= REQUEST INFO ========================= */
+function formatAddress(r){
+  const addr = String(r.address || "").trim();
+  const postcode = String(r.postcode || "").trim();
+  const city = String(r.city || "").trim();
+  const country = String(r.country || "").trim();
+  const addrHasFrance = /france/i.test(addr);
+
+  const parts = [];
+  if(addr) parts.push(addr);
+  if(postcode || city) parts.push([postcode, city].filter(Boolean).join(" "));
+  if(country && !addrHasFrance) parts.push(country);
+  return parts.join(" ").replace(/\s+/g," ").trim();
+}
+
+function renderRequestCard(r){
+  const addrLine = formatAddress(r);
+  const assigned = String(r.assigned_to_email || "").trim();
+
+  return `
+    <div class="card">
+      <div class="gridInfo">
+        <div class="kv"><b>Client</b><div>${escHtml(r.client_name || "-")}</div></div>
+        <div class="kv"><b>Véhicule</b><div>${escHtml(r.vehicle || "-")}</div></div>
+
+        <div class="kv"><b>Adresse</b><div>${escHtml(addrLine || "-")}</div></div>
+        <div class="kv"><b>Contact</b><div>${escHtml(r.contact_name || "-")}</div></div>
+
+        <div class="kv"><b>Email contact</b><div>${escHtml(r.contact_email || "-")}</div></div>
+        <div class="kv"><b>Téléphone</b><div>${escHtml(r.contact_phone || "-")}</div></div>
+
+        <div class="kv"><b>SIRET</b><div>${escHtml(r.siret || "-")}</div></div>
+        <div class="kv"><b>TVA</b><div>${escHtml(r.vat || "-")}</div></div>
+
+        <div class="kv"><b>Assigné à</b><div>${escHtml(assigned || "-")}</div></div>
+        <div class="kv"><b>Votre email</b><div>${escHtml(PROVIDER_EMAIL || "-")}</div></div>
+      </div>
+    </div>
+  `;
+}
+
+/* ========================= GET THREAD ========================= */
+async function loadThread(){
+  if(!RID || !CODE) return;
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ request_id: RID, access_code: CODE })
+  });
+
+  if(!res.ok){
+    debugLog("get-thread failed", res.status, data);
+    $("accessErr").style.display = "";
+    $("accessErr").textContent = `❌ Impossible de charger le dossier (HTTP ${res.status}).`;
+    $("requestInfo").textContent = "";
+    return;
+  }
+
+  $("accessErr").style.display = "none";
+
+  if(data?.request){
+    $("requestInfo").innerHTML = renderRequestCard(data.request);
+  }else{
+    $("requestInfo").textContent = "⚠️ Le dossier ne renvoie pas data.request (get-thread).";
+  }
+
+  const responses = Array.isArray(data?.responses) ? data.responses : [];
+  const thread = $("thread");
+  thread.innerHTML = "";
+
+  responses.forEach(x=>{
+    const from = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
+    const isYou = x.responder_email && normalizeEmail(from) === normalizeEmail(PROVIDER_EMAIL);
+    thread.innerHTML += `
+      <div class="msg ${isYou ? "you" : "them"}">
+        <div class="msgHead">
+          <div class="msgWho">${escHtml(from)}</div>
+          <div class="msgMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+        </div>
+        <div class="msgBody">
+          ${escHtml(x.message || "").replaceAll("\n","<br>")}
+          ${renderMessageFiles(x.files)}
+        </div>
+      </div>
+    `;
+  });
+
+  const latest = responses.length ? new Date(responses[responses.length-1].created_at).getTime() : 0;
+  updateNewBadge(latest > getSeen());
+}
+
+/* ========================= REPLY ========================= */
+async function providerReply(){
+  if(!RID || !CODE || !PROVIDER_EMAIL){
+    $("respStatus").textContent = "❌ Lien invalide (rid/code/pe manquant).";
+    return;
+  }
+
+  const msg = String($("respMsg").value || "").trim();
+  const fileInput = $("respFiles");
+
+  if(!msg && (!fileInput?.files?.length)){
+    $("respStatus").textContent = "❌ Mets un message ou un fichier.";
+    return;
+  }
+
+  $("respStatus").textContent = "Upload fichiers…";
+  let files = [];
+  try { files = await uploadFiles(RID, fileInput); }
+  catch(e){
+    $("respStatus").textContent = "❌ Erreur upload fichier.";
+    debugLog("upload error", String(e));
+    return;
+  }
+
+  $("respStatus").textContent = "Envoi…";
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
+    method:"POST",
+    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      provider_email: PROVIDER_EMAIL,
+      message: msg || "(Pièce jointe)",
+      files
+    })
+  });
+
+  if(!res.ok){
+    debugLog("provider-reply failed", res.status, data);
+    $("respStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
+    return;
+  }
+
+  $("respMsg").value = "";
+  $("respFiles").value = "";
+  $("respStatus").textContent = "✅ Envoyé";
+  await loadThread();
+}
+
+/* ========================= VENDOR MANAGE (manager) ========================= */
+async function vendorManage(action, extra={}){
+  return await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-manage`, {
+    method:"POST",
+    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify({ action, provider_email: PROVIDER_EMAIL, request_id: RID, access_code: CODE, ...extra })
+  });
+}
+
+async function managerLoadVendors(){
+  $("assignHint").textContent = "Chargement vendeurs…";
+  $("assignStatus").textContent = "";
+
+  const { res, data } = await vendorManage("list");
+  if(!res.ok){
+    debugLog("vendor-manage list failed", res.status, data);
+    $("assignHint").textContent = "❌ Accès Chef des ventes refusé (vendor-manage).";
+    return { ok:false, vendors:[] };
+  }
+  return { ok:true, vendors: Array.isArray(data?.vendors) ? data.vendors : [] };
+}
+
+function renderAssignList(vendors){
+  const el = $("assignList");
+  if(!vendors.length){
+    $("assignHint").textContent = "Aucun vendeur rattaché. Ajoute un vendeur ci-dessous.";
+    el.innerHTML = "";
+    return;
+  }
+  $("assignHint").textContent = "Choisis un vendeur :";
+  el.innerHTML = vendors.map((v,i)=>{
+    const email = normalizeEmail(v.vendor_email || v.email || "");
+    const name  = String(v.vendor_name || v.name || "").trim();
+    const label = name ? `${name} — ${email}` : email;
+    return `
+      <div class="providerRow">
+        <input type="radio" name="assignVendor" value="${escHtml(email)}" ${i===0 ? "checked" : ""}>
+        <div class="txt">
+          <span class="main">${escHtml(label)}</span>
+          <span class="sub">Attribuer ce dossier à ce vendeur</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function assignRequestToSelectedVendor(){
+  const picked = document.querySelector('input[name="assignVendor"]:checked');
+  if(!picked){
+    $("assignStatus").textContent = "❌ Sélectionne un vendeur.";
+    return;
+  }
+  const vendor_email = normalizeEmail(picked.value);
+  $("assignStatus").textContent = "Attribution en cours…";
+
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/request-assign`, {
+    method:"POST",
+    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify({ request_id: RID, access_code: CODE, manager_email: PROVIDER_EMAIL, vendor_email })
+  });
+
+  if(!res.ok){
+    debugLog("request-assign failed", res.status, data);
+    const msg = data?.error ? String(data.error) : "Erreur attribution";
+    $("assignStatus").textContent = `❌ ${msg} (HTTP ${res.status})`;
+    return;
+  }
+
+  $("assignStatus").textContent = "✅ Dossier attribué (mail envoyé au vendeur).";
+  await loadThread();
+}
+
+async function managerAddVendor(){
+  const email = normalizeEmail($("mgrVendorEmail").value || "");
+  const name  = String($("mgrVendorName").value || "").trim();
+  if(!emailLooksValid(email)){
+    $("mgrVendorStatus").textContent = "❌ Email vendeur invalide.";
+    return;
+  }
+  $("mgrVendorStatus").textContent = "Ajout…";
+  const { res, data } = await vendorManage("add", { vendor_email: email, vendor_name: name });
+  if(!res.ok){
+    debugLog("vendor-manage add failed", res.status, data);
+    $("mgrVendorStatus").textContent = `❌ Erreur ajout (HTTP ${res.status})`;
+    return;
+  }
+  $("mgrVendorStatus").textContent = "✅ Vendeur ajouté.";
+  $("mgrVendorEmail").value = "";
+  $("mgrVendorName").value = "";
+  const r = await managerLoadVendors();
+  renderAssignList(r.vendors);
+}
+
+async function managerRemoveVendor(){
+  const email = normalizeEmail($("mgrVendorEmail").value || "");
+  if(!emailLooksValid(email)){
+    $("mgrVendorStatus").textContent = "❌ Mets l’email du vendeur à supprimer.";
+    return;
+  }
+  $("mgrVendorStatus").textContent = "Suppression…";
+  const { res, data } = await vendorManage("remove", { vendor_email: email });
+  if(!res.ok){
+    debugLog("vendor-manage remove failed", res.status, data);
+    $("mgrVendorStatus").textContent = `❌ Erreur suppression (HTTP ${res.status})`;
+    return;
+  }
+  $("mgrVendorStatus").textContent = "✅ Vendeur supprimé.";
+  const r = await managerLoadVendors();
+  renderAssignList(r.vendors);
+}
+
+/* ========================= ACTIONS UI ========================= */
+async function copyThreadLink(){
+  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(PROVIDER_EMAIL)}`;
+  await navigator.clipboard.writeText(link);
+  alert("Lien copié.");
+}
+
+/* ========================= INIT ========================= */
+(async function init(){
+  const { rid, code, pe, debug } = getAllParams();
+  DEBUG_ON = String(debug) === "1";
+  debugShow(DEBUG_ON);
+  $("debugClearBtn")?.addEventListener("click", debugClear);
+
+  RID = String(rid || "").trim();
+  CODE = String(code || "").trim();
+  PROVIDER_EMAIL = decodeURIComponent(String(pe || "")).trim().toLowerCase();
+
+  if(!RID || !CODE || !PROVIDER_EMAIL){
+    $("requestInfo").textContent = "❌ Lien invalide. Il faut rid, code et pe.";
+    $("accessErr").style.display = "";
+    $("accessErr").textContent = "Exemple : manager.html?rid=XXX&code=YYY&pe=manager@domaine.com";
+    return;
+  }
+
+  $("refreshBtn").addEventListener("click", async ()=>{
+    await loadThread();
+    const r = await managerLoadVendors();
+    if(r.ok){
+      $("assignBox").style.display = "";
+      renderAssignList(r.vendors);
+    }
+  });
+
+  $("copyLinkBtn").addEventListener("click", copyThreadLink);
+  $("markReadBtn").addEventListener("click", markSeen);
+
+  $("sendMsgBtn").addEventListener("click", providerReply);
+
+  $("reloadVendorsBtn").addEventListener("click", async ()=>{
+    const r = await managerLoadVendors();
+    if(r.ok){
+      $("assignBox").style.display = "";
+      renderAssignList(r.vendors);
+    }
+  });
+
+  $("assignBtn").addEventListener("click", assignRequestToSelectedVendor);
+  $("mgrAddVendorBtn").addEventListener("click", managerAddVendor);
+  $("mgrRemoveVendorBtn").addEventListener("click", managerRemoveVendor);
+
+  await loadThread();
+
+  // Vérifie manager via vendor-manage
+  const r = await managerLoadVendors();
+  if(r.ok){
+    $("assignBox").style.display = "";
+    renderAssignList(r.vendors);
+  }else{
+    $("assignBox").style.display = "none";
+  }
+})();
+</script>
+</body>
+</html>
