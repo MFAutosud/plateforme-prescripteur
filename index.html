@@ -519,15 +519,19 @@ function formatAddress(r){
 }
 
 /* ========================= PORTAL LINKS (test) ========================= */
+function baseDir(){
+  // exemple: https://mfautosud.github.io/plateforme-prescripteur/
+  const url = new URL(window.location.href);
+  const p = url.pathname;
+  const dir = p.endsWith("/") ? p : p.substring(0, p.lastIndexOf("/") + 1);
+  return url.origin + dir;
+}
+
 function buildManagerLink(email){
-  // futur: /manager.html ; pour l'instant on garde index.html mais avec pe
-  const base = window.location.origin + window.location.pathname.replace(/\/index\.html$/,"/");
-  // si tu crées manager.html plus tard: return `${base}manager.html?...`
-  return `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(email)}`;
+  return `${baseDir()}manager.html?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(email)}`;
 }
 function buildVendorLink(email){
-  const base = window.location.origin + window.location.pathname.replace(/\/index\.html$/,"/");
-  return `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(email)}`;
+  return `${baseDir()}vendor.html?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(email)}`;
 }
 
 /* =========================================================
@@ -924,15 +928,48 @@ async function sendToSelected(){
   $("sendStatus").textContent = "Envoi…";
   const custom = String($("customMessage")?.value || "").trim();
 
-  // ✅ envoie aussi rôles (utile côté send-request si tu veux router vers manager/vendor plus tard)
-  const providers = loadProviders().filter(p => emails.includes(normalizeEmail(p.email)));
-  const provider_roles = providers.map(p => ({
-    email: normalizeEmail(p.email),
-    name: String(p.name||"").trim() || null,
-    is_sales_manager: !!p.is_sales_manager,
-    is_vendor: !!p.is_vendor
-  }));
+  // ⚠️ IMPORTANT: provider_roles doit être construit à partir du répertoire local
+  const directory = loadProviders();
 
+  // 1) On map par email (normalisé)
+  const byEmail = new Map(directory.map(p => [normalizeEmail(p.email), p]));
+
+  // 2) On vérifie que CHAQUE email sélectionné a bien un rôle (manager ou vendor)
+  const missing = [];
+  const provider_roles = [];
+
+  for(const email of emails){
+    const p = byEmail.get(email);
+    const is_sales_manager = !!p?.is_sales_manager;
+    const is_vendor = !!p?.is_vendor;
+
+    if(!is_sales_manager && !is_vendor){
+      missing.push(email);
+      continue;
+    }
+
+    provider_roles.push({
+      email,
+      name: String(p?.name || "").trim() || null,
+      is_sales_manager,
+      is_vendor,
+      // ✅ routing côté email (si ta function l’utilise)
+      portal_manager_url: buildManagerLink(email),
+      portal_vendor_url: buildVendorLink(email)
+    });
+  }
+
+  if(missing.length){
+    $("sendStatus").textContent = "";
+    alert(
+      "Impossible d’envoyer : certains destinataires n’ont pas de rôle (Chef des ventes ou Vendeur).\n\n" +
+      missing.map(e => "• " + e).join("\n") +
+      "\n\n➡️ Ouvre la fiche du prestataire dans ton répertoire et coche au moins un rôle."
+    );
+    return;
+  }
+
+  // 3) On envoie (emails + provider_roles)
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
     method: "POST",
     headers: {
@@ -954,7 +991,15 @@ async function sendToSelected(){
     $("sendStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
     return;
   }
-  $("sendStatus").textContent = "✅ Envoyé";
+
+  // ✅ Bonus: affichage des liens direct après envoi (utile en debug)
+  const info = provider_roles.map(r=>{
+    const type = r.is_sales_manager ? "CHEF" : (r.is_vendor ? "VENDEUR" : "—");
+    const url = r.is_sales_manager ? r.portal_manager_url : r.portal_vendor_url;
+    return `${type} ${r.email} -> ${url}`;
+  }).join("\n");
+
+  $("sendStatus").textContent = "✅ Envoyé\n\n" + info;
 }
 
 /* ========================= PROVIDER REPLY ========================= */
