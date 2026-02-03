@@ -369,7 +369,6 @@ async function uploadFiles(requestId, fileInput){
   return uploaded;
 }
 
-
 function isImageUrl(url){
   const u = String(url || "").toLowerCase();
   return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp");
