@@ -1364,7 +1364,6 @@ async function managerRemoveVendor(){
 }
 
 /* ========================= RENDER FILES ========================= */
-/* ========================= RENDER FILES ========================= */
 function isImageUrl(url){
   const u = String(url || "").toLowerCase();
   return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image/");
@@ -1372,14 +1371,14 @@ function isImageUrl(url){
 
 function normalizeFiles(raw){
   if(!raw) return [];
-  if(Array.isArray(raw)) return raw;
+  if(Array.isArray(raw)) return raw.filter(Boolean);
 
   if(typeof raw === "string"){
     try{
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
     }catch{
-      return [];
+      return [raw];
     }
   }
 
@@ -1392,6 +1391,7 @@ function normalizeFiles(raw){
 }
 
 function resolveFileUrl(file){
+  if(typeof file === "string") return file.trim();
   const raw =
     file?.url ||
     file?.publicUrl ||
@@ -1421,7 +1421,7 @@ function renderMessageFiles(rawFiles){
   if(!files.length) return "";
 
   return files.map(f => {
-    const name = escHtml(f?.name || "fichier");
+    const name = escHtml((typeof f === "string" ? f.split("/").pop() : f?.name) || "fichier");
     const url = resolveFileUrl(f);
 
     if(!url){
@@ -1441,6 +1441,7 @@ function renderMessageFiles(rawFiles){
     return link + preview;
   }).join("");
 }
+
 
 /* ========================= THREAD ========================= */
 async function loadThread(){
