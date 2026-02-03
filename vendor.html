@@ -353,13 +353,18 @@ async function uploadFiles(requestId, fileInput){
 
     if(Array.isArray(data?.files)){
       for(const it of data.files){
-        uploaded.push({ name: it?.name || file.name, url: it?.url || "" });
-      }
-    } else {
-      uploaded.push({
-        name: data?.name || file.name,
-        url: data?.url || "",
-      });
+        const returnedUrl =
+  data?.url ||
+  data?.publicUrl ||
+  data?.public_url ||
+  data?.signedUrl ||
+  data?.signed_url ||
+  "";
+
+uploaded.push({
+  name: data?.name || data?.filename || file.name,
+  url: returnedUrl
+});
     }
   }
 
