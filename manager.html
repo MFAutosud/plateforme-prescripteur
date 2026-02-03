@@ -802,6 +802,51 @@ async function managerRemoveVendor(){
   renderAssignList(r.vendors);
 }
 
+/* ========================= REPLY (MANAGER) ========================= */
+async function providerReply(){
+  if(!RID || !CODE || !PROVIDER_EMAIL){
+    $("respStatus").textContent = "❌ Lien invalide (rid/code/pe manquant).";
+    return;
+  }
+
+  const msg = String($("respMsg")?.value || "").trim();
+  const fileInput = $("respFiles");
+
+  if(!msg && (!fileInput?.files?.length)){
+    $("respStatus").textContent = "❌ Mets un message ou un fichier.";
+    return;
+  }
+
+  $("respStatus").textContent = "Envoi…";
+
+  // ⚠️ Pour l’instant : envoi sans pièces jointes (upload à corriger ensuite)
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
+    method:"POST",
+    headers:{
+      apikey: SUPABASE_ANON_KEY,
+      Authorization:"Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      provider_email: PROVIDER_EMAIL,
+      message: msg || "(Message)",
+      files: []
+    })
+  });
+
+  if(!res.ok){
+    debugLog("provider-reply failed", res.status, data);
+    $("respStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
+    return;
+  }
+
+  $("respMsg").value = "";
+  $("respFiles").value = "";
+  $("respStatus").textContent = "✅ Envoyé";
+  await loadThread();
+}
 /* ========================= ACTIONS UI ========================= */
 async function copyThreadLink(){
   const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(PROVIDER_EMAIL)}`;
@@ -839,7 +884,7 @@ async function copyThreadLink(){
   $("copyLinkBtn").addEventListener("click", copyThreadLink);
   $("markReadBtn").addEventListener("click", markSeen);
 
-  $("sendMsgBtn").addEventListener("click", providerReply);
+  $("sendMsgBtn")?.addEventListener("click", providerReply);
 
   $("reloadVendorsBtn").addEventListener("click", async ()=>{
     const r = await managerLoadVendors();
