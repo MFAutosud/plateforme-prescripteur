@@ -585,10 +585,15 @@ async function loadThread(){
   $("accessErr").style.display = "none";
 
   if(data?.request){
-    $("requestInfo").innerHTML = renderRequestCard(data.request);
-  }else{
-    $("requestInfo").textContent = "⚠️ Le dossier ne renvoie pas data.request (get-thread).";
-  }
+  $("requestInfo").innerHTML = renderRequestCard(data.request);
+}else{
+  $("requestInfo").innerHTML = `
+    <div class="hint">
+      ⚠️ Informations du dossier indisponibles.<br>
+      (droits ou réponse get-thread incomplète)
+    </div>
+  `;
+}
 
   const responses = Array.isArray(data?.responses) ? data.responses : [];
   const thread = $("thread");
