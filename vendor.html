@@ -260,6 +260,34 @@ function escHtml(s){
     .replaceAll('"',"&quot;");
 }
 function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
+function currentTheme(){
+  return document.documentElement.getAttribute("data-theme") || "dark";
+}
+
+function hashHue(str){
+  const s = String(str || "");
+  let h = 0;
+  for(let i=0;i<s.length;i++){
+    h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  return h % 360;
+}
+
+function bubbleStyleForSender(senderEmail, isYou){
+  // Vous = bleu MF (style iMessage)
+  if(isYou){
+    return `background: linear-gradient(180deg, var(--brand), var(--brand)); color:#fff; border-color: rgba(255,255,255,.18);`;
+  }
+
+  // Interlocuteur = couleur stable basée sur son email
+  const hue = hashHue(senderEmail || "unknown");
+  const theme = currentTheme();
+
+  if(theme === "light"){
+    return `background: hsl(${hue} 85% 96%); color:#0b1220; border-color: rgba(2,6,23,.10);`;
+  }
+  return `background: hsl(${hue} 55% 18%); color:#ffffff; border-color: rgba(255,255,255,.10);`;
+}
 function baseUrl(){ return window.location.origin + window.location.pathname; }
 
 function getAllParams(){
