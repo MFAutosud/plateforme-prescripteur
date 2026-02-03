@@ -591,25 +591,34 @@ async function loadThread(){
   thread.innerHTML = "";
 
   responses.forEach(x=>{
-    const from = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
-    const isYou = x.responder_email && normalizeEmail(from) === normalizeEmail(PROVIDER_EMAIL);
-    thread.innerHTML += `
-      <div class="msg ${isYou ? "you" : "them"}">
-        <div class="msgHead">
-          <div class="msgWho">${escHtml(from)}</div>
-          <div class="msgMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-        </div>
-        <div class="msgBody">
-          ${escHtml(x.message || "").replaceAll("\n","<br>")}
-          ${renderMessageFiles(x.files)}
+  const from = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
+
+  // isYou = message envoyé par le prestataire connecté (chef des ventes)
+  const isYou = !!x.responder_email && normalizeEmail(from) === normalizeEmail(PROVIDER_EMAIL);
+
+  // couleur : bleu pour toi, couleur unique pour chaque interlocuteur sinon
+  const style = bubbleStyleForSender(from, isYou);
+
+  thread.innerHTML += `
+    <div class="msg">
+      <div class="msgRow ${isYou ? "you" : "them"}">
+        <div class="bubble" style="${style}">
+          <div class="bubbleHead">
+            <div class="bubbleWho">${escHtml(isYou ? "Vous" : from)}</div>
+            <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+          </div>
+          <div class="bubbleBody">
+            ${escHtml(x.message || "").replaceAll("\n","<br>")}
+            ${renderMessageFiles(x.files)}
+          </div>
         </div>
       </div>
-    `;
-  });
+    </div>
+  `;
+});
 
   const latest = responses.length ? new Date(responses[responses.length-1].created_at).getTime() : 0;
-  updateNewBadge(latest > getSeen());
-}
+updateNewBadge(latest > getSeen("provider"));}
 
 /* ========================= REPLY ========================= */
 async function providerReply(){
