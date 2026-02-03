@@ -219,7 +219,7 @@
     <textarea id="respMsg" style="height:120px" placeholder="Votre message…"></textarea>
 
     <label>Documents (PDF, images…)</label>
-<input type="file" id="respFiles" multiple accept="application/pdf,image/*">
+    <input type="file" id="respFiles" multiple accept="application/pdf,image/*">
     <div class="row">
       <button id="sendMsgBtn" type="button">Envoyer</button>
     </div>
@@ -303,6 +303,9 @@ async function fetchJson(url, options){
   let data=null; try{ data=await res.json(); }catch{}
   return { res, data };
 }
+function debugLog(...args){
+  console.debug("[vendor]", ...args);
+}
 
 /* badge */
 function seenKey(){ return `mf_seen_vendor_${RID}_${PROVIDER_EMAIL}`; }
@@ -369,14 +372,6 @@ async function uploadFiles(requestId, fileInput){
   return uploaded;
 }
 
-function isImageUrl(url){
-  const u = String(url || "").toLowerCase();
-  return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp");
-}
-function isImageUrl(url){
-  const u = String(url || "").toLowerCase();
-  return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image/");
-}
 function normalizeFiles(raw){
   if(!raw) return [];
   if(Array.isArray(raw)) return raw;
@@ -398,6 +393,11 @@ function normalizeFiles(raw){
   return [];
 }
 
+function isImageUrl(url){
+  const u = String(url || "").toLowerCase();
+  return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image/");
+}
+
 function resolveFileUrl(file){
   const raw =
     file?.url ||
@@ -405,6 +405,9 @@ function resolveFileUrl(file){
     file?.public_url ||
     file?.signedUrl ||
     file?.signed_url ||
+    file?.download_url ||
+    file?.file_path ||
+    file?.filepath ||
     file?.path ||
     file?.storage_path ||
     "";
@@ -497,31 +500,31 @@ async function loadThread(){
   thread.innerHTML = "";
 
   responses.forEach(x=>{
-  const from = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
+    const from = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
 
-  // isYou = message envoyé par le prestataire connecté (chef des ventes)
-  const isYou = !!x.responder_email && normalizeEmail(from) === normalizeEmail(PROVIDER_EMAIL);
+    // isYou = message envoyé par le prestataire connecté (chef des ventes)
+    const isYou = !!x.responder_email && normalizeEmail(from) === normalizeEmail(PROVIDER_EMAIL);
 
-  // couleur : bleu pour toi, couleur unique pour chaque interlocuteur sinon
-  const style = bubbleStyleForSender(from, isYou);
+    // couleur : bleu pour toi, couleur unique pour chaque interlocuteur sinon
+    const style = bubbleStyleForSender(from, isYou);
 
-  thread.innerHTML += `
-    <div class="msg">
-      <div class="msgRow ${isYou ? "you" : "them"}">
-        <div class="bubble" style="${style}">
-          <div class="bubbleHead">
-            <div class="bubbleWho">${escHtml(isYou ? "Vous" : from)}</div>
-            <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          </div>
-          <div class="bubbleBody">
-            ${escHtml(x.message || "").replaceAll("\n","<br>")}
-            ${renderMessageFiles(x.files)}
+    thread.innerHTML += `
+      <div class="msg">
+        <div class="msgRow ${isYou ? "you" : "them"}">
+          <div class="bubble" style="${style}">
+            <div class="bubbleHead">
+              <div class="bubbleWho">${escHtml(isYou ? "Vous" : from)}</div>
+              <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+            </div>
+            <div class="bubbleBody">
+              ${escHtml(x.message || "").replaceAll("\n","<br>")}
+              ${renderMessageFiles(x.files)}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  `;
-});
+    `;
+  });
 
   const latest = responses.length ? new Date(responses[responses.length-1].created_at).getTime() : 0;
   updateNewBadge(latest > getSeen());
@@ -540,9 +543,9 @@ async function providerReply(){
   let files = [];
   try { files = await uploadFiles(RID, fileInput); }
   catch(e){
-  $("respStatus").textContent = "❌ Erreur upload fichier : " + String(e.message || e);
-  return;
-}
+    $("respStatus").textContent = "❌ Erreur upload fichier : " + String(e.message || e);
+    return;
+  }
 
   $("respStatus").textContent = "Envoi…";
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
