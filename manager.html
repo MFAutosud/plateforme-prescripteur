@@ -568,7 +568,7 @@ function renderRequestCard(r){
 async function loadThread(){
   if(!RID || !CODE) return;
 
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
+ const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
   method: "POST",
   headers: {
     apikey: SUPABASE_ANON_KEY,
@@ -578,18 +578,27 @@ async function loadThread(){
   body: JSON.stringify({
     request_id: RID,
     access_code: CODE,
-    provider_email: PROVIDER_EMAIL,   // ✅ AJOUT
-    role: "manager"                   // ✅ optionnel mais utile
+    provider_email: PROVIDER_EMAIL, // ✅
+    role: "manager"                 // ✅
   })
 });
 
-  if(!res.ok){
-    debugLog("get-thread failed", res.status, data);
-    $("accessErr").style.display = "";
-    $("accessErr").textContent = `❌ Impossible de charger le dossier (HTTP ${res.status}).`;
-    $("requestInfo").textContent = "";
-    return;
-  }
+// ✅ Debug seulement si erreur OU si debug=1 dans l’URL
+if (!res.ok || DEBUG_ON) {
+  $("accessErr").style.display = "";
+  $("accessErr").textContent =
+    "DEBUG get-thread:\nHTTP " + res.status + "\n\n" +
+    JSON.stringify(data, null, 2);
+}
+
+// ✅ Si erreur → on stoppe ici (et on garde le debug visible)
+if (!res.ok) {
+  $("requestInfo").textContent = "";
+  return;
+}
+
+// ✅ Sinon on cache accessErr
+$("accessErr").style.display = "none";
 
   $("accessErr").style.display = "none";
 
@@ -701,15 +710,15 @@ async function managerLoadVendors(){
   $("assignStatus").textContent = "";
 
   const { res, data } = await vendorManage("list");
+
   if(!res.ok){
-  debugLog("vendor-manage list failed", { status: res.status, data });
-  $("assignHint").textContent =
-    `❌ Accès Chef des ventes refusé.\nHTTP ${res.status}\n` +
-    (data?.error ? `Erreur: ${data.error}\n` : "") +
-    "➡️ Ajoute &debug=1 au lien pour voir le détail.";
-  return { ok:false, vendors:[] };
-}
+    debugLog("vendor-manage list failed", { status: res.status, data });
+    $("assignHint").textContent =
+      `❌ Accès Chef des ventes refusé.\nHTTP ${res.status}\n` +
+      (data?.error ? `Erreur: ${data.error}\n` : "");
+    return { ok:false, vendors:[] };
   }
+
   return { ok:true, vendors: Array.isArray(data?.vendors) ? data.vendors : [] };
 }
 
