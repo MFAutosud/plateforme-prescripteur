@@ -625,45 +625,47 @@ async function uploadFiles(requestId, fileInput){
     fd.append("file", file);
     fd.append("request_id", requestId);
 
-    // ✅ AJOUT IMPORTANT : on envoie aussi le code + l'email
+    // on envoie aussi le code + l'email (utile pour la sécurité côté Edge Function)
     fd.append("access_code", CODE || "");
-    fd.append("uploader_email", PROVIDER_EMAIL || PRESCRIBER_EMAIL || "");
+    fd.append("uploader_email", (PROVIDER_EMAIL || PRESCRIBER_EMAIL || "").toLowerCase());
 
     const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-attachment`, {
-      method:"POST",
-      headers:{
+      method: "POST",
+      headers: {
         apikey: SUPABASE_ANON_KEY,
-        Authorization:"Bearer " + SUPABASE_ANON_KEY
+        Authorization: "Bearer " + SUPABASE_ANON_KEY
       },
       body: fd
     });
 
-    let data=null; try{ data=await res.json(); }catch{}
+    let data = null;
+    try { data = await res.json(); } catch {}
 
     if(!res.ok){
-      // ✅ Pour voir l'erreur exacte dans l'écran (débutant friendly)
       console.error("upload-attachment error", res.status, data);
       throw new Error(data?.error || `upload-attachment failed: ${res.status}`);
     }
 
-    // ✅ Sécurité : on s'assure que la function renvoie une URL
-    const url = data?.url || "";
-    if(!url){
+    const returnedUrl =
+      data?.url ||
+      data?.publicUrl ||
+      data?.public_url ||
+      data?.signedUrl ||
+      data?.signed_url ||
+      "";
+
+    if(!returnedUrl){
       throw new Error("upload-attachment: URL manquante dans la réponse");
     }
 
-    const returnedUrl =
-  data?.url ||
-  data?.publicUrl ||
-  data?.public_url ||
-  data?.signedUrl ||
-  data?.signed_url ||
-  "";
+    uploaded.push({
+      name: data?.name || data?.filename || file.name,
+      url: returnedUrl
+    });
+  }
 
-uploaded.push({
-  name: data?.name || data?.filename || file.name,
-  url: returnedUrl
-});
+  return uploaded;
+}
 
 /* ========================= PROVIDERS localStorage ========================= */
 function loadProviders(){
