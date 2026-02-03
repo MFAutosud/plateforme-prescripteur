@@ -1364,6 +1364,7 @@ async function managerRemoveVendor(){
 }
 
 /* ========================= RENDER FILES ========================= */
+/* ========================= RENDER FILES ========================= */
 function isImageUrl(url){
   const u = String(url || "").toLowerCase();
   return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image/");
@@ -1397,6 +1398,9 @@ function resolveFileUrl(file){
     file?.public_url ||
     file?.signedUrl ||
     file?.signed_url ||
+    file?.download_url ||
+    file?.file_path ||
+    file?.filepath ||
     file?.path ||
     file?.storage_path ||
     "";
