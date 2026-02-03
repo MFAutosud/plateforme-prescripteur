@@ -331,16 +331,39 @@ async function uploadFiles(requestId, fileInput){
     fd.append("request_id", requestId);
 
     const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-attachment`, {
-      method:"POST",
-      headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY },
-      body: fd
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      },
+      body: fd,
     });
 
-    let data=null; try{ data=await res.json(); }catch{}
-    if(!res.ok) throw new Error(`upload-attachment failed: ${res.status}`);
+    const text = await res.text();
+    let data = null;
+    try{ data = JSON.parse(text); }catch{ /* ignore */ }
 
-    uploaded.push({ name: data?.name || file.name, url: data?.url || "" });
+    if(!res.ok){
+      debugLog("upload-attachment failed", {
+        status: res.status,
+        statusText: res.statusText,
+        body: text
+      });
+      throw new Error(`upload-attachment failed: HTTP ${res.status}`);
+    }
+
+    if(Array.isArray(data?.files)){
+      for(const it of data.files){
+        uploaded.push({ name: it?.name || file.name, url: it?.url || "" });
+      }
+    } else {
+      uploaded.push({
+        name: data?.name || file.name,
+        url: data?.url || "",
+      });
+    }
   }
+
   return uploaded;
 }
 
