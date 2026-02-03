@@ -153,6 +153,60 @@
     [data-theme="light"] .kv{background:rgba(2,6,23,.03)}
     .kv b{display:block;font-size:12px;opacity:.8;margin-bottom:4px}
     .kv div{font-size:13px;word-break:break-word}
+    /* ============ iMessage-like chat ============ */
+.msg{
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin-top: 10px;
+}
+
+.msgRow{
+  display:flex;
+  width:100%;
+}
+
+.msgRow.you{ justify-content:flex-end; }
+.msgRow.them{ justify-content:flex-start; }
+
+.bubble{
+  max-width: 78%;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--rowBorder);
+  background: var(--msgBg);
+  box-shadow: 0 6px 16px rgba(0,0,0,.10);
+}
+
+.msgRow.you .bubble{ border-bottom-right-radius: 8px; }
+.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
+
+.bubbleHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:6px;
+}
+
+.bubbleWho{
+  font-size:12px;
+  font-weight:800;
+  opacity:.9;
+}
+
+.bubbleMeta{
+  font-size:11px;
+  opacity:.7;
+  color: var(--muted);
+  white-space:nowrap;
+}
+
+.bubbleBody{
+  font-size:13px;
+  line-height:1.45;
+  word-break:break-word;
+}
   </style>
 </head>
 
