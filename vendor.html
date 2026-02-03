@@ -516,9 +516,9 @@ async function providerReply(){
   let files = [];
   try { files = await uploadFiles(RID, fileInput); }
   catch(e){
-    $("respStatus").textContent = "❌ Erreur upload fichier.";
-    return;
-  }
+  $("respStatus").textContent = "❌ Erreur upload fichier : " + String(e.message || e);
+  return;
+}
 
   $("respStatus").textContent = "Envoi…";
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
