@@ -652,14 +652,18 @@ async function uploadFiles(requestId, fileInput){
       throw new Error("upload-attachment: URL manquante dans la réponse");
     }
 
-    uploaded.push({
-      name: data?.name || file.name,
-      url
-    });
-  }
+    const returnedUrl =
+  data?.url ||
+  data?.publicUrl ||
+  data?.public_url ||
+  data?.signedUrl ||
+  data?.signed_url ||
+  "";
 
-  return uploaded;
-}
+uploaded.push({
+  name: data?.name || data?.filename || file.name,
+  url: returnedUrl
+});
 
 /* ========================= PROVIDERS localStorage ========================= */
 function loadProviders(){
