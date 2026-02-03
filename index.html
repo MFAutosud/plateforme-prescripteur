@@ -635,18 +635,29 @@ async function uploadFiles(requestId, fileInput){
       body: fd,
     });
 
+    const text = await res.text();
     let data = null;
-    try { data = await res.json(); } catch {}
+    try{ data = JSON.parse(text); }catch{ /* ignore */ }
 
     if(!res.ok){
-      debugLog("upload-attachment failed", res.status, data);
-      throw new Error(`upload-attachment failed: ${res.status}`);
+      debugLog("upload-attachment failed", {
+        status: res.status,
+        statusText: res.statusText,
+        body: text
+      });
+      throw new Error(`upload-attachment failed: HTTP ${res.status}`);
     }
 
-    uploaded.push({
-      name: data?.name || file.name,
-      url: data?.url || "",
-    });
+    if(Array.isArray(data?.files)){
+      for(const it of data.files){
+        uploaded.push({ name: it?.name || file.name, url: it?.url || "" });
+      }
+    } else {
+      uploaded.push({
+        name: data?.name || file.name,
+        url: data?.url || "",
+      });
+    }
   }
 
   return uploaded;
