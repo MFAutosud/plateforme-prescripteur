@@ -569,10 +569,19 @@ async function loadThread(){
   if(!RID || !CODE) return;
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
-    method: "POST",
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ request_id: RID, access_code: CODE })
-  });
+  method: "POST",
+  headers: {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: "Bearer " + SUPABASE_ANON_KEY,
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    request_id: RID,
+    access_code: CODE,
+    provider_email: PROVIDER_EMAIL,   // ✅ AJOUT
+    role: "manager"                   // ✅ optionnel mais utile
+  })
+});
 
   if(!res.ok){
     debugLog("get-thread failed", res.status, data);
