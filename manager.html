@@ -702,9 +702,13 @@ async function managerLoadVendors(){
 
   const { res, data } = await vendorManage("list");
   if(!res.ok){
-    debugLog("vendor-manage list failed", res.status, data);
-    $("assignHint").textContent = "❌ Accès Chef des ventes refusé (vendor-manage).";
-    return { ok:false, vendors:[] };
+  debugLog("vendor-manage list failed", { status: res.status, data });
+  $("assignHint").textContent =
+    `❌ Accès Chef des ventes refusé.\nHTTP ${res.status}\n` +
+    (data?.error ? `Erreur: ${data.error}\n` : "") +
+    "➡️ Ajoute &debug=1 au lien pour voir le détail.";
+  return { ok:false, vendors:[] };
+}
   }
   return { ok:true, vendors: Array.isArray(data?.vendors) ? data.vendors : [] };
 }
