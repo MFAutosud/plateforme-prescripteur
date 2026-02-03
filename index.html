@@ -1366,31 +1366,6 @@ async function managerRemoveVendor(){
 /* ========================= RENDER FILES ========================= */
 function isImageUrl(url){
   const u = String(url || "").toLowerCase();
-  return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp");
-}
-function normalizeFiles(raw){
-  if(!raw) return [];
-  if(Array.isArray(raw)) return raw;
-
-  if(typeof raw === "string"){
-    try{
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    }catch{
-      return [];
-    }
-  }
-
-  if(typeof raw === "object"){
-    if(Array.isArray(raw.files)) return raw.files;
-    return [];
-  }
-
-  return [];
-}
-
-function isImageUrl(url){
-  const u = String(url || "").toLowerCase();
   return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image/");
 }
 
