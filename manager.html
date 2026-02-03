@@ -448,14 +448,54 @@ function isImageUrl(url){
   const u = String(url || "").toLowerCase();
   return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp");
 }
-function renderMessageFiles(files){
-  if(!Array.isArray(files) || !files.length) return "";
+function normalizeFiles(raw){
+  if(!raw) return [];
+  if(Array.isArray(raw)) return raw;
+
+  if(typeof raw === "string"){
+    try{
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }catch{
+      return [];
+    }
+  }
+
+  if(typeof raw === "object"){
+    if(Array.isArray(raw.files)) return raw.files;
+    return [];
+  }
+
+  return [];
+}
+
+function isImageUrl(url){
+  const u = String(url || "").toLowerCase();
+  return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image/");
+}
+
+function renderMessageFiles(rawFiles){
+  const files = normalizeFiles(rawFiles);
+  if(!files.length) return "";
+
   return files.map(f => {
     const name = escHtml(f?.name || "fichier");
-    const url = f?.url;
-    if(!url) return `<div class="hint">📎 ${name} (lien indisponible)</div>`;
-    const link = `<div><a class="file" href="${url}" target="_blank" rel="noopener">📎 Télécharger : ${name}</a></div>`;
-    const preview = isImageUrl(url) ? `<img class="thumb" src="${url}" alt="${name}">` : "";
+    const url = String(f?.url || "").trim();
+
+    if(!url){
+      return `<div class="hint">📎 ${name} (lien indisponible)</div>`;
+    }
+
+    const link = `
+      <div>
+        <a class="file" href="${url}" target="_blank" rel="noopener">📎 Télécharger : ${name}</a>
+      </div>
+    `;
+
+    const preview = isImageUrl(url)
+      ? `<img class="thumb" src="${url}" alt="${name}">`
+      : "";
+
     return link + preview;
   }).join("");
 }
