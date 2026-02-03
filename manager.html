@@ -464,15 +464,35 @@ async function uploadFiles(requestId, fileInput){
   return uploaded;
 }
 
-
-
 /* ========================= RENDER FILES ========================= */
+function normalizeFiles(raw){
+  if(!raw) return [];
+  if(Array.isArray(raw)) return raw.filter(Boolean);
+
+  if(typeof raw === "string"){
+    try{
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    }catch{
+      return [raw];
+    }
+  }
+
+  if(typeof raw === "object"){
+    if(Array.isArray(raw.files)) return raw.files;
+    return [];
+  }
+
+  return [];
+}
+
 function isImageUrl(url){
   const u = String(url || "").toLowerCase();
   return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image/");
 }
 
 function resolveFileUrl(file){
+  if(typeof file === "string") return file.trim();
   const raw =
     file?.url ||
     file?.publicUrl ||
@@ -502,7 +522,7 @@ function renderMessageFiles(rawFiles){
   if(!files.length) return "";
 
   return files.map(f => {
-    const name = escHtml(f?.name || "fichier");
+    const name = escHtml((typeof f === "string" ? f.split("/").pop() : f?.name) || "fichier");
     const url = resolveFileUrl(f);
 
     if(!url){
@@ -522,7 +542,6 @@ function renderMessageFiles(rawFiles){
     return link + preview;
   }).join("");
 }
-
 
 /* ========================= REQUEST INFO ========================= */
 function formatAddress(r){
@@ -732,8 +751,20 @@ function renderAssignList(vendors){
   }
   $("assignHint").textContent = "Choisis un vendeur :";
   el.innerHTML = vendors.map((v,i)=>{
-    const email = normalizeEmail(v.vendor_email || v.email || "");
-    const name  = String(v.vendor_name || v.name || "").trim();
+    const vendorObj = (v && typeof v === "object") ? v : {};
+    const email = normalizeEmail(
+      (typeof v === "string" ? v : "") ||
+      vendorObj.vendor_email ||
+      vendorObj.email ||
+      vendorObj.vendor?.email ||
+      ""
+    );
+    const name  = String(
+      vendorObj.vendor_name ||
+      vendorObj.name ||
+      vendorObj.vendor?.name ||
+      ""
+    ).trim();
     const label = name ? `${name} — ${email}` : email;
     return `
       <div class="providerRow">
@@ -812,51 +843,6 @@ async function managerRemoveVendor(){
   renderAssignList(r.vendors);
 }
 
-/* ========================= REPLY (MANAGER) ========================= */
-async function providerReply(){
-  if(!RID || !CODE || !PROVIDER_EMAIL){
-    $("respStatus").textContent = "❌ Lien invalide (rid/code/pe manquant).";
-    return;
-  }
-
-  const msg = String($("respMsg")?.value || "").trim();
-  const fileInput = $("respFiles");
-
-  if(!msg && (!fileInput?.files?.length)){
-    $("respStatus").textContent = "❌ Mets un message ou un fichier.";
-    return;
-  }
-
-  $("respStatus").textContent = "Envoi…";
-
-  // ⚠️ Pour l’instant : envoi sans pièces jointes (upload à corriger ensuite)
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
-    method:"POST",
-    headers:{
-      apikey: SUPABASE_ANON_KEY,
-      Authorization:"Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type":"application/json"
-    },
-    body: JSON.stringify({
-      request_id: RID,
-      access_code: CODE,
-      provider_email: PROVIDER_EMAIL,
-      message: msg || "(Message)",
-      files: []
-    })
-  });
-
-  if(!res.ok){
-    debugLog("provider-reply failed", res.status, data);
-    $("respStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
-    return;
-  }
-
-  $("respMsg").value = "";
-  $("respFiles").value = "";
-  $("respStatus").textContent = "✅ Envoyé";
-  await loadThread();
-}
 /* ========================= ACTIONS UI ========================= */
 async function copyThreadLink(){
   const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(PROVIDER_EMAIL)}`;
