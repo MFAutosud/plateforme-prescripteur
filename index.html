@@ -625,38 +625,37 @@ async function uploadFiles(requestId, fileInput){
     fd.append("file", file);
     fd.append("request_id", requestId);
 
+    // ✅ AJOUT IMPORTANT : on envoie aussi le code + l'email
+    fd.append("access_code", CODE || "");
+    fd.append("uploader_email", PROVIDER_EMAIL || PRESCRIBER_EMAIL || "");
+
     const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-attachment`, {
-      method: "POST",
-      headers: {
+      method:"POST",
+      headers:{
         apikey: SUPABASE_ANON_KEY,
-        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        Authorization:"Bearer " + SUPABASE_ANON_KEY
       },
-      body: fd,
+      body: fd
     });
 
-    const text = await res.text();
-    let data = null;
-    try{ data = JSON.parse(text); }catch{ /* ignore */ }
+    let data=null; try{ data=await res.json(); }catch{}
 
     if(!res.ok){
-      debugLog("upload-attachment failed", {
-        status: res.status,
-        statusText: res.statusText,
-        body: text
-      });
-      throw new Error(`upload-attachment failed: HTTP ${res.status}`);
+      // ✅ Pour voir l'erreur exacte dans l'écran (débutant friendly)
+      console.error("upload-attachment error", res.status, data);
+      throw new Error(data?.error || `upload-attachment failed: ${res.status}`);
     }
 
-    if(Array.isArray(data?.files)){
-      for(const it of data.files){
-        uploaded.push({ name: it?.name || file.name, url: it?.url || "" });
-      }
-    } else {
-      uploaded.push({
-        name: data?.name || file.name,
-        url: data?.url || "",
-      });
+    // ✅ Sécurité : on s'assure que la function renvoie une URL
+    const url = data?.url || "";
+    if(!url){
+      throw new Error("upload-attachment: URL manquante dans la réponse");
     }
+
+    uploaded.push({
+      name: data?.name || file.name,
+      url
+    });
   }
 
   return uploaded;
