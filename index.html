@@ -1446,42 +1446,62 @@ async function loadThread(){
   updateNewBadge(latest > seen);
 
   if($("thread")){
-    const el = $("thread");
-    el.innerHTML = "";
-    responses.forEach(x=>{
-      const isProvider = !!x.responder_email;
-      el.innerHTML += `
-        <div class="msg ${isProvider ? "them":"you"}">
-          <div class="msgHead">
-            <div class="msgWho">${isProvider ? escHtml(x.responder_email || "Prestataire") : "MF Auto Sud"}</div>
-            <div class="msgMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+  const el = $("thread");
+  el.innerHTML = "";
+  responses.forEach(x=>{
+    const isProvider = !!x.responder_email;
+    const sender = isProvider ? (x.responder_email || "Prestataire") : "MF Auto Sud";
+    const isYou = !isProvider;
+
+    const style = bubbleStyleForSender(String(x.responder_email || "mf"), isYou);
+
+    el.innerHTML += `
+      <div class="msg">
+        <div class="msgRow ${isYou ? "you" : "them"}">
+          <div class="bubble" style="${style}">
+            <div class="bubbleHead">
+              <div class="bubbleWho">${escHtml(sender)}</div>
+              <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+            </div>
+            <div class="bubbleBody">
+              ${escHtml(x.message || "").replaceAll("\n","<br>")}
+              ${renderMessageFiles(x.files)}
+            </div>
           </div>
-          <div class="msgBody">
-            ${escHtml(x.message || "").replaceAll("\n","<br>")}
-            ${renderMessageFiles(x.files)}
-          </div>
-        </div>`;
-    });
-  }
+        </div>
+      </div>
+    `;
+  });
+}
 
   if($("threadProvider")){
-    const el = $("threadProvider");
-    el.innerHTML = "";
-    responses.forEach(x=>{
-      const isYou = PROVIDER_EMAIL && (String(x.responder_email||"").toLowerCase() === PROVIDER_EMAIL);
-      el.innerHTML += `
-        <div class="msg ${isYou ? "you":"them"}">
-          <div class="msgHead">
-            <div class="msgWho">${escHtml(x.responder_email || "MF Auto Sud")}</div>
-            <div class="msgMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+  const el = $("threadProvider");
+  el.innerHTML = "";
+  responses.forEach(x=>{
+    const senderEmail = String(x.responder_email || "mf");
+    const isYou = PROVIDER_EMAIL && (senderEmail.toLowerCase() === PROVIDER_EMAIL);
+
+    const senderLabel = isYou ? "Vous" : "MF Auto Sud";
+    const style = bubbleStyleForSender(senderEmail, isYou);
+
+    el.innerHTML += `
+      <div class="msg">
+        <div class="msgRow ${isYou ? "you" : "them"}">
+          <div class="bubble" style="${style}">
+            <div class="bubbleHead">
+              <div class="bubbleWho">${escHtml(senderLabel)}</div>
+              <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+            </div>
+            <div class="bubbleBody">
+              ${escHtml(x.message || "").replaceAll("\n","<br>")}
+              ${renderMessageFiles(x.files)}
+            </div>
           </div>
-          <div class="msgBody">
-            ${escHtml(x.message || "").replaceAll("\n","<br>")}
-            ${renderMessageFiles(x.files)}
-          </div>
-        </div>`;
-    });
-  }
+        </div>
+      </div>
+    `;
+  });
+}
 
   // ✅ Afficher toutes les infos (corrige ton "il manque des informations")
   if($("requestInfo") && data.request){
