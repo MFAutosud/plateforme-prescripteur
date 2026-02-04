@@ -263,7 +263,7 @@
           <div class="kv"><b>Contact</b><div id="previewContact">—</div></div>
           <div class="kv"><b>Email contact</b><div id="previewContactEmail">—</div></div>
           <div class="kv"><b>Téléphone</b><div id="previewContactPhone">—</div></div>
-          <div class="kv"><b>SIRET</b><div id="previewSiret">—</div></div>
+          <div class="kv"><b>SIRET</b><div id="previewSiret"></div></div>
           <div class="kv"><b>TVA</b><div id="previewVat">—</div></div>
         </div>
       </div>
@@ -1021,6 +1021,7 @@ async function sendToSelected(){
     provider_roles.push({
       provider_email: email,
       is_sales_manager: !!p.is_sales_manager,
+      is_manager: !!p.is_sales_manager,
       is_vendor: !!p.is_vendor
     });
   });
