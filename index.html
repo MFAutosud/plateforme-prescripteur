@@ -179,7 +179,7 @@
 }
 
 .msgRow.you .bubble{ border-bottom-right-radius: 8px; }
-.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
+msgRow.them .bubble{ border-bottom-left-radius: 8px; }
 
 .bubbleHead{
   display:flex;
@@ -449,7 +449,7 @@ function escHtml(s){
     .replaceAll('"',"&quot;");
 }
 function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
-function emailLooksValid(e){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(e||"").trim().toLowerCase()); }
+function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
 function baseUrl(){ return window.location.origin + window.location.pathname; }
 
 function currentTheme(){
@@ -507,7 +507,7 @@ function debugLog(...args){
     try { return (typeof a === "string") ? a : JSON.stringify(a, null, 2); }
     catch { return String(a); }
   }).join(" ");
-  out.textContent = (out.textContent === "—" ? "" : out.textContent + "\\n\\n") + txt;
+  out.textContent = (out.textContent === "—" ? "" : out.textContent + "\n\n") + txt;
 }
 
 /* ========================= NEW MESSAGE BADGE ========================= */
@@ -708,7 +708,7 @@ async function exportProviders(){
     const email = normalizeEmail(p.email || "");
     const name = String(p.name || "").trim();
     return name ? `${name} <${email}>` : email;
-  }).join("\\n");
+  }).join("\n");
   await navigator.clipboard.writeText(lines || "");
   alert("Liste copiée dans le presse-papiers.");
 }
@@ -722,7 +722,7 @@ function clearProviders(){
 function extractEmailAndName(line){
   const s = (line || "").trim();
   if(!s) return null;
-  const m = s.match(/^(.*)<\\s*([^>]+)\\s*>$/);
+  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
   if(m){
     const name = m[1].replace(/^['"]|['"]$/g,"").trim();
     const email = (m[2] || "").trim().toLowerCase();
@@ -730,16 +730,16 @@ function extractEmailAndName(line){
   }
   const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
   if(emailLooksValid(only)) return { name:"", email: only };
-  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i);
+  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   if(em) return { name:"", email: em[0].toLowerCase() };
   return null;
 }
 
 function importProviders(){
-  const raw = String($("importArea")?.value || "").replace(/\\r/g,"").trim();
+  const raw = String($("importArea")?.value || "").replace(/\r/g,"").trim();
   if(!raw){ alert("Colle une liste."); return; }
 
-  const lines = raw.split("\\n").map(x=>x.trim()).filter(Boolean);
+  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
   const providers = loadProviders();
   const existing = new Set(providers.map(p => normalizeEmail(p.email)));
 
@@ -760,8 +760,8 @@ function importProviders(){
 
 /* ========================= PARSE PASTE ========================= */
 function parsePaste(text){
-  const t = (text || "").replace(/\\r/g, "").trim();
-  const rawLines = t.split("\\n").map(l => l.replace(/\\u00A0/g," ").trim());
+  const t = (text || "").replace(/\r/g, "").trim();
+  const rawLines = t.split("\n").map(l => l.replace(/\u00A0/g," ").trim());
   const lines = rawLines.filter(l => l && l.length);
 
   const out = {
@@ -779,7 +779,7 @@ function parsePaste(text){
   };
   if (!lines.length) return out;
 
-  const norm = (s) => String(s || "").replace(/\\u00A0/g," ").trim();
+  const norm = (s) => String(s || "").replace(/\u00A0/g," ").trim();
   const low  = (s) => norm(s).toLowerCase();
 
   const isUselessLine = (l) => {
@@ -802,7 +802,7 @@ function parsePaste(text){
 
   const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l));
   const parseZipCityCountry = (l) => {
-    const m = norm(l).match(/\\b(\\d{5})\\b\\s+(.+)$/);
+    const m = norm(l).match(/\b(\d{5})\b\s+(.+)$/);
     if (!m) return null;
     const postcode = m[1];
     let rest = norm(m[2]);
@@ -814,29 +814,29 @@ function parsePaste(text){
   const looksLikeStreet = (l) => {
     const x = low(l);
     return (
-      /\\b\\d{1,5}\\b/.test(x) &&
+      /\b\d{1,5}\b/.test(x) &&
       (x.includes("rue") || x.includes("avenue") || x.includes("av ") || x.includes("boulevard") ||
        x.includes("bd ") || x.includes("chemin") || x.includes("route") || x.includes("impasse") || x.includes("place"))
     );
   };
 
   const extractSiretValue = (l) => {
-    const m = norm(l).match(/siret\\s*[:\\-]?\\s*([0-9 .]{10,30})/i);
+    const m = norm(l).match(/siret\s*[:\-]?\s*([0-9 .]{10,30})/i);
     if (!m) return "";
     return norm(m[1]).replace(/[ .]/g, "");
   };
   const extractVatValue = (l) => {
-    const m = norm(l).match(/tva\\s*[:\\-]?\\s*([A-Z]{2}\\s*[0-9A-Z .]{6,})/i);
+    const m = norm(l).match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z .]{6,})/i);
     if (!m) return "";
     return norm(m[1]).replace(/[ .]/g, "");
   };
   const extractEmailValue = (l) => {
-    const m = norm(l).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i);
+    const m = norm(l).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     return m ? m[0].toLowerCase() : "";
   };
   const extractPhoneValue = (l) => {
-    const m = norm(l).match(/(\\+33|0)\\s*[1-9](?:[\\s.\\-]*\\d{2}){4}/);
-    return m ? m[0].replace(/[\\s.\\-]/g, "") : "";
+    const m = norm(l).match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
+    return m ? m[0].replace(/[\s.\-]/g, "") : "";
   };
 
   let firstMeaningful = "";
@@ -851,14 +851,14 @@ function parsePaste(text){
 
     if (pending) {
       const v = norm(l).replace(/[ .]/g, "");
-      if (pending === "siret" && /^\\d{10,20}$/.test(v)) out.siret = v;
+      if (pending === "siret" && /^\d{10,20}$/.test(v)) out.siret = v;
       if (pending === "vat" && /^[A-Z]{2}[0-9A-Z]{6,}$/.test(v)) out.vat = v;
       pending = null;
       continue;
     }
 
-    if (!out.siret && /siret\\s*[:\\-]?\\s*$/i.test(l)) { pending = "siret"; continue; }
-    if (!out.vat && /tva\\s*[:\\-]?\\s*$/i.test(l)) { pending = "vat"; continue; }
+    if (!out.siret && /siret\s*[:\-]?\s*$/i.test(l)) { pending = "siret"; continue; }
+    if (!out.vat && /tva\s*[:\-]?\s*$/i.test(l)) { pending = "vat"; continue; }
 
     if (!out.siret) { const v = extractSiretValue(l); if (v) { out.siret = v; continue; } }
     if (!out.vat) { const v = extractVatValue(l); if (v) { out.vat = v; continue; } }
@@ -881,8 +881,8 @@ function parsePaste(text){
 
     if (!out.contact_name) {
       const forbidden = x.includes("siret") || x.includes("tva") || x.includes("n°") || x.includes("no ");
-      if (!forbidden && !/\\d/.test(l) && !l.includes("@") && l.length <= 60) {
-        const w = l.split(/\\s+/).filter(Boolean);
+      if (!forbidden && !/\d/.test(l) && !l.includes("@") && l.length <= 60) {
+        const w = l.split(/\s+/).filter(Boolean);
         if (w.length >= 2 && w.length <= 6) out.contact_name = l;
       }
     }
@@ -952,7 +952,7 @@ async function createRequest(){
   if(!res.ok){
     debugLog("create request failed", res.status, data);
     const details = data ? JSON.stringify(data, null, 2) : "(no body)";
-    alert(`❌ Erreur création demande\\nHTTP ${res.status}\\n\\n${details}`);
+    alert(`❌ Erreur création demande\nHTTP ${res.status}\n\n${details}`);
     return;
   }
 
@@ -964,7 +964,7 @@ async function createRequest(){
   }
 
   const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
-  $("link").textContent = `✅ Demande créée\\nClient : ${parsed.client_name}\\nLien : ${link}`;
+  $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
 
   $("sendBox").style.display = "block";
   $("prescriberReplyBox").style.display = "block";
@@ -983,11 +983,17 @@ async function sendToSelected(){
   if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
 
   const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
-  if(!checks.length){ alert("Choisis au moins un prestataire."); return; }
+  const emails = checks
+    .map(c => (c.getAttribute("data-email")||"").trim().toLowerCase())
+    .filter(Boolean);
 
-  const providers = loadProviders();
-  const byEmail = new Map(providers.map(p => [normalizeEmail(p.email), p]));
-  const emails = checks.map(c => normalizeEmail(c.dataset.email)).filter(Boolean);
+  if(!emails.length){ alert("Sélectionne au moins 1 prestataire."); return; }
+
+  $("sendStatus").textContent = "Envoi…";
+  const custom = String($("customMessage")?.value || "").trim();
+
+  const directory = loadProviders();
+  const byEmail = new Map(directory.map(p => [normalizeEmail(p.email), p]));
 
   const provider_roles = [];
   emails.forEach(email => {
@@ -1013,7 +1019,7 @@ async function sendToSelected(){
       prescriber_email: PRESCRIBER_EMAIL,
       provider_emails: emails,
       provider_roles,
-      message: String($("customMessage")?.value || "").trim()
+      message: custom
     })
   });
 
@@ -1070,7 +1076,7 @@ function resolveFileUrl(file){
     "";
   const url = String(raw || "").trim();
   if(!url) return "";
-  if(/^https?:\\/\\//i.test(url)) return url;
+  if(/^https?:\/\//i.test(url)) return url;
   if(url.startsWith("/")){
     return `${SUPABASE_URL}${url}`;
   }
@@ -1116,7 +1122,7 @@ function formatAddress(r){
   if(addr) parts.push(addr);
   if(postcode || city) parts.push([postcode, city].filter(Boolean).join(" "));
   if(country && !addrHasFrance) parts.push(country);
-  return parts.join(" ").replace(/\\s+/g," ").trim();
+  return parts.join(" ").replace(/\s+/g," ").trim();
 }
 
 async function loadThread(){
@@ -1166,7 +1172,7 @@ async function loadThread(){
                 <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
               </div>
               <div class="bubbleBody">
-                ${escHtml(x.message || "").replaceAll("\\n","<br>")}
+                ${escHtml(x.message || "").replaceAll("\n","<br>")}
                 ${renderMessageFiles(x.files)}
               </div>
             </div>
@@ -1195,7 +1201,7 @@ async function loadThread(){
                 <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
               </div>
               <div class="bubbleBody">
-                ${escHtml(x.message || "").replaceAll("\\n","<br>")}
+                ${escHtml(x.message || "").replaceAll("\n","<br>")}
                 ${renderMessageFiles(x.files)}
               </div>
             </div>
@@ -1308,5 +1314,6 @@ async function loadThread(){
   $("prescriberReplyBox").style.display = "none";
 })();
 </script>
+
 </body>
 </html>
