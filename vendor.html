@@ -135,7 +135,7 @@
 }
 
 .msgRow.you{ justify-content:flex-end; }
-.msgRow.them{ justify-content:flex-start; }
+msgRow.them{ justify-content:flex-start; }
 
 .bubble{
   max-width: 78%;
@@ -147,7 +147,7 @@
 }
 
 .msgRow.you .bubble{ border-bottom-right-radius: 8px; }
-.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
+msgRow.them .bubble{ border-bottom-left-radius: 8px; }
 
 .bubbleHead{
   display:flex;
@@ -177,39 +177,42 @@
 }
   </style>
 </head>
-
 <body>
 <div class="wrap">
+
   <div class="topbar">
     <div class="brand">
       <div class="brandLogo">
         <img src="./assets/logo-mfautosud.png" alt="MF Auto Sud">
       </div>
       <div class="brandTitle">
-        <h1>Portail Vendeur</h1>
-        <div class="sub">Voir dossier • Répondre • Pièces jointes</div>
+        <h1>Portail Vendeur – MF Auto Sud</h1>
+        <div class="sub">Réponses • Export client</div>
       </div>
     </div>
+
     <div class="topbarRight">
       <div class="chip">Vendeur</div>
-      <div class="chip" id="newMsgChip" style="display:none;">🔔 Nouveau message</div>
       <button class="secondary" id="themeBtn" type="button">🌙 Mode sombre</button>
     </div>
   </div>
 
   <div class="box">
-    <h2>Dossier</h2>
+    <h2>Dossier client</h2>
     <div class="row">
       <button class="secondary" id="refreshBtn" type="button">🔄 Rafraîchir</button>
       <button class="secondary" id="copyLinkBtn" type="button">Copier le lien</button>
       <button class="secondary" id="markReadBtn" type="button">✅ Marquer comme lu</button>
     </div>
-    <div id="requestInfo" class="hint" style="margin-top:10px">Chargement…</div>
+    <div id="requestInfo" style="margin-top:10px"></div>
     <div id="accessErr" class="hint" style="margin-top:10px;display:none;"></div>
   </div>
 
   <div class="box">
     <h2>Conversation</h2>
+    <div class="row">
+      <button class="secondary" id="sendClientBtn" type="button">📤 Envoyer au client</button>
+    </div>
     <div id="thread" style="margin-top:10px"></div>
   </div>
 
@@ -220,6 +223,7 @@
 
     <label>Documents (PDF, images…)</label>
     <input type="file" id="respFiles" multiple accept="application/pdf,image/*">
+
     <div class="row">
       <button id="sendMsgBtn" type="button">Envoyer</button>
     </div>
@@ -228,9 +232,11 @@
 </div>
 
 <script>
+/* ========================= CONFIG ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
 
+/* ========================= THEME ========================= */
 const THEME_KEY = "mfautosud_theme";
 function applyTheme(theme){
   const t = (theme === "light") ? "light" : "dark";
@@ -248,8 +254,14 @@ function toggleTheme(){
   document.getElementById("themeBtn")?.addEventListener("click", toggleTheme);
 })();
 
-let RID="", CODE="", PROVIDER_EMAIL="";
+/* ========================= STATE ========================= */
+let RID = "";
+let CODE = "";
+let PROVIDER_EMAIL = "";
+let REQUEST_DATA = null;
+let THREAD_CACHE = [];
 
+/* ========================= UTILS ========================= */
 function $(id){ return document.getElementById(id); }
 function escHtml(s){
   return String(s ?? "")
@@ -259,6 +271,9 @@ function escHtml(s){
     .replaceAll('"',"&quot;");
 }
 function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
+function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
+function baseUrl(){ return window.location.origin + window.location.pathname; }
+
 function currentTheme(){
   return document.documentElement.getAttribute("data-theme") || "dark";
 }
@@ -274,18 +289,15 @@ function hashHue(str){
 
 function bubbleStyleForSender(senderEmail, isYou){
   if(isYou){
-    return `background: linear-gradient(180deg, var(--brand), var(--brand)); color:#fff; border-color: rgba(255,255,255,.18);`;
+    return `background: linear-gradient(180deg, var(--brand), var(--brand)); color: #fff; border-color: rgba(255,255,255,.18);`;
   }
-
   const hue = hashHue(senderEmail || "unknown");
   const theme = currentTheme();
-
   if(theme === "light"){
     return `background: hsl(${hue} 85% 96%); color:#0b1220; border-color: rgba(2,6,23,.10);`;
   }
   return `background: hsl(${hue} 55% 18%); color:#ffffff; border-color: rgba(255,255,255,.10);`;
 }
-function baseUrl(){ return window.location.origin + window.location.pathname; }
 
 function getAllParams(){
   const url = new URL(window.location.href);
@@ -296,156 +308,12 @@ function getAllParams(){
   const pe    = qs.get("pe")    || hs.get("pe");
   return { rid, code, pe };
 }
+
 async function fetchJson(url, options){
   const res = await fetch(url, options);
-  let data=null; try{ data=await res.json(); }catch{}
+  let data = null;
+  try { data = await res.json(); } catch {}
   return { res, data };
-}
-function debugLog(...args){
-  console.debug("[vendor]", ...args);
-}
-
-/* badge */
-function seenKey(){ return `mf_seen_vendor_${RID}_${PROVIDER_EMAIL}`; }
-function markSeen(){
-  if(!RID) return;
-  localStorage.setItem(seenKey(), new Date().toISOString());
-  $("newMsgChip").style.display = "none";
-}
-function getSeen(){
-  const v = localStorage.getItem(seenKey());
-  return v ? new Date(v).getTime() : 0;
-}
-function updateNewBadge(show){
-  $("newMsgChip").style.display = show ? "" : "none";
-}
-
-/* files */
-async function uploadFiles(requestId, fileInput){
-  const uploaded = [];
-  if(!fileInput || !fileInput.files || !fileInput.files.length) return uploaded;
-
-  for(const file of fileInput.files){
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("request_id", requestId);
-    fd.append("access_code", CODE || "");
-    fd.append("uploader_email", (PROVIDER_EMAIL || "").toLowerCase());
-
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-attachment`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: "Bearer " + SUPABASE_ANON_KEY
-      },
-      body: fd
-    });
-
-    let data = null;
-    try { data = await res.json(); } catch {}
-
-    if(!res.ok){
-      debugLog("upload-attachment failed", { status: res.status, data });
-      throw new Error(data?.error || `upload-attachment failed: ${res.status}`);
-    }
-
-    const returnedUrl =
-      data?.url ||
-      data?.publicUrl ||
-      data?.public_url ||
-      data?.signedUrl ||
-      data?.signed_url ||
-      "";
-
-    if(!returnedUrl){
-      throw new Error("upload-attachment: URL manquante dans la réponse");
-    }
-
-    uploaded.push({
-      name: data?.name || data?.filename || file.name,
-      url: returnedUrl
-    });
-  }
-
-  return uploaded;
-}
-
-function normalizeFiles(raw){
-  if(!raw) return [];
-  if(Array.isArray(raw)) return raw.filter(Boolean);
-
-  if(typeof raw === "string"){
-    try{
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-    }catch{
-      return [raw];
-    }
-  }
-
-  if(typeof raw === "object"){
-    if(Array.isArray(raw.files)) return raw.files;
-    return [];
-  }
-
-  return [];
-}
-
-function isImageUrl(url){
-  const u = String(url || "").toLowerCase();
-  return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image/");
-}
-
-function resolveFileUrl(file){
-  if(typeof file === "string") return file.trim();
-  const raw =
-    file?.url ||
-    file?.publicUrl ||
-    file?.public_url ||
-    file?.signedUrl ||
-    file?.signed_url ||
-    file?.download_url ||
-    file?.file_path ||
-    file?.filepath ||
-    file?.path ||
-    file?.storage_path ||
-    "";
-  const url = String(raw || "").trim();
-  if(!url) return "";
-  if(/^https?:\/\//i.test(url)) return url;
-  if(url.startsWith("/")){
-    return `${SUPABASE_URL}${url}`;
-  }
-  if(url.startsWith("attachments/")){
-    return `${SUPABASE_URL}/storage/v1/object/public/${url}`;
-  }
-  return `${SUPABASE_URL}/storage/v1/object/public/attachments/${url}`;
-}
-
-function renderMessageFiles(rawFiles){
-  const files = normalizeFiles(rawFiles);
-  if(!files.length) return "";
-
-  return files.map(f => {
-    const name = escHtml((typeof f === "string" ? f.split("/").pop() : f?.name) || "fichier");
-    const url = resolveFileUrl(f);
-
-    if(!url){
-      return `<div class="hint">📎 ${name} (lien indisponible)</div>`;
-    }
-
-    const link = `
-      <div>
-        <a class="file" href="${url}" target="_blank" rel="noopener" download>📎 Télécharger : ${name}</a>
-      </div>
-    `;
-
-    const preview = isImageUrl(url)
-      ? `<img class="thumb" src="${url}" alt="${name}">`
-      : "";
-
-    return link + preview;
-  }).join("");
 }
 
 function formatAddress(r){
@@ -454,12 +322,13 @@ function formatAddress(r){
   const city = String(r.city || "").trim();
   const country = String(r.country || "").trim();
   const addrHasFrance = /france/i.test(addr);
-  const parts=[];
+  const parts = [];
   if(addr) parts.push(addr);
   if(postcode || city) parts.push([postcode, city].filter(Boolean).join(" "));
   if(country && !addrHasFrance) parts.push(country);
   return parts.join(" ").replace(/\s+/g," ").trim();
 }
+
 function renderRequestCard(r){
   const addrLine = formatAddress(r);
   return `
@@ -467,14 +336,72 @@ function renderRequestCard(r){
       <div class="gridInfo">
         <div class="kv"><b>Client</b><div>${escHtml(r.client_name || "-")}</div></div>
         <div class="kv"><b>Véhicule</b><div>${escHtml(r.vehicle || "-")}</div></div>
+
         <div class="kv"><b>Adresse</b><div>${escHtml(addrLine || "-")}</div></div>
         <div class="kv"><b>Contact</b><div>${escHtml(r.contact_name || "-")}</div></div>
+
         <div class="kv"><b>Email contact</b><div>${escHtml(r.contact_email || "-")}</div></div>
         <div class="kv"><b>Téléphone</b><div>${escHtml(r.contact_phone || "-")}</div></div>
+
         <div class="kv"><b>Assigné à</b><div>${escHtml(r.assigned_to_email || "-")}</div></div>
       </div>
     </div>
   `;
+}
+
+function formatThreadForClient(responses){
+  if(!Array.isArray(responses) || !responses.length) return "";
+  return responses.map((x)=>{
+    const who = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
+    const when = x.created_at ? new Date(x.created_at).toLocaleString("fr-FR") : "";
+    const msg = String(x.message || "");
+    return `[${when}] ${who} :\n${msg}\n`;
+  }).join("\n");
+}
+
+function formatClientSummary(r){
+  if(!r) return "";
+  const lines = [];
+  const clientName = String(r.client_name || "").trim();
+  const vehicle = String(r.vehicle || "").trim();
+  const address = formatAddress(r);
+  const contactName = String(r.contact_name || "").trim();
+  const contactEmail = String(r.contact_email || "").trim();
+  const contactPhone = String(r.contact_phone || "").trim();
+  const siret = String(r.siret || "").trim();
+  const vat = String(r.vat || "").trim();
+
+  if(clientName) lines.push(`Client : ${clientName}`);
+  if(vehicle) lines.push(`Véhicule : ${vehicle}`);
+  if(address) lines.push(`Adresse : ${address}`);
+  if(contactName) lines.push(`Contact : ${contactName}`);
+  if(contactEmail) lines.push(`Email contact : ${contactEmail}`);
+  if(contactPhone) lines.push(`Téléphone : ${contactPhone}`);
+  if(siret) lines.push(`SIRET : ${siret}`);
+  if(vat) lines.push(`TVA : ${vat}`);
+
+  if(!lines.length) return "";
+  return `\nDossier :\n${lines.map((line)=>`- ${line}`).join("\n")}\n`;
+}
+
+function sendToClientEmail(){
+  if(!REQUEST_DATA){
+    alert("Charge d’abord un dossier.");
+    return;
+  }
+  const clientEmail = String(REQUEST_DATA.contact_email || "").trim();
+  if(!clientEmail){
+    alert("Email client introuvable.");
+    return;
+  }
+  const subject = `Offre MF Auto Sud – ${REQUEST_DATA.client_name || "Client"}`;
+  const intro = `Bonjour ${REQUEST_DATA.client_name || ""},\n\nVoici les informations concernant votre demande :\n`;
+  const summary = formatClientSummary(REQUEST_DATA);
+  const thread = formatThreadForClient(THREAD_CACHE);
+  const threadSection = thread ? `\nÉchanges :\n${thread}` : "\nÉchanges :\nAucun échange pour le moment.\n";
+  const body = `${intro}${summary}${threadSection}\nCordialement,\nMF Auto Sud`;
+  const mailto = `mailto:${encodeURIComponent(clientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
 }
 
 async function loadThread(){
@@ -497,17 +424,21 @@ async function loadThread(){
   }
 
   $("accessErr").style.display = "none";
+  REQUEST_DATA = data?.request || null;
   $("requestInfo").innerHTML = data?.request ? renderRequestCard(data.request) : "⚠️ data.request manquant (get-thread).";
 
   const responses = Array.isArray(data?.responses) ? data.responses : [];
+  THREAD_CACHE = responses;
   const thread = $("thread");
   thread.innerHTML = "";
 
   responses.forEach(x=>{
     const from = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
 
+    // isYou = message envoyé par le prestataire connecté (chef des ventes)
     const isYou = !!x.responder_email && normalizeEmail(from) === normalizeEmail(PROVIDER_EMAIL);
 
+    // couleur : bleu pour toi, couleur unique pour chaque interlocuteur sinon
     const style = bubbleStyleForSender(from, isYou);
 
     thread.innerHTML += `
@@ -596,6 +527,7 @@ async function copyThreadLink(){
   $("copyLinkBtn").addEventListener("click", copyThreadLink);
   $("markReadBtn").addEventListener("click", markSeen);
   $("sendMsgBtn").addEventListener("click", providerReply);
+  $("sendClientBtn").addEventListener("click", sendToClientEmail);
 
   await loadThread();
 })();
