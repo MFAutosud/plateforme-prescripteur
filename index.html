@@ -179,7 +179,7 @@
 }
 
 .msgRow.you .bubble{ border-bottom-right-radius: 8px; }
-msgRow.them .bubble{ border-bottom-left-radius: 8px; }
+.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
 
 .bubbleHead{
   display:flex;
@@ -451,6 +451,14 @@ function escHtml(s){
 function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
 function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
 function baseUrl(){ return window.location.origin + window.location.pathname; }
+function randomCode(len=6){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for(let i=0;i<len;i++){
+    out += chars[Math.floor(Math.random()*chars.length)];
+  }
+  return out;
+}
 
 function currentTheme(){
   return document.documentElement.getAttribute("data-theme") || "dark";
@@ -938,16 +946,27 @@ async function createRequest(){
     contact_phone: parsed.contact_phone || null
   };
 
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json",
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify(payload)
-  });
+  let res;
+  let data;
+  try {
+    const result = await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(payload)
+    });
+    res = result.res;
+    data = result.data;
+  } catch (err) {
+    const message = err?.message || err;
+    debugLog("create request network error", message);
+    alert(`❌ Impossible de créer la demande (réseau/CORS).\n\n${message}`);
+    return;
+  }
 
   if(!res.ok){
     debugLog("create request failed", res.status, data);
@@ -1030,6 +1049,108 @@ async function sendToSelected(){
   }
 
   $("sendStatus").textContent = "✅ Prestataires notifiés.";
+  await loadThread();
+}
+
+async function prescriberReply(){
+  if(!RID || !CODE){
+    $("prescStatus").textContent = "❌ Crée d’abord une demande.";
+    return;
+  }
+
+  const msg = String($("prescMsg")?.value || "").trim();
+  const fileInput = $("prescFiles");
+
+  if(!msg && (!fileInput?.files?.length)){
+    $("prescStatus").textContent = "❌ Mets un message ou un fichier.";
+    return;
+  }
+
+  $("prescStatus").textContent = "Upload fichiers…";
+  let files = [];
+  try { files = await uploadFiles(RID, fileInput); }
+  catch(e){
+    $("prescStatus").textContent = "❌ Erreur upload fichier : " + String(e.message || e);
+    return;
+  }
+
+  $("prescStatus").textContent = "Envoi…";
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/prescriber-reply`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      prescriber_email: PRESCRIBER_EMAIL,
+      message: msg || "(Pièce jointe)",
+      files
+    })
+  });
+
+  if(!res.ok){
+    debugLog("prescriber-reply failed", res.status, data);
+    $("prescStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
+    return;
+  }
+
+  $("prescMsg").value = "";
+  $("prescFiles").value = "";
+  $("prescStatus").textContent = "✅ Envoyé";
+  await loadThread();
+}
+
+async function providerReply(){
+  if(!RID || !CODE){
+    $("providerReplyStatus").textContent = "❌ Lien invalide.";
+    return;
+  }
+
+  const msg = String($("providerReplyMsg")?.value || "").trim();
+  const fileInput = $("providerReplyFiles");
+
+  if(!msg && (!fileInput?.files?.length)){
+    $("providerReplyStatus").textContent = "❌ Mets un message ou un fichier.";
+    return;
+  }
+
+  $("providerReplyStatus").textContent = "Upload fichiers…";
+  let files = [];
+  try { files = await uploadFiles(RID, fileInput); }
+  catch(e){
+    $("providerReplyStatus").textContent = "❌ Erreur upload fichier : " + String(e.message || e);
+    return;
+  }
+
+  $("providerReplyStatus").textContent = "Envoi…";
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      provider_email: PROVIDER_EMAIL || "",
+      message: msg || "(Pièce jointe)",
+      files
+    })
+  });
+
+  if(!res.ok){
+    debugLog("provider-reply failed", res.status, data);
+    $("providerReplyStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
+    return;
+  }
+
+  $("providerReplyMsg").value = "";
+  $("providerReplyFiles").value = "";
+  $("providerReplyStatus").textContent = "✅ Envoyé";
   await loadThread();
 }
 
