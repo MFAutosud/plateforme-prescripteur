@@ -659,7 +659,7 @@ function renderProviders(){
   listEl.innerHTML = providers.map((p, idx) => {
     const email = normalizeEmail(p.email || "");
     const name  = String(p.name || "").trim();
-    const primary = email || name || "Email manquant";
+    const primary = name || email || "Email manquant";
     const tags = [
       p.is_sales_manager ? "Chef des ventes" : "",
       p.is_vendor ? "Vendeur" : ""
@@ -670,7 +670,7 @@ function renderProviders(){
         <input type="checkbox" class="providerCheck" data-email="${escHtml(email)}" aria-label="Sélection prestataire">
         <div class="txt">
           <span class="main">${escHtml(primary)}</span>
-          ${email && name ? `<span class="sub">${escHtml(name)}</span>` : ""}
+          ${email && name ? `<span class="sub">${escHtml(email)}</span>` : ""}
           ${tags ? `<span class="sub">${escHtml(tags)}</span>` : ""}
         </div>
         <button class="small secondary" type="button" onclick="removeProvider(${idx})">Suppr.</button>
