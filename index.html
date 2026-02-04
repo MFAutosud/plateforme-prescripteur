@@ -2,42 +2,37 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>Plateforme prescripteur – MF Auto Sud</title>
+  <title>Plateforme Prescripteur – MF Auto Sud</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="./assets/logo-mfautosud.png">
-
   <style>
     :root{
       --bg:#0b1220; --panel:#111c34; --panel2:#0f1a32;
       --text:#ffffff; --muted:rgba(255,255,255,.75); --line:rgba(255,255,255,.10);
-      --brand:#4da3ff; --brand2:#2563eb;
-      --btn:#4da3ff; --btnText:#001; --btn2:#334155;
-      --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+      --brand:#4da3ff; --btn:#4da3ff; --btnText:#001; --btn2:#334155;
       --shadow: 0 10px 24px rgba(0,0,0,.22);
       --fieldBg: rgba(11,18,32,.85); --fieldBorder: rgba(255,255,255,.14); --fieldFocus: rgba(77,163,255,.55);
-      --chipBg: rgba(77,163,255,.12); --chipBorder: rgba(77,163,255,.25); --chipText: #cfe6ff;
-      --link: #7cc0ff;
       --rowBg: rgba(11,18,32,.60); --rowBorder: rgba(255,255,255,.08);
-      --msgBg: rgba(11,18,32,.75); --cardBg: rgba(11,18,32,.65); --kvBg: rgba(17,28,52,.55);
+      --msgBg: rgba(11,18,32,.75);
+      --fileBg:#334155; --fileBorder: rgba(255,255,255,.10);
       --topbarBg: rgba(17,28,52,.85); --topbarBorder: rgba(255,255,255,.08);
-      --fileBg: #334155; --fileBorder: rgba(255,255,255,.10);
+      --chipBg: rgba(77,163,255,.12); --chipBorder: rgba(77,163,255,.25); --chipText: #cfe6ff;
       --divider: rgba(255,255,255,.10);
+      --link: #7cc0ff;
     }
-
     [data-theme="light"]{
       --bg:#f6f8fc; --panel:#ffffff; --panel2:#ffffff;
       --text:#0b1220; --muted:rgba(15,23,42,.72); --line:rgba(15,23,42,.12);
-      --brand:#2563eb; --brand2:#1d4ed8;
-      --btn:#2563eb; --btnText:#ffffff; --btn2:#e2e8f0;
+      --brand:#2563eb; --btn:#2563eb; --btnText:#fff; --btn2:#e2e8f0;
       --shadow: 0 10px 24px rgba(2,6,23,.08);
       --fieldBg: rgba(255,255,255,.95); --fieldBorder: rgba(15,23,42,.14); --fieldFocus: rgba(37,99,235,.45);
-      --chipBg: rgba(37,99,235,.10); --chipBorder: rgba(37,99,235,.22); --chipText: rgba(15,23,42,.85);
-      --link: #2563eb;
       --rowBg: rgba(2,6,23,.03); --rowBorder: rgba(2,6,23,.08);
-      --msgBg: rgba(2,6,23,.03); --cardBg: rgba(2,6,23,.02); --kvBg: rgba(2,6,23,.03);
-      --topbarBg: rgba(255,255,255,.85); --topbarBorder: rgba(2,6,23,.10);
+      --msgBg: rgba(2,6,23,.03);
       --fileBg: rgba(2,6,23,.06); --fileBorder: rgba(2,6,23,.10);
+      --topbarBg: rgba(255,255,255,.85); --topbarBorder: rgba(2,6,23,.10);
+      --chipBg: rgba(37,99,235,.10); --chipBorder: rgba(37,99,235,.22); --chipText: rgba(15,23,42,.85);
       --divider: rgba(2,6,23,.10);
+      --link: #2563eb;
     }
 
     *{box-sizing:border-box}
@@ -46,12 +41,6 @@
       background:
         radial-gradient(1100px 460px at 10% -10%, rgba(77,163,255,.22), transparent 60%),
         radial-gradient(900px 380px at 90% 0%, rgba(37,99,235,.18), transparent 60%),
-        var(--bg);
-    }
-    [data-theme="light"] body{
-      background:
-        radial-gradient(1100px 460px at 10% -10%, rgba(37,99,235,.10), transparent 60%),
-        radial-gradient(900px 380px at 90% 0%, rgba(77,163,255,.08), transparent 60%),
         var(--bg);
     }
     .wrap{max-width:1100px;margin:0 auto}
@@ -68,7 +57,7 @@
       display:flex;align-items:center;justify-content:center; padding:6px; flex:0 0 auto;
     }
     .brandLogo img{max-width:100%;max-height:100%;object-fit:contain;display:block}
-    .brandTitle h1{font-size:18px;margin:0;color:var(--brand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .brandTitle h1{font-size:16px;margin:0;color:var(--brand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .brandTitle .sub{margin:2px 0 0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .topbarRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
     .chip{
@@ -76,9 +65,6 @@
       background:var(--chipBg); border:1px solid var(--chipBorder); color:var(--chipText);
       white-space:nowrap;
     }
-
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    @media(max-width:900px){.grid2{grid-template-columns:1fr}}
 
     .box{
       background: linear-gradient(180deg, rgba(17,28,52,.95), rgba(15,26,50,.95));
@@ -142,11 +128,12 @@
 
     .msg{background:var(--msgBg); padding:12px; border-radius:14px; margin-top:10px; border:1px solid var(--rowBorder)}
     .msg.you{border-left:4px solid var(--brand)}
-    .msg.them{border-left:4px solid var(--ok)}
+    .msg.them{border-left:4px solid #22c55e}
     .msgHead{display:flex;gap:10px;align-items:center;justify-content:space-between}
     .msgMeta{font-size:12px;opacity:.75;color:var(--muted)}
     .msgWho{font-weight:800}
     .msgBody{margin-top:8px;line-height:1.45;font-size:13px}
+
     .file{
       display:inline-block; margin-top:8px; padding:8px 10px; border-radius:12px;
       background:var(--fileBg); color:var(--text); text-decoration:none; border:1px solid var(--fileBorder);
@@ -159,305 +146,162 @@
       display:block;
     }
 
-    .card{background:var(--cardBg); border:1px solid var(--rowBorder); border-radius:16px; padding:14px;}
+    .card{background:var(--rowBg); border:1px solid var(--rowBorder); border-radius:16px; padding:14px;}
     .gridInfo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     @media(max-width:720px){.gridInfo{grid-template-columns:1fr}}
-    .kv{padding:10px 10px;border-radius:14px;background:var(--kvBg);border:1px solid var(--rowBorder);}
+    .kv{padding:10px 10px;border-radius:14px;background:rgba(17,28,52,.35);border:1px solid var(--rowBorder);}
+    [data-theme="light"] .kv{background:rgba(2,6,23,.03)}
     .kv b{display:block;font-size:12px;opacity:.8;margin-bottom:4px}
     .kv div{font-size:13px;word-break:break-word}
-
-    .tag{
-      display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px;
-      border:1px solid var(--line); background:var(--rowBg); color:var(--text);
-    }
-    .checkline{display:flex;align-items:center;gap:8px;margin-top:0;color:var(--muted)}
-    .checkline input{width:auto}
-    /* ============ iMessage-like chat ============ */
-.msg{
-  background: transparent;
-  border: 0;
-  padding: 0;
-  margin-top: 10px;
-}
-
-.msgRow{
-  display:flex;
-  width:100%;
-}
-
-.msgRow.you{ justify-content:flex-end; }
-.msgRow.them{ justify-content:flex-start; }
-
-.bubble{
-  max-width: 78%;
-  padding: 10px 12px;
-  border-radius: 18px;
-  border: 1px solid var(--rowBorder);
-  background: var(--msgBg);
-  box-shadow: 0 6px 16px rgba(0,0,0,.10);
-}
-
-.msgRow.you .bubble{ border-bottom-right-radius: 8px; }
-.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
-
-.bubbleHead{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:6px;
-}
-
-.bubbleWho{
-  font-size:12px;
-  font-weight:800;
-  opacity:.9;
-}
-
-.bubbleMeta{
-  font-size:11px;
-  opacity:.7;
-  color: var(--muted);
-  white-space:nowrap;
-}
-
-.bubbleBody{
-  font-size:13px;
-  line-height:1.45;
-  word-break:break-word;
-}
   </style>
 </head>
 
 <body>
 <div class="wrap">
-
   <div class="topbar">
     <div class="brand">
       <div class="brandLogo">
         <img src="./assets/logo-mfautosud.png" alt="MF Auto Sud">
       </div>
       <div class="brandTitle">
-        <h1>Plateforme prescripteur – MF Auto Sud</h1>
-        <div class="sub">Demandes • Réponses • Pièces jointes • Transferts • Relances automatiques</div>
+        <h1>Portail Prescripteur</h1>
+        <div class="sub">Créer • Suivre • Envoyer • Répondre</div>
       </div>
     </div>
-
     <div class="topbarRight">
-      <div class="chip" id="modeChip">Mode : Prescripteur</div>
+      <div class="chip">Prescripteur</div>
       <div class="chip" id="newMsgChip" style="display:none;">🔔 Nouveau message</div>
-      <button class="secondary" id="themeBtn" type="button" style="white-space:nowrap">🌙 Mode sombre</button>
+      <button class="secondary" id="themeBtn" type="button">🌙 Mode sombre</button>
     </div>
   </div>
 
-  <!-- ========================= PRESCRIPTEUR UI ========================= -->
-  <div id="prescriberUI">
-    <!-- (inchangé) -->
-    <div class="box">
-      <h2>1) Créer une demande</h2>
-
-      <div class="grid2">
-        <div>
-          <label>Véhicule</label>
-          <input id="vehicle" placeholder="Ex. : Ford Puma LLD 25 mois – 30 000 km – entretien inclus">
-        </div>
-
-        <div>
-          <label>Lien de la demande</label>
-          <div class="row" style="margin-top:10px">
-            <button class="secondary" id="copyLinkBtn" type="button">Copier le lien</button>
-          </div>
-          <div class="hint">Disponible après création (rid + code).</div>
-        </div>
+  <div class="box">
+    <h2>Créer une demande</h2>
+    <div class="gridInfo" style="margin-top:10px">
+      <div>
+        <label>Client (nom / société)</label>
+        <input id="clientName" placeholder="Ex. : Dupont SARL">
       </div>
-
-      <label>Bloc client (copier-coller) — 1ʳᵉ ligne = nom du client</label>
-      <textarea id="pasteBlock" style="height:180px" placeholder="Colle ici le bloc complet…"></textarea>
-
-      <div class="row">
-        <button id="createBtn" type="button">Créer la demande</button>
+      <div>
+        <label>Véhicule</label>
+        <input id="vehicle" placeholder="Ex. : Peugeot 208">
       </div>
-
-      <div id="link" class="hint"></div>
-    </div>
-
-    <div class="box" id="sendBox" style="display:none;">
-      <h2>2) Envoyer à des prestataires</h2>
-
-      <div class="row">
-        <button class="secondary" id="checkAllBtn" type="button">Tout cocher</button>
-        <button class="secondary" id="uncheckAllBtn" type="button">Tout décocher</button>
-        <button class="secondary" id="exportProvidersBtn" type="button">Exporter</button>
-        <button class="secondary" id="clearProvidersBtn" type="button">Tout effacer</button>
+      <div>
+        <label>Adresse</label>
+        <input id="address" placeholder="Ex. : 12 rue des Fleurs">
       </div>
-
-      <div id="providersList" style="margin-top:10px"></div>
-
-      <div class="divider"></div>
-
-      <h3>Ajouter / importer</h3>
-
-      <div class="grid2">
-        <div>
-          <label>E-mail du prestataire</label>
-          <input id="providerEmail" placeholder="exemple@domaine.com">
-        </div>
-        <div>
-          <label>Nom (optionnel)</label>
-          <input id="providerName" placeholder="Ex. : Groupe Grim">
-        </div>
+      <div>
+        <label>Code postal</label>
+        <input id="postcode" placeholder="Ex. : 13008">
       </div>
-
-      <div class="row">
-        <label class="checkline"><input type="checkbox" id="providerIsManager"> Chef des ventes</label>
-        <label class="checkline"><input type="checkbox" id="providerIsVendor"> Vendeur</label>
+      <div>
+        <label>Ville</label>
+        <input id="city" placeholder="Ex. : Marseille">
       </div>
-
-      <div class="row">
-        <button id="addProviderBtn" type="button">Ajouter au répertoire</button>
+      <div>
+        <label>Pays</label>
+        <input id="country" placeholder="Ex. : France">
       </div>
-
-      <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
-      <textarea id="importArea" style="height:110px" placeholder="Ex. : Nom <email@domaine.com>"></textarea>
-      <div class="row">
-        <button class="secondary" id="importProvidersBtn" type="button">Importer</button>
+      <div>
+        <label>Contact (nom / service)</label>
+        <input id="contactName" placeholder="Ex. : Mme Martin">
       </div>
-
-      <label>Message (optionnel) inclus dans l’e-mail</label>
-      <textarea id="customMessage" style="height:90px" placeholder="Texte optionnel…"></textarea>
-
-      <div class="row">
-        <button id="sendBtn" type="button">✅ Envoyer automatiquement</button>
-        <button class="secondary" id="copyLinkBtn2" type="button">Copier le lien</button>
+      <div>
+        <label>Email contact</label>
+        <input id="contactEmail" placeholder="contact@exemple.com">
       </div>
-
-      <div id="sendStatus" class="hint"></div>
-    </div>
-
-    <div class="box">
-      <h2>3) Conversation</h2>
-      <div class="row">
-        <button class="secondary" id="refreshThreadBtn" type="button">🔄 Rafraîchir</button>
-        <button class="secondary" id="markReadBtn" type="button">✅ Marquer comme lu</button>
-        <button class="secondary" id="copyLinkBtn3" type="button">Copier le lien</button>
+      <div>
+        <label>Téléphone contact</label>
+        <input id="contactPhone" placeholder="06 12 34 56 78">
       </div>
-      <div id="thread" style="margin-top:10px"></div>
-    </div>
-
-    <div class="box" id="prescriberReplyBox" style="display:none;">
-      <h2>4) Répondre (MF Auto Sud)</h2>
-
-      <label>Message</label>
-      <textarea id="prescMsg" style="height:120px" placeholder="Votre message…"></textarea>
-
-      <label>Documents (PDF, images…)</label>
-      <input type="file" id="prescFiles" multiple>
-
-      <div class="row">
-        <button id="prescReplyBtn" type="button">Envoyer la réponse</button>
+      <div>
+        <label>SIRET</label>
+        <input id="siret" placeholder="SIRET">
       </div>
-      <div id="prescStatus" class="hint"></div>
-
-      <label class="checkline" style="margin-top:10px">
-        <input type="checkbox" id="notifyAssignedOnly">
-        Notifier seulement le prestataire assigné (si assigné)
-      </label>
-
-      <div class="hint" style="margin-top:10px">
-        ⚠️ Nécessite une Edge Function <b>prescriber-reply</b> côté Supabase.
+      <div>
+        <label>TVA</label>
+        <input id="vat" placeholder="TVA">
+      </div>
+      <div>
+        <label>Message initial</label>
+        <textarea id="message" style="height:120px" placeholder="Détails de la demande…"></textarea>
       </div>
     </div>
+
+    <label>Documents (PDF, images…)</label>
+    <input type="file" id="reqFiles" multiple accept="application/pdf,image/*">
+
+    <div class="row">
+      <button id="sendBtn" type="button">Envoyer la demande</button>
+      <button class="secondary" id="resetBtn" type="button">Réinitialiser</button>
+    </div>
+    <div id="sendStatus" class="hint"></div>
   </div>
 
-  <!-- ========================= PRESTATAIRE UI ========================= -->
-  <div id="providerUI" style="display:none;">
+  <div class="box">
+    <h2>Répertoire des prestataires</h2>
+    <div id="providersList" style="margin-top:10px"></div>
 
-    <div class="box">
-      <h2>Demande reçue <span class="tag">Prestataire</span></h2>
-      <div id="requestInfo" class="hint">Chargement…</div>
+    <div class="divider"></div>
 
-      <!-- ✅ AJOUT: liens de test (utile pour vérifier manager/vendor) -->
-      <div class="row" style="margin-top:10px">
-        <button class="secondary" id="copyManagerLinkBtn" type="button">Copier lien portail Chef</button>
-        <button class="secondary" id="copyVendorLinkBtn" type="button">Copier lien portail Vendeur</button>
+    <h3>Ajouter un prestataire</h3>
+    <div class="gridInfo" style="margin-top:10px">
+      <div>
+        <label>Email</label>
+        <input id="providerEmail" placeholder="exemple@domaine.com">
       </div>
-      <div class="hint" id="portalLinksHint"></div>
+      <div>
+        <label>Nom (optionnel)</label>
+        <input id="providerName" placeholder="Ex. : Groupe Grim">
+      </div>
     </div>
 
-    <!-- ✅ Chef des ventes : attribution + gestion vendeurs -->
-    <div class="box" id="assignBox" style="display:none;">
-      <h2>Chef des ventes — Attribuer à un vendeur</h2>
-      <div class="hint" id="assignHint">Chargement…</div>
-      <div id="assignList" style="margin-top:10px"></div>
-
-      <div class="row">
-        <button class="secondary" id="assignBtn" type="button">Attribuer</button>
-        <button class="secondary" id="refreshVendorsBtn" type="button">🔄 Recharger vendeurs</button>
-      </div>
-      <div class="hint" id="assignStatus"></div>
-
-      <div class="divider"></div>
-
-      <h3>Gestion des vendeurs</h3>
-      <div class="hint">Ajoute / supprime des vendeurs rattachés à ton compte (ceux-ci apparaîtront dans la liste d’attribution).</div>
-
-      <div class="grid2">
-        <div>
-          <label>Email vendeur</label>
-          <input id="mgrVendorEmail" placeholder="vendeur@domaine.com">
-        </div>
-        <div>
-          <label>Nom vendeur (optionnel)</label>
-          <input id="mgrVendorName" placeholder="Prénom Nom">
-        </div>
-      </div>
-
-      <div class="row">
-        <button id="mgrAddVendorBtn" type="button">➕ Ajouter vendeur</button>
-        <button class="secondary" id="mgrRemoveVendorBtn" type="button">🗑️ Supprimer vendeur (email ci-dessus)</button>
-      </div>
-      <div class="hint" id="mgrVendorStatus"></div>
+    <div class="row">
+      <label class="checkline"><input type="checkbox" id="providerIsManager"> Chef des ventes</label>
+      <label class="checkline"><input type="checkbox" id="providerIsVendor"> Vendeur</label>
     </div>
 
-    <div class="box">
-      <h2>Conversation</h2>
-      <div class="row">
-        <button class="secondary" id="refreshThreadProviderBtn" type="button">🔄 Rafraîchir</button>
-        <button class="secondary" id="markReadProviderBtn" type="button">✅ Marquer comme lu</button>
-      </div>
-      <div id="threadProvider" style="margin-top:10px"></div>
+    <div class="row">
+      <button id="addProviderBtn" type="button">➕ Ajouter</button>
+      <button class="secondary" id="importProvidersBtn" type="button">📥 Importer liste</button>
+      <button class="secondary" id="exportProvidersBtn" type="button">📤 Exporter liste</button>
+      <button class="secondary" id="clearProvidersBtn" type="button">🗑️ Tout effacer</button>
     </div>
+    <div id="providersStatus" class="hint"></div>
+  </div>
 
-    <div class="box">
-      <h2>Répondre</h2>
+  <div class="box">
+    <h2>Envoyer à des prestataires</h2>
+    <div class="row">
+      <button class="secondary" type="button" onclick="checkAll(true)">Tout cocher</button>
+      <button class="secondary" type="button" onclick="checkAll(false)">Tout décocher</button>
+    </div>
+    <div class="hint">Sélectionne les prestataires à prévenir.</div>
+  </div>
 
-      <label>Votre message</label>
-      <textarea id="respMsg" style="height:120px" placeholder="Texte d’accompagnement…"></textarea>
+  <div class="box">
+    <h2>Conversation</h2>
+    <div id="thread" style="margin-top:10px"></div>
+  </div>
 
-      <label>Documents (PDF, images…)</label>
-<input type="file" id="respFiles" multiple accept="application/pdf,image/*">
+  <div class="box" id="providerUI" style="display:none;">
+    <h2>Réponse prestataire</h2>
+    <div id="providerThread" class="hint">Chargement…</div>
+    <label>Message</label>
+    <textarea id="providerReplyMsg" style="height:120px" placeholder="Votre réponse…"></textarea>
+    <label>Documents (PDF, images…)</label>
+    <input type="file" id="providerReplyFiles" multiple accept="application/pdf,image/*">
+    <div class="row">
       <button id="providerReplyBtn" type="button">Envoyer la réponse</button>
-      <div id="respStatus" class="hint"></div>
     </div>
-
-    <div class="box" id="debugBox" style="display:none;">
-      <h2>Debug (sans console)</h2>
-      <div id="debugOut" class="hint">—</div>
-      <div class="row">
-        <button class="secondary" id="debugClearBtn" type="button">Vider</button>
-      </div>
-    </div>
-
+    <div id="providerReplyStatus" class="hint"></div>
   </div>
-
 </div>
 
 <script>
 /* ========================= CONFIG ========================= */
 const SUPABASE_URL = "https://tubhsjkstbrqlvmylobz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YmhzamtzdGJycWx2bXlsb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDE1NzQsImV4cCI6MjA4NDk3NzU3NH0.tANS4zo9wvLsWJS48Hyw6thttQX0yhBjOKI1aY4FTCo";
-const PRESCRIBER_EMAIL = "courtier@mfautosud.fr";
-const PROVIDERS_KEY = "mfautosud_providers_v3";
 
 /* ========================= THEME ========================= */
 const THEME_KEY = "mfautosud_theme";
@@ -473,16 +317,15 @@ function toggleTheme(){
   applyTheme(cur === "dark" ? "light" : "dark");
 }
 (function(){
-  const saved = localStorage.getItem(THEME_KEY) || "dark";
-  applyTheme(saved);
-  const tbtn = document.getElementById("themeBtn");
-  if(tbtn) tbtn.addEventListener("click", toggleTheme);
+  applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+  document.getElementById("themeBtn")?.addEventListener("click", toggleTheme);
 })();
 
 /* ========================= STATE ========================= */
 let RID = "";
 let CODE = "";
 let PROVIDER_EMAIL = "";
+let PROVIDER_ROLE = "";
 
 /* ========================= UTILS ========================= */
 function $(id){ return document.getElementById(id); }
@@ -495,127 +338,9 @@ function escHtml(s){
 }
 function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
 function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
-function setModeChip(txt){ const c=$("modeChip"); if(c) c.textContent = "Mode : " + txt; }
 function baseUrl(){ return window.location.origin + window.location.pathname; }
-function randomCode(){
-  const a = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-  function currentTheme(){
-  return document.documentElement.getAttribute("data-theme") || "dark";
-}
 
-function hashHue(str){
-  const s = String(str || "");
-  let h = 0;
-  for(let i=0;i<s.length;i++){
-    h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  }
-  return h % 360;
-}
-
-function bubbleStyleForSender(senderEmail, isYou){
-  if(isYou){
-    return `background: linear-gradient(180deg, var(--brand2), var(--brand)); color: #fff; border-color: rgba(255,255,255,.18);`;
-  }
-
-  const hue = hashHue(senderEmail || "unknown");
-  const theme = currentTheme();
-
-  if(theme === "light"){
-    return `background: hsl(${hue} 85% 96%); color:#0b1220; border-color: rgba(2,6,23,.10);`;
-  }
-  return `background: hsl(${hue} 55% 18%); color:#ffffff; border-color: rgba(255,255,255,.10);`;
-}
-function getAllParams(){
-  const url = new URL(window.location.href);
-  const qs = url.searchParams;
-  const hs = new URLSearchParams(window.location.hash.replace("#",""));
-  const rid   = qs.get("rid")   || hs.get("rid");
-  const code  = qs.get("code")  || hs.get("code");
-  const pe    = qs.get("pe")    || hs.get("pe");
-  const debug = qs.get("debug") || hs.get("debug");
-  return { rid, code, pe, debug };
-}
-async function fetchJson(url, options){
-  const res = await fetch(url, options);
-  let data = null;
-  try { data = await res.json(); } catch {}
-  return { res, data };
-}
-
-/* ========================= DEBUG ========================= */
-let DEBUG_ON = false;
-function debugShow(show){
-  const box = $("debugBox");
-  if(box) box.style.display = show ? "" : "none";
-}
-function debugClear(){ const out = $("debugOut"); if(out) out.textContent = "—"; }
-function debugLog(...args){
-  if(!DEBUG_ON) return;
-  const out = $("debugOut");
-  if(!out) return;
-  const txt = args.map(a=>{
-    try { return (typeof a === "string") ? a : JSON.stringify(a, null, 2); }
-    catch { return String(a); }
-  }).join(" ");
-  out.textContent = (out.textContent === "—" ? "" : out.textContent + "\n\n") + txt;
-}
-
-/* ========================= NEW MESSAGE BADGE ========================= */
-function seenKey(mode){ return `mf_seen_${mode}_${RID}`; }
-function markSeen(mode){
-  if(!RID) return;
-  localStorage.setItem(seenKey(mode), new Date().toISOString());
-  updateNewBadge(false);
-}
-function getSeen(mode){
-  const v = localStorage.getItem(seenKey(mode));
-  return v ? new Date(v).getTime() : 0;
-}
-function updateNewBadge(show){
-  const chip = $("newMsgChip");
-  if(chip) chip.style.display = show ? "" : "none";
-}
-
-/* ========================= UI Helpers ========================= */
-function showAssignBox(show){
-  const box = $("assignBox");
-  if(box) box.style.display = show ? "" : "none";
-}
-function formatAddress(r){
-  const addr = String(r.address || "").trim();
-  const postcode = String(r.postcode || "").trim();
-  const city = String(r.city || "").trim();
-  const country = String(r.country || "").trim();
-
-  const addrHasFrance = /france/i.test(addr);
-  const parts = [];
-  if(addr) parts.push(addr);
-  if(postcode || city) parts.push([postcode, city].filter(Boolean).join(" "));
-  if(country && !addrHasFrance) parts.push(country);
-  return parts.join(" ").replace(/\s+/g," ").trim();
-}
-
-/* ========================= PORTAL LINKS (test) ========================= */
-function baseDir(){
-  // exemple: https://mfautosud.github.io/plateforme-prescripteur/
-  const url = new URL(window.location.href);
-  const p = url.pathname;
-  const dir = p.endsWith("/") ? p : p.substring(0, p.lastIndexOf("/") + 1);
-  return url.origin + dir;
-}
-
-function buildManagerLink(email){
-  return `${baseDir()}manager.html?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(email)}`;
-}
-function buildVendorLink(email){
-  return `${baseDir()}vendor.html?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}&pe=${encodeURIComponent(email)}`;
-}
-
-/* =========================================================
-   UPLOAD FILES via Edge Function: upload-attachment
-========================================================= */
+/* ========================= FILE UPLOAD ========================= */
 async function uploadFiles(requestId, fileInput){
   const uploaded = [];
   if(!fileInput || !fileInput.files || !fileInput.files.length) return uploaded;
@@ -624,10 +349,8 @@ async function uploadFiles(requestId, fileInput){
     const fd = new FormData();
     fd.append("file", file);
     fd.append("request_id", requestId);
-
-    // on envoie aussi le code + l'email (utile pour la sécurité côté Edge Function)
     fd.append("access_code", CODE || "");
-    fd.append("uploader_email", (PROVIDER_EMAIL || PRESCRIBER_EMAIL || "").toLowerCase());
+    fd.append("uploader_email", (PROVIDER_EMAIL || "").toLowerCase());
 
     const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-attachment`, {
       method: "POST",
@@ -642,7 +365,6 @@ async function uploadFiles(requestId, fileInput){
     try { data = await res.json(); } catch {}
 
     if(!res.ok){
-      console.error("upload-attachment error", res.status, data);
       throw new Error(data?.error || `upload-attachment failed: ${res.status}`);
     }
 
@@ -668,6 +390,7 @@ async function uploadFiles(requestId, fileInput){
 }
 
 /* ========================= PROVIDERS localStorage ========================= */
+const PROVIDERS_KEY = "mfautosud_providers_v3";
 function toBool(value){
   if(typeof value === "string"){
     const v = value.trim().toLowerCase();
@@ -792,624 +515,7 @@ async function addProvider(){
 
 function checkAll(on){ document.querySelectorAll(".providerCheck").forEach(c=>c.checked=!!on); }
 
-async function exportProviders(){
-  const providers = loadProviders();
-  const lines = providers.map(p => {
-    const email = normalizeEmail(p.email || "");
-    const name = String(p.name || "").trim();
-    return name ? `${name} <${email}>` : email;
-  }).join("\n");
-  await navigator.clipboard.writeText(lines || "");
-  alert("Liste copiée dans le presse-papiers.");
-}
-
-function clearProviders(){
-  if(!confirm("Supprimer tous les prestataires enregistrés sur cet ordinateur ?")) return;
-  saveProviders([]);
-  renderProviders();
-}
-
-function extractEmailAndName(line){
-  const s = (line || "").trim();
-  if(!s) return null;
-  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
-  if(m){
-    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
-    const email = (m[2] || "").trim().toLowerCase();
-    return { name, email };
-  }
-  const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
-  if(emailLooksValid(only)) return { name:"", email: only };
-  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  if(em) return { name:"", email: em[0].toLowerCase() };
-  return null;
-}
-
-function importProviders(){
-  const raw = String($("importArea")?.value || "").replace(/\r/g,"").trim();
-  if(!raw){ alert("Colle une liste."); return; }
-
-  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
-  const providers = loadProviders();
-  const existing = new Set(providers.map(p => normalizeEmail(p.email)));
-
-  let added=0, ignored=0;
-  for(const line of lines){
-    const parsed = extractEmailAndName(line);
-    if(!parsed || !emailLooksValid(parsed.email)){ ignored++; continue; }
-    if(existing.has(parsed.email)){ ignored++; continue; }
-    providers.push({ name: parsed.name || "", email: parsed.email, is_sales_manager:false, is_vendor:false });
-    existing.add(parsed.email);
-    added++;
-  }
-
-  saveProviders(providers);
-  renderProviders();
-  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
-}
-
-/* ========================= PARSE PASTE ========================= */
-function parsePaste(text){
-  const t = (text || "").replace(/\r/g, "").trim();
-  const rawLines = t.split("\n").map(l => l.replace(/\u00A0/g," ").trim());
-  const lines = rawLines.filter(l => l && l.length);
-
-  const out = {
-    client_name: "",
-    address: "",
-    postcode: "",
-    city: "",
-    country: "",
-    siret: "",
-    vat: "",
-    contact_name: "",
-    contact_email: "",
-    contact_phone: ""
-  };
-  if (!lines.length) return out;
-
-  const norm = (s) => String(s || "").replace(/\u00A0/g," ").trim();
-  const low  = (s) => norm(s).toLowerCase();
-
-  const isUselessLine = (l) => {
-    const x = low(l);
-    if (!x) return true;
-    return (
-      x === "client" ||
-      x === "contacts" ||
-      x === "contact" ||
-      x === "responsable" ||
-      x === "mf autosud" ||
-      x.includes("responsable mf autosud") ||
-      x.includes("obtenir un lien") ||
-      x.includes("mandat de prélèvement sepa") ||
-      x.includes("mandat de prelevement sepa") ||
-      x.includes("prelevement sepa") ||
-      x.includes("prélèvement sepa")
-    );
-  };
-
-  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l));
-  const parseZipCityCountry = (l) => {
-    const m = norm(l).match(/\b(\d{5})\b\s+(.+)$/);
-    if (!m) return null;
-    const postcode = m[1];
-    let rest = norm(m[2]);
-    let country = "";
-    if (/france$/i.test(rest)) { country = "France"; rest = rest.replace(/france$/i, "").trim(); }
-    return { postcode, city: rest, country };
-  };
-
-  const looksLikeStreet = (l) => {
-    const x = low(l);
-    return (
-      /\b\d{1,5}\b/.test(x) &&
-      (x.includes("rue") || x.includes("avenue") || x.includes("av ") || x.includes("boulevard") ||
-       x.includes("bd ") || x.includes("chemin") || x.includes("route") || x.includes("impasse") || x.includes("place"))
-    );
-  };
-
-  const extractSiretValue = (l) => {
-    const m = norm(l).match(/siret\s*[:\-]?\s*([0-9 .]{10,30})/i);
-    if (!m) return "";
-    return norm(m[1]).replace(/[ .]/g, "");
-  };
-  const extractVatValue = (l) => {
-    const m = norm(l).match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z .]{6,})/i);
-    if (!m) return "";
-    return norm(m[1]).replace(/[ .]/g, "");
-  };
-  const extractEmailValue = (l) => {
-    const m = norm(l).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-    return m ? m[0].toLowerCase() : "";
-  };
-  const extractPhoneValue = (l) => {
-    const m = norm(l).match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
-    return m ? m[0].replace(/[\s.\-]/g, "") : "";
-  };
-
-  let firstMeaningful = "";
-  for (const l of lines) { if (isUselessLine(l)) continue; firstMeaningful = l; break; }
-  out.client_name = firstMeaningful || lines[0];
-
-  let pending = null;
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i];
-    const x = low(l);
-    if (!l || isUselessLine(l) || looksLikeShortCode(l)) continue;
-
-    if (pending) {
-      const v = norm(l).replace(/[ .]/g, "");
-      if (pending === "siret" && /^\d{10,20}$/.test(v)) out.siret = v;
-      if (pending === "vat" && /^[A-Z]{2}[0-9A-Z]{6,}$/.test(v)) out.vat = v;
-      pending = null;
-      continue;
-    }
-
-    if (!out.siret && /siret\s*[:\-]?\s*$/i.test(l)) { pending = "siret"; continue; }
-    if (!out.vat && /tva\s*[:\-]?\s*$/i.test(l)) { pending = "vat"; continue; }
-
-    if (!out.siret) { const v = extractSiretValue(l); if (v) { out.siret = v; continue; } }
-    if (!out.vat) { const v = extractVatValue(l); if (v) { out.vat = v; continue; } }
-
-    if (!out.contact_email) { const v = extractEmailValue(l); if (v) { out.contact_email = v; continue; } }
-    if (!out.contact_phone) { const v = extractPhoneValue(l); if (v) { out.contact_phone = v; continue; } }
-
-    if (!out.address && looksLikeStreet(l)) {
-      out.address = l;
-      const next = lines[i + 1] || "";
-      const z = parseZipCityCountry(next);
-      if (z) { out.postcode = z.postcode; out.city = z.city; if (z.country) out.country = z.country; }
-      continue;
-    }
-
-    if (!out.address) {
-      const z = parseZipCityCountry(l);
-      if (z) { out.address = l; out.postcode = z.postcode; out.city = z.city; if (z.country) out.country = z.country; continue; }
-    }
-
-    if (!out.contact_name) {
-      const forbidden = x.includes("siret") || x.includes("tva") || x.includes("n°") || x.includes("no ");
-      if (!forbidden && !/\d/.test(l) && !l.includes("@") && l.length <= 60) {
-        const w = l.split(/\s+/).filter(Boolean);
-        if (w.length >= 2 && w.length <= 6) out.contact_name = l;
-      }
-    }
-  }
-
-  if (!out.country && /france/i.test(t)) out.country = "France";
-  return out;
-}
-
-/* ========================= CREATE REQUEST ========================= */
-async function createRequest(){
-  const vehicle = String($("vehicle")?.value || "").trim();
-  const paste = String($("pasteBlock")?.value || "").trim();
-  if(!vehicle || !paste){ alert("Véhicule + bloc client obligatoires."); return; }
-
-  const parsed = parsePaste(paste);
-  if(!parsed.client_name){ alert("Nom client introuvable (1ère ligne)."); return; }
-
-  RID = "";
-  CODE = randomCode();
-
-  const payload = {
-    status: "draft",
-    prescriber_email: PRESCRIBER_EMAIL,
-    client_name: parsed.client_name,
-    vehicle,
-    fin_type: "LLD",
-    recipients: [PRESCRIBER_EMAIL],
-    access_code: CODE,
-    address: parsed.address || null,
-    postcode: parsed.postcode || null,
-    city: parsed.city || null,
-    country: parsed.country || null,
-    siret: parsed.siret || null,
-    vat: parsed.vat || null,
-    contact_name: parsed.contact_name || null,
-    contact_email: parsed.contact_email || null,
-    contact_phone: parsed.contact_phone || null
-  };
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json",
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if(!res.ok){
-    debugLog("create request failed", res.status, data);
-    const details = data ? JSON.stringify(data, null, 2) : "(no body)";
-    alert(`❌ Erreur création demande\nHTTP ${res.status}\n\n${details}`);
-    return;
-  }
-
-  RID = data?.[0]?.id;
-  if(!RID){
-    alert("❌ Demande créée mais ID introuvable (réponse Supabase inattendue).");
-    debugLog("create request response unexpected", data);
-    return;
-  }
-
-  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
-  $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
-
-  $("sendBox").style.display = "block";
-  $("prescriberReplyBox").style.display = "block";
-  renderProviders();
-  await loadThread();
-}
-
-/* ========================= COPY LINK ========================= */
-async function copyThreadLink(){
-  if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
-  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
-  await navigator.clipboard.writeText(link);
-  alert("Lien copié.");
-}
-
-/* ========================= SEND TO SELECTED (send-request) ========================= */
-async function sendToSelected(){
-  if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
-
-  const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
-  const emails = checks
-    .map(c => (c.getAttribute("data-email")||"").trim().toLowerCase())
-    .filter(Boolean);
-
-  if(!emails.length){ alert("Sélectionne au moins 1 prestataire."); return; }
-
-  $("sendStatus").textContent = "Envoi…";
-  const custom = String($("customMessage")?.value || "").trim();
-
-  // ⚠️ IMPORTANT: provider_roles doit être construit à partir du répertoire local
-  const directory = loadProviders();
-
-  // 1) On map par email (normalisé)
-  const byEmail = new Map(directory.map(p => [normalizeEmail(p.email), p]));
-
-  // 2) On vérifie que CHAQUE email sélectionné a bien un rôle (manager ou vendor)
-  const missing = [];
-  const provider_roles = [];
-
-  for(const email of emails){
-    const p = byEmail.get(email);
-    const is_sales_manager = !!p?.is_sales_manager;
-    const is_vendor = !!p?.is_vendor;
-
-    if(!is_sales_manager && !is_vendor){
-      missing.push(email);
-      continue;
-    }
-
-    provider_roles.push({
-      email,
-      provider_email: email,
-      name: String(p?.name || "").trim() || null,
-      is_sales_manager,
-      is_vendor,
-      // ✅ routing côté email (si ta function l’utilise)
-      portal_manager_url: buildManagerLink(email),
-      portal_vendor_url: buildVendorLink(email)
-    });
-  }
-
-  if(missing.length){
-    $("sendStatus").textContent = "";
-    alert(
-      "Impossible d’envoyer : certains destinataires n’ont pas de rôle (Chef des ventes ou Vendeur).\n\n" +
-      missing.map(e => "• " + e).join("\n") +
-      "\n\n➡️ Ouvre la fiche du prestataire dans ton répertoire et coche au moins un rôle."
-    );
-    return;
-  }
-
-  // 3) On envoie (emails + provider_roles)
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      request_id: RID,
-      access_code: CODE,
-      provider_emails: emails,
-      custom_message: custom,
-      provider_roles
-    })
-  });
-
-  if(!res.ok){
-    debugLog("send-request failed", res.status, data);
-    $("sendStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
-    return;
-  }
-
-  // ✅ Bonus: affichage des liens direct après envoi (utile en debug)
-  const info = provider_roles.map(r=>{
-    const type = r.is_sales_manager ? "CHEF" : (r.is_vendor ? "VENDEUR" : "—");
-    const url = r.is_sales_manager ? r.portal_manager_url : r.portal_vendor_url;
-    return `${type} ${r.email} -> ${url}`;
-  }).join("\n");
-
-  $("sendStatus").textContent = "✅ Envoyé\n\n" + info;
-}
-
-/* ========================= PROVIDER REPLY ========================= */
-async function providerReply(){
-  if(!RID || !CODE || !PROVIDER_EMAIL){
-    $("respStatus").textContent = "❌ Lien invalide (rid/code/pe manquant).";
-    return;
-  }
-
-  const msg = String($("respMsg")?.value || "").trim();
-  const fileInput = $("respFiles");
-
-  if(!msg && (!fileInput?.files?.length)){
-    $("respStatus").textContent = "❌ Mets un message ou un fichier.";
-    return;
-  }
-
-  $("respStatus").textContent = "Upload fichiers…";
-  let files = [];
-  try{ files = await uploadFiles(RID, fileInput); }
-  catch(e){
-    $("respStatus").textContent = "❌ Erreur upload fichier.";
-    debugLog("upload error", String(e));
-    return;
-  }
-
-  $("respStatus").textContent = "Envoi…";
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
-    method:"POST",
-    headers:{
-      apikey: SUPABASE_ANON_KEY,
-      Authorization:"Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type":"application/json"
-    },
-    body: JSON.stringify({
-      request_id: RID,
-      access_code: CODE,
-      provider_email: PROVIDER_EMAIL,
-      message: msg || "(Pièce jointe)",
-      files
-    })
-  });
-
-  if(!res.ok){
-    debugLog("provider-reply failed", res.status, data);
-    $("respStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
-    return;
-  }
-
-  $("respMsg").value = "";
-  $("respFiles").value = "";
-  $("respStatus").textContent = "✅ Envoyé";
-  await loadThread();
-}
-
-/* ========================= PRESCRIBER REPLY ========================= */
-async function prescriberReply(){
-  if(!RID || !CODE){
-    $("prescStatus").textContent = "❌ Ouvre d’abord une demande (rid+code).";
-    return;
-  }
-
-  const msg = String($("prescMsg")?.value || "").trim();
-  const fileInput = $("prescFiles");
-
-  if(!msg && (!fileInput?.files?.length)){
-    $("prescStatus").textContent = "❌ Mets un message ou un fichier.";
-    return;
-  }
-
-  const notifyAssignedOnly = !!$("notifyAssignedOnly")?.checked;
-
-  $("prescStatus").textContent = "Upload fichiers…";
-  let files = [];
-  try{ files = await uploadFiles(RID, fileInput); }
-  catch(e){
-    $("prescStatus").textContent = "❌ Erreur upload fichier.";
-    debugLog("upload error", String(e));
-    return;
-  }
-
-  $("prescStatus").textContent = "Envoi…";
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/prescriber-reply`, {
-    method:"POST",
-    headers:{
-      apikey: SUPABASE_ANON_KEY,
-      Authorization:"Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type":"application/json"
-    },
-    body: JSON.stringify({
-      request_id: RID,
-      access_code: CODE,
-      message: msg || "(Pièce jointe)",
-      files,
-      notify_assigned_only: notifyAssignedOnly
-    })
-  });
-
-  if(!res.ok){
-    debugLog("prescriber-reply failed", res.status, data);
-    $("prescStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
-    return;
-  }
-
-  $("prescMsg").value = "";
-  $("prescFiles").value = "";
-  $("prescStatus").textContent = "✅ Envoyé";
-  await loadThread();
-}
-
-/* =========================================================
-   ✅ MANAGER: vendor-manage (list/add/remove)
-========================================================= */
-async function vendorManage(action, extra={}){
-  return await fetchJson(`${SUPABASE_URL}/functions/v1/vendor-manage`, {
-    method:"POST",
-    headers:{
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type":"application/json"
-    },
-    body: JSON.stringify({
-      action,
-      provider_email: PROVIDER_EMAIL,
-      request_id: RID,
-      access_code: CODE,
-      ...extra
-    })
-  });
-}
-
-async function managerLoadVendors(){
-  const hint = $("assignHint");
-  const status = $("assignStatus");
-  if(hint) hint.textContent = "Chargement vendeurs…";
-  if(status) status.textContent = "";
-
-  const { res, data } = await vendorManage("list");
-
-  if(!res.ok){
-    // ✅ message clair pour comprendre pourquoi il ne voit pas l’attribution
-    const msg = data?.error ? String(data.error) : `HTTP ${res.status}`;
-    if(hint) hint.textContent =
-      "❌ Accès Chef des ventes non valide.\n" +
-      "- Vérifie que cet email a bien is_sales_manager=true dans provider_roles\n" +
-      "- Vérifie qu'il est bien invité dans provider_invites pour ce dossier\n" +
-      `Détail: ${msg}\n` +
-      "Active le debug : ajoute &debug=1 au lien.";
-    debugLog("vendor-manage list failed", res.status, data);
-    return { is_manager:false, vendors:[] };
-  }
-
-  const vendors = Array.isArray(data?.vendors) ? data.vendors : [];
-  return { is_manager:true, vendors };
-}
-
-function renderAssignList(vendors){
-  const el = $("assignList");
-  const hint = $("assignHint");
-
-  if(!vendors?.length){
-    if(hint) hint.textContent = "Aucun vendeur rattaché à ce chef des ventes. Ajoute-en ci-dessous.";
-    if(el) el.innerHTML = "";
-    return;
-  }
-
-  if(hint) hint.textContent = "Choisis un vendeur de l’équipe :";
-  el.innerHTML = vendors.map((v, i)=>{
-    const email = String(v.vendor_email || "").trim().toLowerCase();
-    const name = String(v.vendor_name || "").trim();
-    const label = name ? `${name} — ${email}` : email;
-
-    return `
-      <div class="providerRow">
-        <input type="radio" name="assignVendor" value="${escHtml(email)}" ${i===0 ? "checked" : ""}>
-        <div class="txt">
-          <span class="main">${escHtml(label)}</span>
-          <span class="sub">Attribuer ce dossier à ce vendeur</span>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-async function assignRequestToSelectedVendor(){
-  const status = $("assignStatus");
-  const picked = document.querySelector('input[name="assignVendor"]:checked');
-  if(!picked){
-    if(status) status.textContent = "❌ Sélectionne un vendeur.";
-    return;
-  }
-
-  const vendor_email = String(picked.value || "").trim().toLowerCase();
-  if(status) status.textContent = "Attribution en cours…";
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/request-assign`, {
-    method:"POST",
-    headers:{
-      apikey: SUPABASE_ANON_KEY,
-      Authorization:"Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type":"application/json"
-    },
-    body: JSON.stringify({ request_id: RID, access_code: CODE, manager_email: PROVIDER_EMAIL, vendor_email })
-  });
-
-  if(!res.ok){
-    debugLog("request-assign failed", res.status, data);
-    const msg = data?.error ? String(data.error) : `HTTP ${res.status}`;
-    if(status) status.textContent = `❌ Erreur attribution: ${msg}`;
-    return;
-  }
-
-  if(status) status.textContent = "✅ Dossier attribué (mail envoyé au vendeur).";
-  await loadThread();
-}
-
-async function managerAddVendor(){
-  const st = $("mgrVendorStatus");
-  const email = normalizeEmail($("mgrVendorEmail")?.value || "");
-  const name = String($("mgrVendorName")?.value || "").trim();
-
-  if(!emailLooksValid(email)){
-    if(st) st.textContent = "❌ Email vendeur invalide.";
-    return;
-  }
-
-  if(st) st.textContent = "Ajout en cours…";
-  const { res, data } = await vendorManage("add", { vendor_email: email, vendor_name: name });
-
-  if(!res.ok){
-    debugLog("vendor-manage add failed", res.status, data);
-    const msg = data?.error ? String(data.error) : `HTTP ${res.status}`;
-    if(st) st.textContent = `❌ Erreur ajout: ${msg}`;
-    return;
-  }
-
-  if(st) st.textContent = "✅ Vendeur ajouté.";
-  $("mgrVendorEmail").value = "";
-  $("mgrVendorName").value = "";
-
-  const role = await managerLoadVendors();
-  if(role.is_manager) renderAssignList(role.vendors);
-}
-
-async function managerRemoveVendor(){
-  const st = $("mgrVendorStatus");
-  const email = normalizeEmail($("mgrVendorEmail")?.value || "");
-
-  if(!emailLooksValid(email)){
-    if(st) st.textContent = "❌ Mets l’email du vendeur à supprimer.";
-    return;
-  }
-
-  if(st) st.textContent = "Suppression en cours…";
-  const { res, data } = await vendorManage("remove", { vendor_email: email });
-
-  if(!res.ok){
-    debugLog("vendor-manage remove failed", res.status, data);
-    const msg = data?.error ? String(data.error) : `HTTP ${res.status}`;
-    if(st) st.textContent = `❌ Erreur suppression: ${msg}`;
-    return;
-  }
-
-  if(st) st.textContent = "✅ Vendeur supprimé.";
-  const role = await managerLoadVendors();
-  if(role.is_manager) renderAssignList(role.vendors);
-}
-
-/* ========================= RENDER FILES ========================= */
+/* ========================= FILE RENDERING ========================= */
 function isImageUrl(url){
   const u = String(url || "").toLowerCase();
   return u.endsWith(".png") || u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".webp") || u.includes("image/");
@@ -1488,113 +594,10 @@ function renderMessageFiles(rawFiles){
   }).join("");
 }
 
-/* ========================= THREAD ========================= */
-async function loadThread(){
-  if(!RID || !CODE) return;
-
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ request_id: RID, access_code: CODE })
-  });
-
-  const target = $("thread") || $("threadProvider");
-  if(!res.ok){
-    debugLog("get-thread failed", res.status, data);
-    if(target) target.innerHTML = `<div class="hint">❌ Erreur chargement conversation (HTTP ${res.status})</div>`;
-    return;
-  }
-
-  const responses = Array.isArray(data?.responses) ? data.responses : [];
-  const latest = responses.length ? new Date(responses[responses.length-1].created_at).getTime() : 0;
-
-  const providerVisible = $("providerUI") && $("providerUI").style.display !== "none";
-  const mode = providerVisible ? "provider" : "prescriber";
-  const seen = getSeen(mode);
-  updateNewBadge(latest > seen);
-
-  if($("thread")){
-  const el = $("thread");
-  el.innerHTML = "";
-  responses.forEach(x=>{
-    const isProvider = !!x.responder_email;
-    const sender = isProvider ? (x.responder_email || "Prestataire") : "MF Auto Sud";
-    const isYou = !isProvider;
-
-    const style = bubbleStyleForSender(String(x.responder_email || "mf"), isYou);
-
-    el.innerHTML += `
-      <div class="msg">
-        <div class="msgRow ${isYou ? "you" : "them"}">
-          <div class="bubble" style="${style}">
-            <div class="bubbleHead">
-              <div class="bubbleWho">${escHtml(sender)}</div>
-              <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-            </div>
-            <div class="bubbleBody">
-              ${escHtml(x.message || "").replaceAll("\n","<br>")}
-              ${renderMessageFiles(x.files)}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-}
-
-  if($("threadProvider")){
-  const el = $("threadProvider");
-  el.innerHTML = "";
-  responses.forEach(x=>{
-    const senderEmail = String(x.responder_email || "mf");
-    const isYou = PROVIDER_EMAIL && (senderEmail.toLowerCase() === PROVIDER_EMAIL);
-
-    const senderLabel = isYou ? "Vous" : "MF Auto Sud";
-    const style = bubbleStyleForSender(senderEmail, isYou);
-
-    el.innerHTML += `
-      <div class="msg">
-        <div class="msgRow ${isYou ? "you" : "them"}">
-          <div class="bubble" style="${style}">
-            <div class="bubbleHead">
-              <div class="bubbleWho">${escHtml(senderLabel)}</div>
-              <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-            </div>
-            <div class="bubbleBody">
-              ${escHtml(x.message || "").replaceAll("\n","<br>")}
-              ${renderMessageFiles(x.files)}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-}
-
-  // ✅ Afficher toutes les infos (corrige ton "il manque des informations")
-  if($("requestInfo") && data.request){
-    const r = data.request;
-    const addrLine = formatAddress(r);
-
-    $("requestInfo").innerHTML = `
-      <div class="card">
-        <div class="gridInfo">
-          <div class="kv"><b>Client</b><div>${escHtml(r.client_name || "-")}</div></div>
-          <div class="kv"><b>Véhicule</b><div>${escHtml(r.vehicle || "-")}</div></div>
-
-          <div class="kv"><b>Adresse</b><div>${escHtml(addrLine || "-")}</div></div>
-          <div class="kv"><b>Contact</b><div>${escHtml(r.contact_name || "-")}</div></div>
-
-          <div class="kv"><b>E-mail</b><div>${escHtml(r.contact_email || "-")}</div></div>
-          <div class="kv"><b>Téléphone</b><div>${escHtml(r.contact_phone || "-")}</div></div>
-
-          <div class="kv"><b>SIRET</b><div>${escHtml(r.siret || "-")}</div></div>
-          <div class="kv"><b>TVA</b><div>${escHtml(r.vat || "-")}</div></div>
-
-          <div class="kv"><b>Assigné à</b><div>${escHtml(r.assigned_to_email || "-")}</div></div>
-        </div>
-      </div>
+/* ========================= INIT ========================= */
+window.addEventListener("load", () => {
+  renderProviders();
+});
+</script>
+</body>
+</html>
