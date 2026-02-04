@@ -179,7 +179,7 @@
 }
 
 .msgRow.you .bubble{ border-bottom-right-radius: 8px; }
-msgRow.them .bubble{ border-bottom-left-radius: 8px; }
+.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
 
 .bubbleHead{
   display:flex;
@@ -312,7 +312,7 @@ msgRow.them .bubble{ border-bottom-left-radius: 8px; }
       </div>
 
       <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
-      <textarea id="importArea" style="height:110px" placeholder="Ex. : Nom <email@domaine.com>"></textarea>
+      <textarea id="importArea" style="height:110px" placeholder="Ex. : Nom &lt;email@domaine.com&gt;"></textarea>
       <div class="row">
         <button class="secondary" id="importProvidersBtn" type="button">Importer</button>
       </div>
@@ -938,16 +938,27 @@ async function createRequest(){
     contact_phone: parsed.contact_phone || null
   };
 
-  const { res, data } = await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json",
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify(payload)
-  });
+  let res;
+  let data;
+  try {
+    const result = await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(payload)
+    });
+    res = result.res;
+    data = result.data;
+  } catch (err) {
+    const message = err?.message || err;
+    debugLog("create request network error", message);
+    alert(`❌ Impossible de créer la demande (réseau/CORS).\n\n${message}`);
+    return;
+  }
 
   if(!res.ok){
     debugLog("create request failed", res.status, data);
