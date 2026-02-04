@@ -135,7 +135,7 @@
 }
 
 .msgRow.you{ justify-content:flex-end; }
-msgRow.them{ justify-content:flex-start; }
+.msgRow.them{ justify-content:flex-start; }
 
 .bubble{
   max-width: 78%;
@@ -147,7 +147,7 @@ msgRow.them{ justify-content:flex-start; }
 }
 
 .msgRow.you .bubble{ border-bottom-right-radius: 8px; }
-msgRow.them .bubble{ border-bottom-left-radius: 8px; }
+.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
 
 .bubbleHead{
   display:flex;
@@ -219,7 +219,7 @@ msgRow.them .bubble{ border-bottom-left-radius: 8px; }
     <textarea id="respMsg" style="height:120px" placeholder="Votre message…"></textarea>
 
     <label>Documents (PDF, images…)</label>
-<input type="file" id="respFiles" multiple accept="application/pdf,image/*">
+    <input type="file" id="respFiles" multiple accept="application/pdf,image/*">
     <div class="row">
       <button id="sendMsgBtn" type="button">Envoyer</button>
     </div>
@@ -273,12 +273,10 @@ function hashHue(str){
 }
 
 function bubbleStyleForSender(senderEmail, isYou){
-  // Vous = bleu MF (style iMessage)
   if(isYou){
     return `background: linear-gradient(180deg, var(--brand), var(--brand)); color:#fff; border-color: rgba(255,255,255,.18);`;
   }
 
-  // Interlocuteur = couleur stable basée sur son email
   const hue = hashHue(senderEmail || "unknown");
   const theme = currentTheme();
 
@@ -508,10 +506,8 @@ async function loadThread(){
   responses.forEach(x=>{
     const from = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
 
-    // isYou = message envoyé par le prestataire connecté (chef des ventes)
     const isYou = !!x.responder_email && normalizeEmail(from) === normalizeEmail(PROVIDER_EMAIL);
 
-    // couleur : bleu pour toi, couleur unique pour chaque interlocuteur sinon
     const style = bubbleStyleForSender(from, isYou);
 
     thread.innerHTML += `
