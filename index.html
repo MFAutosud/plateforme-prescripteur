@@ -167,7 +167,7 @@
 }
 
 .msgRow.you{ justify-content:flex-end; }
-.msgRow.them{ justify-content:flex-start; }
+msgRow.them{ justify-content:flex-start; }
 
 .bubble{
   max-width: 78%;
@@ -179,7 +179,7 @@
 }
 
 .msgRow.you .bubble{ border-bottom-right-radius: 8px; }
-.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
+msgRow.them .bubble{ border-bottom-left-radius: 8px; }
 
 .bubbleHead{
   display:flex;
@@ -263,7 +263,7 @@
           <div class="kv"><b>Contact</b><div id="previewContact">—</div></div>
           <div class="kv"><b>Email contact</b><div id="previewContactEmail">—</div></div>
           <div class="kv"><b>Téléphone</b><div id="previewContactPhone">—</div></div>
-          <div class="kv"><b>SIRET</b><div id="previewSiret"></div></div>
+          <div class="kv"><b>SIRET</b><div id="previewSiret">—</div></div>
           <div class="kv"><b>TVA</b><div id="previewVat">—</div></div>
         </div>
       </div>
@@ -301,6 +301,16 @@
           <input id="providerName" placeholder="Ex. : Groupe Grim">
         </div>
       </div>
+      <div class="grid2">
+        <div>
+          <label>Marque / groupe</label>
+          <input id="providerBrand" placeholder="Ex. : Peugeot, Renault, Groupe X">
+        </div>
+        <div>
+          <label>Email chef des ventes (optionnel)</label>
+          <input id="providerManagerEmail" placeholder="manager@domaine.com">
+        </div>
+      </div>
 
       <div class="row">
         <label class="checkline"><input type="checkbox" id="providerIsManager"> Chef des ventes</label>
@@ -312,7 +322,7 @@
       </div>
 
       <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
-      <textarea id="importArea" style="height:110px" placeholder="Ex. : Nom &lt;email@domaine.com&gt;"></textarea>
+      <textarea id="importArea" style="height:110px" placeholder="Ex. : Nom <email@domaine.com>"></textarea>
       <div class="row">
         <button class="secondary" id="importProvidersBtn" type="button">Importer</button>
       </div>
@@ -599,7 +609,7 @@ function toBool(value){
 function normalizeProvider(raw){
   if(typeof raw === "string"){
     const email = normalizeEmail(raw);
-    return { email, name: "", is_sales_manager: false, is_vendor: false };
+    return { email, name: "", brand: "", manager_email: "", is_sales_manager: false, is_vendor: false };
   }
   const email = normalizeEmail(
     raw?.email ||
@@ -619,10 +629,22 @@ function normalizeProvider(raw){
     raw?.label ||
     ""
   ).trim();
+  const brand = String(
+    raw?.brand ||
+    raw?.provider_brand ||
+    raw?.brand_name ||
+    ""
+  ).trim();
+  const manager_email = normalizeEmail(
+    raw?.manager_email ||
+    raw?.managerEmail ||
+    raw?.sales_manager_email ||
+    ""
+  );
   const fallbackEmail = (!email && emailLooksValid(name)) ? normalizeEmail(name) : email;
   const is_sales_manager = toBool(raw?.is_sales_manager ?? raw?.is_manager ?? raw?.isManager ?? raw?.sales_manager);
   const is_vendor = toBool(raw?.is_vendor ?? raw?.isVendor ?? raw?.vendor);
-  return { email: fallbackEmail, name, is_sales_manager, is_vendor };
+  return { email: fallbackEmail, name, brand, manager_email, is_sales_manager, is_vendor };
 }
 
 function loadProviders(){
@@ -659,10 +681,16 @@ function renderProviders(){
   listEl.innerHTML = providers.map((p, idx) => {
     const email = normalizeEmail(p.email || "");
     const name  = String(p.name || "").trim();
+    const brand = String(p.brand || "").trim();
+    const managerEmail = normalizeEmail(p.manager_email || "");
     const primary = name || email || "Email manquant";
     const tags = [
       p.is_sales_manager ? "Chef des ventes" : "",
       p.is_vendor ? "Vendeur" : ""
+    ].filter(Boolean).join(" • ");
+    const details = [
+      brand ? `Marque : ${brand}` : "",
+      managerEmail ? `Chef des ventes : ${managerEmail}` : ""
     ].filter(Boolean).join(" • ");
 
     return `
@@ -672,6 +700,7 @@ function renderProviders(){
           <span class="main">${escHtml(primary)}</span>
           ${email && name ? `<span class="sub">${escHtml(email)}</span>` : ""}
           ${email && !name ? `<span class="sub">${escHtml(email)}</span>` : ""}
+          ${details ? `<span class="sub">${escHtml(details)}</span>` : ""}
           ${tags ? `<span class="sub">${escHtml(tags)}</span>` : ""}
         </div>
         <button class="small secondary" type="button" onclick="removeProvider(${idx})">Suppr.</button>
@@ -683,11 +712,14 @@ function renderProviders(){
 async function addProvider(){
   const email = normalizeEmail($("providerEmail")?.value || "");
   const name = String($("providerName")?.value || "").trim();
+  const brand = String($("providerBrand")?.value || "").trim();
+  const manager_email = normalizeEmail($("providerManagerEmail")?.value || "");
   const is_sales_manager = !!$("providerIsManager")?.checked;
   const is_vendor = !!$("providerIsVendor")?.checked;
 
   if(!email){ alert("Saisis un e-mail."); return; }
   if(!emailLooksValid(email)){ alert("E-mail invalide."); return; }
+  if(manager_email && !emailLooksValid(manager_email)){ alert("Email chef des ventes invalide."); return; }
   if(!is_sales_manager && !is_vendor){
     alert("Coche au moins un rôle : Chef des ventes ou Vendeur.");
     return;
@@ -698,11 +730,13 @@ async function addProvider(){
     alert("Déjà enregistré."); return;
   }
 
-  providers.push({ name, email, is_sales_manager, is_vendor });
+  providers.push({ name, email, brand, manager_email, is_sales_manager, is_vendor });
   saveProviders(providers);
 
   $("providerEmail").value = "";
   $("providerName").value = "";
+  $("providerBrand").value = "";
+  $("providerManagerEmail").value = "";
   $("providerIsManager").checked = false;
   $("providerIsVendor").checked = false;
 
@@ -757,7 +791,7 @@ function importProviders(){
     const parsed = extractEmailAndName(line);
     if(!parsed || !emailLooksValid(parsed.email)){ ignored++; continue; }
     if(existing.has(parsed.email)){ ignored++; continue; }
-    providers.push({ name: parsed.name || "", email: parsed.email, is_sales_manager:false, is_vendor:false });
+    providers.push({ name: parsed.name || "", email: parsed.email, brand:"", manager_email:"", is_sales_manager:false, is_vendor:false });
     existing.add(parsed.email);
     added++;
   }
