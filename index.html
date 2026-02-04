@@ -167,7 +167,7 @@
 }
 
 .msgRow.you{ justify-content:flex-end; }
-msgRow.them{ justify-content:flex-start; }
+.msgRow.them{ justify-content:flex-start; }
 
 .bubble{
   max-width: 78%;
@@ -179,7 +179,7 @@ msgRow.them{ justify-content:flex-start; }
 }
 
 .msgRow.you .bubble{ border-bottom-right-radius: 8px; }
-msgRow.them .bubble{ border-bottom-left-radius: 8px; }
+.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
 
 .bubbleHead{
   display:flex;
@@ -304,24 +304,19 @@ msgRow.them .bubble{ border-bottom-left-radius: 8px; }
       <div class="grid2">
         <div>
           <label>Marque / groupe</label>
-          <input id="providerBrand" placeholder="Ex. : Peugeot, Renault, Groupe X">
+          <input id="providerBrand" placeholder="Ex. : Peugeot, Renault, Groupe…">
         </div>
         <div>
-          <label>Email chef des ventes (optionnel)</label>
+          <label>Email manager (optionnel)</label>
           <input id="providerManagerEmail" placeholder="manager@domaine.com">
         </div>
-      </div>
-
-      <div class="row">
-        <label class="checkline"><input type="checkbox" id="providerIsManager"> Chef des ventes</label>
-        <label class="checkline"><input type="checkbox" id="providerIsVendor"> Vendeur</label>
       </div>
 
       <div class="row">
         <button id="addProviderBtn" type="button">Ajouter au répertoire</button>
       </div>
 
-      <label>Importer une liste (1 par ligne : Nom &lt;email&gt; ou email)</label>
+      <label>Importer une liste (1 par ligne : Nom <email> ou email)</label>
       <textarea id="importArea" style="height:110px" placeholder="Ex. : Nom <email@domaine.com>"></textarea>
       <div class="row">
         <button class="secondary" id="importProvidersBtn" type="button">Importer</button>
@@ -338,12 +333,13 @@ msgRow.them .bubble{ border-bottom-left-radius: 8px; }
       <div id="sendStatus" class="hint"></div>
     </div>
 
-    <div class="box">
+  <div class="box">
       <h2>3) Conversation</h2>
       <div class="row">
         <button class="secondary" id="refreshThreadBtn" type="button">🔄 Rafraîchir</button>
         <button class="secondary" id="markReadBtn" type="button">✅ Marquer comme lu</button>
         <button class="secondary" id="copyLinkBtn3" type="button">Copier le lien</button>
+        <button class="secondary" id="sendClientBtn" type="button">📤 Envoyer au client</button>
       </div>
       <div id="thread" style="margin-top:10px"></div>
     </div>
@@ -448,6 +444,8 @@ let CODE = "";
 let PROVIDER_EMAIL = "";
 let PROVIDER_ROLE = "";
 let DEBUG_ON = false;
+let REQUEST_DATA = null;
+let THREAD_CACHE = [];
 
 /* ========================= UTILS ========================= */
 function $(id){ return document.getElementById(id); }
@@ -516,432 +514,219 @@ function debugShow(show){
   const box = $("debugBox");
   if(box) box.style.display = show ? "" : "none";
 }
-function debugClear(){ const out = $("debugOut"); if(out) out.textContent = "—"; }
+function debugClear(){
+  const out = $("debugOut");
+  if(out) out.textContent = "—";
+}
 function debugLog(...args){
   if(!DEBUG_ON) return;
   const out = $("debugOut");
   if(!out) return;
-  const txt = args.map(a=>{
-    try { return (typeof a === "string") ? a : JSON.stringify(a, null, 2); }
-    catch { return String(a); }
-  }).join(" ");
-  out.textContent = (out.textContent === "—" ? "" : out.textContent + "\n\n") + txt;
+  out.textContent += "\n" + args.map(a => (typeof a === "string" ? a : JSON.stringify(a, null, 2))).join(" ");
 }
 
-/* ========================= NEW MESSAGE BADGE ========================= */
-function seenKey(mode="prescriber"){ return `mf_seen_${mode}_${RID}_${PROVIDER_EMAIL || "mf"}`; }
-function markSeen(mode="prescriber"){
-  if(!RID) return;
-  localStorage.setItem(seenKey(mode), new Date().toISOString());
-  updateNewBadge(false);
-}
-function getSeen(mode="prescriber"){
-  const v = localStorage.getItem(seenKey(mode));
-  return v ? new Date(v).getTime() : 0;
-}
-function updateNewBadge(show){
-  const chip = $("newMsgChip");
-  if(chip) chip.style.display = show ? "" : "none";
-}
-
-/* ========================= FILE UPLOAD ========================= */
-async function uploadFiles(requestId, fileInput){
-  const uploaded = [];
-  if(!fileInput || !fileInput.files || !fileInput.files.length) return uploaded;
-
-  for(const file of fileInput.files){
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("request_id", requestId);
-    fd.append("access_code", CODE || "");
-    fd.append("uploader_email", (PROVIDER_EMAIL || "").toLowerCase());
-
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-attachment`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: "Bearer " + SUPABASE_ANON_KEY
-      },
-      body: fd
-    });
-
-    let data = null;
-    try { data = await res.json(); } catch {}
-
-    if(!res.ok){
-      debugLog("upload-attachment failed", { status: res.status, data });
-      throw new Error(data?.error || `upload-attachment failed: ${res.status}`);
-    }
-
-    const returnedUrl =
-      data?.url ||
-      data?.publicUrl ||
-      data?.public_url ||
-      data?.signedUrl ||
-      data?.signed_url ||
-      "";
-
-    if(!returnedUrl){
-      throw new Error("upload-attachment: URL manquante dans la réponse");
-    }
-
-    uploaded.push({
-      name: data?.name || data?.filename || file.name,
-      url: returnedUrl
-    });
-  }
-
-  return uploaded;
-}
-
-/* ========================= PROVIDERS localStorage ========================= */
-const PROVIDERS_KEY = "mfautosud_providers_v3";
-function toBool(value){
-  if(typeof value === "string"){
-    const v = value.trim().toLowerCase();
-    if(["true","1","yes","y","oui"].includes(v)) return true;
-    if(["false","0","no","n","non"].includes(v)) return false;
-  }
-  if(typeof value === "number") return value === 1;
-  return !!value;
-}
-
-function normalizeProvider(raw){
-  if(typeof raw === "string"){
-    const email = normalizeEmail(raw);
-    return { email, name: "", brand: "", manager_email: "", is_sales_manager: false, is_vendor: false };
-  }
-  const email = normalizeEmail(
-    raw?.email ||
-    raw?.provider_email ||
-    raw?.providerEmail ||
-    raw?.mail ||
-    raw?.e_mail ||
-    raw?.value ||
-    raw?.id ||
-    ""
-  );
-  const name = String(
-    raw?.name ||
-    raw?.provider_name ||
-    raw?.providerName ||
-    raw?.display_name ||
-    raw?.label ||
-    ""
-  ).trim();
-  const brand = String(
-    raw?.brand ||
-    raw?.provider_brand ||
-    raw?.brand_name ||
-    ""
-  ).trim();
-  const manager_email = normalizeEmail(
-    raw?.manager_email ||
-    raw?.managerEmail ||
-    raw?.sales_manager_email ||
-    ""
-  );
-  const fallbackEmail = (!email && emailLooksValid(name)) ? normalizeEmail(name) : email;
-  const is_sales_manager = toBool(raw?.is_sales_manager ?? raw?.is_manager ?? raw?.isManager ?? raw?.sales_manager);
-  const is_vendor = toBool(raw?.is_vendor ?? raw?.isVendor ?? raw?.vendor);
-  return { email: fallbackEmail, name, brand, manager_email, is_sales_manager, is_vendor };
-}
-
+/* ========================= STORAGE ========================= */
+const PROVIDERS_KEY = "mfautosud_providers";
 function loadProviders(){
   try{
     const raw = localStorage.getItem(PROVIDERS_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    if(!Array.isArray(arr)) return [];
-    const normalized = arr.map(normalizeProvider);
-    return normalized;
-  }catch{ return []; }
+    const arr = JSON.parse(raw || "[]");
+    return Array.isArray(arr) ? arr : [];
+  }catch{
+    return [];
+  }
 }
-function saveProviders(arr){
-  const normalized = Array.isArray(arr) ? arr.map(normalizeProvider) : [];
-  localStorage.setItem(PROVIDERS_KEY, JSON.stringify(normalized));
+function saveProviders(list){
+  localStorage.setItem(PROVIDERS_KEY, JSON.stringify(list || []));
+}
+function normalizeProvider(p){
+  const email = normalizeEmail(p?.email || p?.provider_email || "");
+  return {
+    email,
+    name: String(p?.name || p?.provider_name || "").trim(),
+    brand: String(p?.brand || p?.provider_brand || "").trim(),
+    manager_email: normalizeEmail(p?.manager_email || p?.managerEmail || "")
+  };
 }
 
-function removeProvider(index){
-  const providers = loadProviders();
-  providers.splice(index, 1);
-  saveProviders(providers);
-  renderProviders();
-}
-
+/* ========================= PROVIDERS UI ========================= */
 function renderProviders(){
-  const listEl = $("providersList");
-  if(!listEl) return;
+  const list = loadProviders();
+  const el = $("providersList");
+  if(!el) return;
 
-  const providers = loadProviders();
-  if(!providers.length){
-    listEl.innerHTML = `<div class="hint">Aucun prestataire enregistré.</div>`;
+  if(!list.length){
+    el.innerHTML = `<div class="hint">Aucun prestataire enregistré.</div>`;
     return;
   }
 
-  listEl.innerHTML = providers.map((p, idx) => {
-    const email = normalizeEmail(p.email || "");
-    const name  = String(p.name || "").trim();
-    const brand = String(p.brand || "").trim();
-    const managerEmail = normalizeEmail(p.manager_email || "");
-    const primary = name || email || "Email manquant";
-    const tags = [
-      p.is_sales_manager ? "Chef des ventes" : "",
-      p.is_vendor ? "Vendeur" : ""
-    ].filter(Boolean).join(" • ");
-    const details = [
-      brand ? `Marque : ${brand}` : "",
-      managerEmail ? `Chef des ventes : ${managerEmail}` : ""
+  el.innerHTML = list.map((p, idx)=>{
+    const checked = p.checked ? "checked" : "";
+    const sub = [
+      p.name ? escHtml(p.name) : "",
+      p.brand ? `Marque : ${escHtml(p.brand)}` : "",
+      p.manager_email ? `Manager : ${escHtml(p.manager_email)}` : ""
     ].filter(Boolean).join(" • ");
 
     return `
       <div class="providerRow">
-        <input type="checkbox" class="providerCheck" data-email="${escHtml(email)}" aria-label="Sélection prestataire">
+        <input type="checkbox" data-idx="${idx}" ${checked}>
         <div class="txt">
-          <span class="main">${escHtml(primary)}</span>
-          ${email && name ? `<span class="sub">${escHtml(email)}</span>` : ""}
-          ${email && !name ? `<span class="sub">${escHtml(email)}</span>` : ""}
-          ${details ? `<span class="sub">${escHtml(details)}</span>` : ""}
-          ${tags ? `<span class="sub">${escHtml(tags)}</span>` : ""}
+          <span class="main">${escHtml(p.email || "-")}</span>
+          <span class="sub">${sub || "—"}</span>
         </div>
-        <button class="small secondary" type="button" onclick="removeProvider(${idx})">Suppr.</button>
+        <button class="secondary small" data-remove="${idx}" type="button">Supprimer</button>
       </div>
     `;
   }).join("");
+
+  el.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    cb.addEventListener("change", ()=>{
+      const idx = Number(cb.dataset.idx);
+      list[idx].checked = cb.checked;
+      saveProviders(list);
+    });
+  });
+
+  el.querySelectorAll('button[data-remove]').forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const idx = Number(btn.dataset.remove);
+      list.splice(idx,1);
+      saveProviders(list);
+      renderProviders();
+    });
+  });
 }
 
-async function addProvider(){
-  const email = normalizeEmail($("providerEmail")?.value || "");
-  const name = String($("providerName")?.value || "").trim();
-  const brand = String($("providerBrand")?.value || "").trim();
-  const manager_email = normalizeEmail($("providerManagerEmail")?.value || "");
-  const is_sales_manager = !!$("providerIsManager")?.checked;
-  const is_vendor = !!$("providerIsVendor")?.checked;
+function addProvider(){
+  const email = normalizeEmail($("providerEmail").value || "");
+  const name = String($("providerName").value || "").trim();
+  const brand = String($("providerBrand").value || "").trim();
+  const managerEmail = normalizeEmail($("providerManagerEmail").value || "");
 
-  if(!email){ alert("Saisis un e-mail."); return; }
-  if(!emailLooksValid(email)){ alert("E-mail invalide."); return; }
-  if(manager_email && !emailLooksValid(manager_email)){ alert("Email chef des ventes invalide."); return; }
-  if(!is_sales_manager && !is_vendor){
-    alert("Coche au moins un rôle : Chef des ventes ou Vendeur.");
+  if(!emailLooksValid(email)){
+    alert("Email invalide.");
+    return;
+  }
+  if(managerEmail && !emailLooksValid(managerEmail)){
+    alert("Email manager invalide.");
     return;
   }
 
-  const providers = loadProviders();
-  if(providers.some(p => normalizeEmail(p.email) === email)){
-    alert("Déjà enregistré."); return;
-  }
-
-  providers.push({ name, email, brand, manager_email, is_sales_manager, is_vendor });
-  saveProviders(providers);
+  const list = loadProviders();
+  list.push({ email, name, brand, manager_email: managerEmail, checked: true });
+  saveProviders(list);
 
   $("providerEmail").value = "";
   $("providerName").value = "";
   $("providerBrand").value = "";
   $("providerManagerEmail").value = "";
-  $("providerIsManager").checked = false;
-  $("providerIsVendor").checked = false;
 
   renderProviders();
 }
 
-function checkAll(on){ document.querySelectorAll(".providerCheck").forEach(c=>c.checked=!!on); }
+function importProviders(){
+  const text = String($("importArea").value || "");
+  if(!text.trim()){ return; }
 
-async function exportProviders(){
-  const providers = loadProviders();
-  const lines = providers.map(p => {
-    const email = normalizeEmail(p.email || "");
-    const name = String(p.name || "").trim();
-    return name ? `${name} <${email}>` : email;
-  }).join("\n");
-  await navigator.clipboard.writeText(lines || "");
-  alert("Liste copiée dans le presse-papiers.");
+  const list = loadProviders();
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+  lines.forEach(line=>{
+    const m = line.match(/(.*)<([^>]+)>/);
+    let name = "";
+    let email = "";
+    if(m){
+      name = m[1].trim();
+      email = normalizeEmail(m[2].trim());
+    }else{
+      email = normalizeEmail(line);
+    }
+    if(emailLooksValid(email)){
+      list.push({ email, name, brand: "", manager_email: "", checked: true });
+    }
+  });
+
+  saveProviders(list);
+  $("importArea").value = "";
+  renderProviders();
+}
+
+function exportProviders(){
+  const list = loadProviders().map(p => ({
+    email: p.email,
+    name: p.name,
+    brand: p.brand,
+    manager_email: p.manager_email
+  }));
+  const blob = new Blob([JSON.stringify(list, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "providers.json";
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function clearProviders(){
-  if(!confirm("Supprimer tous les prestataires enregistrés sur cet ordinateur ?")) return;
+  if(!confirm("Supprimer tous les prestataires ?")) return;
   saveProviders([]);
   renderProviders();
 }
 
-function extractEmailAndName(line){
-  const s = (line || "").trim();
-  if(!s) return null;
-  const m = s.match(/^(.*)<\s*([^>]+)\s*>$/);
-  if(m){
-    const name = m[1].replace(/^['"]|['"]$/g,"").trim();
-    const email = (m[2] || "").trim().toLowerCase();
-    return { name, email };
-  }
-  const only = s.replace(/^['"]|['"]$/g,"").trim().toLowerCase();
-  if(emailLooksValid(only)) return { name:"", email: only };
-  const em = s.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  if(em) return { name:"", email: em[0].toLowerCase() };
-  return null;
-}
-
-function importProviders(){
-  const raw = String($("importArea")?.value || "").replace(/\r/g,"").trim();
-  if(!raw){ alert("Colle une liste."); return; }
-
-  const lines = raw.split("\n").map(x=>x.trim()).filter(Boolean);
-  const providers = loadProviders();
-  const existing = new Set(providers.map(p => normalizeEmail(p.email)));
-
-  let added=0, ignored=0;
-  for(const line of lines){
-    const parsed = extractEmailAndName(line);
-    if(!parsed || !emailLooksValid(parsed.email)){ ignored++; continue; }
-    if(existing.has(parsed.email)){ ignored++; continue; }
-    providers.push({ name: parsed.name || "", email: parsed.email, brand:"", manager_email:"", is_sales_manager:false, is_vendor:false });
-    existing.add(parsed.email);
-    added++;
-  }
-
-  saveProviders(providers);
+function checkAll(value){
+  const list = loadProviders();
+  list.forEach(p => p.checked = value);
+  saveProviders(list);
   renderProviders();
-  alert(`Import terminé : +${added} ajoutés / ${ignored} ignorés`);
 }
 
-/* ========================= PARSE PASTE ========================= */
+/* ========================= REQUEST CREATE ========================= */
 function parsePaste(text){
-  const t = (text || "").replace(/\r/g, "").trim();
-  const rawLines = t.split("\n").map(l => l.replace(/\u00A0/g," ").trim());
-  const lines = rawLines.filter(l => l && l.length);
+  const lines = String(text || "")
+    .split("\n")
+    .map(l => l.trim())
+    .filter(Boolean);
 
   const out = {
     client_name: "",
     client_type: "",
     address: "",
-    postcode: "",
-    city: "",
-    country: "",
-    siret: "",
-    vat: "",
     contact_name: "",
     contact_email: "",
-    contact_phone: ""
-  };
-  if (!lines.length) return out;
-
-  const norm = (s) => String(s || "").replace(/\u00A0/g," ").trim();
-  const low  = (s) => norm(s).toLowerCase();
-
-  const isUselessLine = (l) => {
-    const x = low(l);
-    if (!x) return true;
-    return (
-      x === "client" ||
-      x === "contacts" ||
-      x === "contact" ||
-      x === "responsable" ||
-      x === "mf autosud" ||
-      x.includes("responsable mf autosud") ||
-      x.includes("obtenir un lien") ||
-      x.includes("mandat de prélèvement sepa") ||
-      x.includes("mandat de prelevement sepa") ||
-      x.includes("prelevement sepa") ||
-      x.includes("prélèvement sepa")
-    );
+    contact_phone: "",
+    siret: "",
+    vat: ""
   };
 
-  const looksLikeShortCode = (l) => /^[a-z]{1,3}$/i.test(norm(l));
-  const parseZipCityCountry = (l) => {
-    const m = norm(l).match(/\b(\d{5})\b\s+(.+)$/);
-    if (!m) return null;
-    const postcode = m[1];
-    let rest = norm(m[2]);
-    let country = "";
-    if (/france$/i.test(rest)) { country = "France"; rest = rest.replace(/france$/i, "").trim(); }
-    return { postcode, city: rest, country };
-  };
+  if(!lines.length) return out;
 
-  const looksLikeStreet = (l) => {
-    const x = low(l);
-    return (
-      /\b\d{1,5}\b/.test(x) &&
-      (x.includes("rue") || x.includes("avenue") || x.includes("av ") || x.includes("boulevard") ||
-       x.includes("bd ") || x.includes("chemin") || x.includes("route") || x.includes("impasse") || x.includes("place"))
-    );
-  };
-
-  const extractSiretValue = (l) => {
-    const m = norm(l).match(/siret\s*[:\-]?\s*([0-9 .]{10,30})/i);
-    if (!m) return "";
-    return norm(m[1]).replace(/[ .]/g, "");
-  };
-  const extractVatValue = (l) => {
-    const m = norm(l).match(/tva\s*[:\-]?\s*([A-Z]{2}\s*[0-9A-Z .]{6,})/i);
-    if (!m) return "";
-    return norm(m[1]).replace(/[ .]/g, "");
-  };
-  const extractEmailValue = (l) => {
-    const m = norm(l).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-    return m ? m[0].toLowerCase() : "";
-  };
-  const extractPhoneValue = (l) => {
-    const m = norm(l).match(/(\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4}/);
-    return m ? m[0].replace(/[\s.\-]/g, "") : "";
-  };
-
-  let firstMeaningful = "";
-  for (const l of lines) { if (isUselessLine(l)) continue; firstMeaningful = l; break; }
+  const firstMeaningful = lines[0];
   out.client_name = firstMeaningful || lines[0];
 
-  let pending = null;
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i];
-    const x = low(l);
-    if (!l || isUselessLine(l) || looksLikeShortCode(l)) continue;
+  lines.forEach((line)=>{
+    if(/siret/i.test(line)) out.siret = line.replace(/.*siret[:\s]*/i,"").trim();
+    if(/tva/i.test(line)) out.vat = line.replace(/.*tva[:\s]*/i,"").trim();
+    if(/@/.test(line)) out.contact_email = line.trim();
+    if(/tel|tél|phone/i.test(line)) out.contact_phone = line.replace(/.*(?:tel|tél|phone)[:\s]*/i,"").trim();
+    if(/adresse/i.test(line)) out.address = line.replace(/.*adresse[:\s]*/i,"").trim();
+  });
 
-    if (pending) {
-      const v = norm(l).replace(/[ .]/g, "");
-      if (pending === "siret" && /^\d{10,20}$/.test(v)) out.siret = v;
-      if (pending === "vat" && /^[A-Z]{2}[0-9A-Z]{6,}$/.test(v)) out.vat = v;
-      pending = null;
-      continue;
-    }
+  // heuristique contact name
+  const maybeContact = lines.find(l => /contact/i.test(l)) || "";
+  out.contact_name = maybeContact.replace(/contact[:\s]*/i,"").trim();
 
-    if (!out.siret && /siret\s*[:\-]?\s*$/i.test(l)) { pending = "siret"; continue; }
-    if (!out.vat && /tva\s*[:\-]?\s*$/i.test(l)) { pending = "vat"; continue; }
+  // type client (PRO vs particulier)
+  if(out.siret) out.client_type = "PRO";
+  else out.client_type = "Particulier";
 
-    if (!out.siret) { const v = extractSiretValue(l); if (v) { out.siret = v; continue; } }
-    if (!out.vat) { const v = extractVatValue(l); if (v) { out.vat = v; continue; } }
-
-    if (!out.contact_email) { const v = extractEmailValue(l); if (v) { out.contact_email = v; continue; } }
-    if (!out.contact_phone) { const v = extractPhoneValue(l); if (v) { out.contact_phone = v; continue; } }
-
-    if (!out.address && looksLikeStreet(l)) {
-      out.address = l;
-      const next = lines[i + 1] || "";
-      const z = parseZipCityCountry(next);
-      if (z) { out.postcode = z.postcode; out.city = z.city; if (z.country) out.country = z.country; }
-      continue;
-    }
-
-    if (!out.address) {
-      const z = parseZipCityCountry(l);
-      if (z) { out.address = l; out.postcode = z.postcode; out.city = z.city; if (z.country) out.country = z.country; continue; }
-    }
-
-    if (!out.contact_name) {
-      const forbidden = x.includes("siret") || x.includes("tva") || x.includes("n°") || x.includes("no ");
-      if (!forbidden && !/\d/.test(l) && !l.includes("@") && l.length <= 60) {
-        const w = l.split(/\s+/).filter(Boolean);
-        if (w.length >= 2 && w.length <= 6) out.contact_name = l;
-      }
-    }
-  }
-
-  if (!out.country && /france/i.test(t)) out.country = "France";
-  out.client_type = out.siret ? "PRO" : "Particulier";
   return out;
 }
 
 function updatePastePreview(parsed){
-  if(!$("previewClientName")) return;
-  const addrLine = formatAddress(parsed);
   $("previewClientName").textContent = parsed.client_name || "—";
   $("previewClientType").textContent = parsed.client_type || "—";
-  $("previewAddress").textContent = addrLine || "—";
+  $("previewAddress").textContent = parsed.address || "—";
   $("previewContact").textContent = parsed.contact_name || "—";
   $("previewContactEmail").textContent = parsed.contact_email || "—";
   $("previewContactPhone").textContent = parsed.contact_phone || "—";
@@ -949,7 +734,6 @@ function updatePastePreview(parsed){
   $("previewVat").textContent = parsed.vat || "—";
 }
 
-/* ========================= CREATE REQUEST ========================= */
 async function createRequest(){
   const vehicle = String($("vehicle")?.value || "").trim();
   const paste = String($("pasteBlock")?.value || "").trim();
@@ -958,31 +742,24 @@ async function createRequest(){
   const parsed = parsePaste(paste);
   if(!parsed.client_name){ alert("Nom client introuvable (1ère ligne)."); return; }
 
-  RID = "";
-  CODE = randomCode();
-
   const payload = {
-    status: "draft",
-    prescriber_email: PRESCRIBER_EMAIL,
     client_name: parsed.client_name,
+    client_type: parsed.client_type,
     vehicle,
-    fin_type: "LLD",
-    recipients: [PRESCRIBER_EMAIL],
-    access_code: CODE,
-    address: parsed.address || null,
-    postcode: parsed.postcode || null,
-    city: parsed.city || null,
-    country: parsed.country || null,
-    siret: parsed.siret || null,
-    vat: parsed.vat || null,
-    contact_name: parsed.contact_name || null,
-    contact_email: parsed.contact_email || null,
-    contact_phone: parsed.contact_phone || null
+    address: parsed.address,
+    contact_name: parsed.contact_name,
+    contact_email: parsed.contact_email,
+    contact_phone: parsed.contact_phone,
+    siret: parsed.siret,
+    vat: parsed.vat,
+    raw_block: paste
   };
+
+  $("link").textContent = "Création…";
 
   let res;
   let data;
-  try {
+  try{
     const result = await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
       method: "POST",
       headers: {
@@ -995,70 +772,63 @@ async function createRequest(){
     });
     res = result.res;
     data = result.data;
-  } catch (err) {
-    const message = err?.message || err;
+  }catch(e){
+    const message = String(e?.message || e);
     debugLog("create request network error", message);
-    alert(`❌ Impossible de créer la demande (réseau/CORS).\n\n${message}`);
+    $("link").textContent = `❌ Erreur réseau : ${message}`;
     return;
   }
 
   if(!res.ok){
     debugLog("create request failed", res.status, data);
-    const details = data ? JSON.stringify(data, null, 2) : "(no body)";
-    alert(`❌ Erreur création demande\nHTTP ${res.status}\n\n${details}`);
+    $("link").textContent = `❌ Erreur création (HTTP ${res.status})`;
     return;
   }
 
-  RID = data?.[0]?.id;
-  if(!RID){
-    alert("❌ Demande créée mais ID introuvable (réponse Supabase inattendue).");
+  const created = Array.isArray(data) ? data[0] : data;
+  if(!created?.id){
     debugLog("create request response unexpected", data);
+    $("link").textContent = "❌ Erreur création (réponse inattendue)";
     return;
   }
+
+  RID = created.id;
+  CODE = randomCode(6);
+
+  await fetchJson(`${SUPABASE_URL}/rest/v1/requests`, {
+    method: "PATCH",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ access_code: CODE }),
+    // @ts-ignore
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    }
+  });
 
   const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
   $("link").textContent = `✅ Demande créée\nClient : ${parsed.client_name}\nLien : ${link}`;
 
   $("sendBox").style.display = "block";
   $("prescriberReplyBox").style.display = "block";
-  renderProviders();
+
   await loadThread();
 }
 
-async function copyThreadLink(){
-  if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
-  const link = `${baseUrl()}?rid=${encodeURIComponent(RID)}&code=${encodeURIComponent(CODE)}`;
-  await navigator.clipboard.writeText(link);
-  alert("Lien copié.");
-}
-
 async function sendToSelected(){
+  const providers = loadProviders().filter(p => p.checked);
+  if(!providers.length){ alert("Aucun prestataire sélectionné."); return; }
   if(!RID || !CODE){ alert("Crée d’abord une demande."); return; }
 
-  const checks = Array.from(document.querySelectorAll(".providerCheck:checked"));
-  const emails = checks
-    .map(c => (c.getAttribute("data-email")||"").trim().toLowerCase())
-    .filter(Boolean);
+  const msg = String($("customMessage").value || "").trim();
 
-  if(!emails.length){ alert("Sélectionne au moins 1 prestataire."); return; }
-
-  $("sendStatus").textContent = "Envoi…";
-  const custom = String($("customMessage")?.value || "").trim();
-
-  const directory = loadProviders();
-  const byEmail = new Map(directory.map(p => [normalizeEmail(p.email), p]));
-
-  const provider_roles = [];
-  emails.forEach(email => {
-    const p = byEmail.get(email);
-    if(!p) return;
-    provider_roles.push({
-      provider_email: email,
-      is_sales_manager: !!p.is_sales_manager,
-      is_manager: !!p.is_sales_manager,
-      is_vendor: !!p.is_vendor
-    });
-  });
+  $("sendStatus").textContent = "Envoi en cours…";
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/send-request`, {
     method: "POST",
@@ -1070,30 +840,100 @@ async function sendToSelected(){
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
-      prescriber_email: PRESCRIBER_EMAIL,
-      provider_emails: emails,
-      provider_roles,
-      message: custom
+      providers: providers.map(p => ({
+        email: p.email,
+        name: p.name,
+        brand: p.brand,
+        manager_email: p.manager_email
+      })),
+      custom_message: msg
     })
   });
 
   if(!res.ok){
     debugLog("send-request failed", res.status, data);
-    alert(`❌ Erreur envoi prestataires (HTTP ${res.status})`);
+    $("sendStatus").textContent = `❌ Erreur envoi (HTTP ${res.status})`;
     return;
   }
 
-  $("sendStatus").textContent = "✅ Prestataires notifiés.";
-  await loadThread();
+  $("sendStatus").textContent = `✅ Envoyé à ${providers.length} prestataire(s).`;
+}
+
+async function uploadFiles(requestId, fileInput){
+  const files = fileInput?.files;
+  if(!files?.length) return [];
+
+  const formData = new FormData();
+  formData.append("request_id", requestId);
+  Array.from(files).forEach(f => formData.append("files", f));
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/upload`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY
+    },
+    body: formData
+  });
+
+  if(!res.ok){
+    throw new Error("Upload failed");
+  }
+
+  const data = await res.json();
+  return Array.isArray(data?.files) ? data.files : [];
+}
+
+/* ========================= THREAD / REPLY ========================= */
+function getSeen(mode="prescriber"){
+  const key = `seen_${RID}_${mode}`;
+  const raw = localStorage.getItem(key);
+  return Number(raw || "0");
+}
+
+function markSeen(mode="prescriber"){
+  const key = `seen_${RID}_${mode}`;
+  localStorage.setItem(key, String(Date.now()));
+  updateNewBadge(false);
+}
+
+function updateNewBadge(show){
+  const chip = $("newMsgChip");
+  if(chip) chip.style.display = show ? "" : "none";
+}
+
+function updateReminderStatus(msg){
+  const el = $("reminderStatus");
+  if(el) el.textContent = msg;
+}
+
+async function scheduleReminder(){
+  if(!RID || !CODE) return;
+  const enabled = $("autoReminder").checked;
+  const days = Number($("reminderDays").value || "3");
+  const hour = String($("reminderHour").value || "09:00");
+
+  updateReminderStatus("Enregistrement…");
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/schedule-reminder`, {
+    method:"POST",
+    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify({ request_id: RID, access_code: CODE, enabled, days, hour })
+  });
+
+  if(!res.ok){
+    debugLog("schedule-reminder failed", res.status, data);
+    updateReminderStatus(`❌ Erreur (HTTP ${res.status})`);
+    return;
+  }
+  updateReminderStatus(enabled ? "✅ Relance activée." : "✅ Relance désactivée.");
 }
 
 async function prescriberReply(){
   if(!RID || !CODE){
-    $("prescStatus").textContent = "❌ Crée d’abord une demande.";
+    $("prescStatus").textContent = "❌ Dossier non chargé.";
     return;
   }
-
-  const msg = String($("prescMsg")?.value || "").trim();
+  const msg = String($("prescMsg").value || "").trim();
   const fileInput = $("prescFiles");
 
   if(!msg && (!fileInput?.files?.length)){
@@ -1105,22 +945,18 @@ async function prescriberReply(){
   let files = [];
   try { files = await uploadFiles(RID, fileInput); }
   catch(e){
-    $("prescStatus").textContent = "❌ Erreur upload fichier : " + String(e.message || e);
+    $("prescStatus").textContent = "❌ Erreur upload fichier.";
+    debugLog("upload error", String(e));
     return;
   }
 
   $("prescStatus").textContent = "Envoi…";
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/prescriber-reply`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
+    method:"POST",
+    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
-      prescriber_email: PRESCRIBER_EMAIL,
       message: msg || "(Pièce jointe)",
       files
     })
@@ -1140,11 +976,10 @@ async function prescriberReply(){
 
 async function providerReply(){
   if(!RID || !CODE){
-    $("providerReplyStatus").textContent = "❌ Lien invalide.";
+    $("providerReplyStatus").textContent = "❌ Dossier non chargé.";
     return;
   }
-
-  const msg = String($("providerReplyMsg")?.value || "").trim();
+  const msg = String($("providerReplyMsg").value || "").trim();
   const fileInput = $("providerReplyFiles");
 
   if(!msg && (!fileInput?.files?.length)){
@@ -1156,22 +991,19 @@ async function providerReply(){
   let files = [];
   try { files = await uploadFiles(RID, fileInput); }
   catch(e){
-    $("providerReplyStatus").textContent = "❌ Erreur upload fichier : " + String(e.message || e);
+    $("providerReplyStatus").textContent = "❌ Erreur upload fichier.";
+    debugLog("upload error", String(e));
     return;
   }
 
   $("providerReplyStatus").textContent = "Envoi…";
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/provider-reply`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    },
+    method:"POST",
+    headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + SUPABASE_ANON_KEY, "Content-Type":"application/json" },
     body: JSON.stringify({
       request_id: RID,
       access_code: CODE,
-      provider_email: PROVIDER_EMAIL || "",
+      provider_email: PROVIDER_EMAIL,
       message: msg || "(Pièce jointe)",
       files
     })
@@ -1281,6 +1113,61 @@ function formatAddress(r){
   return parts.join(" ").replace(/\s+/g," ").trim();
 }
 
+function formatThreadForClient(responses){
+  if(!Array.isArray(responses) || !responses.length) return "";
+  return responses.map((x)=>{
+    const who = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
+    const when = x.created_at ? new Date(x.created_at).toLocaleString("fr-FR") : "";
+    const msg = String(x.message || "");
+    return `[${when}] ${who} :\n${msg}\n`;
+  }).join("\n");
+}
+
+function formatClientSummary(r){
+  if(!r) return "";
+  const lines = [];
+  const clientName = String(r.client_name || "").trim();
+  const vehicle = String(r.vehicle || "").trim();
+  const address = formatAddress(r);
+  const contactName = String(r.contact_name || "").trim();
+  const contactEmail = String(r.contact_email || "").trim();
+  const contactPhone = String(r.contact_phone || "").trim();
+  const siret = String(r.siret || "").trim();
+  const vat = String(r.vat || "").trim();
+
+  if(clientName) lines.push(`Client : ${clientName}`);
+  if(vehicle) lines.push(`Véhicule : ${vehicle}`);
+  if(address) lines.push(`Adresse : ${address}`);
+  if(contactName) lines.push(`Contact : ${contactName}`);
+  if(contactEmail) lines.push(`Email contact : ${contactEmail}`);
+  if(contactPhone) lines.push(`Téléphone : ${contactPhone}`);
+  if(siret) lines.push(`SIRET : ${siret}`);
+  if(vat) lines.push(`TVA : ${vat}`);
+
+  if(!lines.length) return "";
+  return `\nDossier :\n${lines.map((line)=>`- ${line}`).join("\n")}\n`;
+}
+
+function sendToClientEmail(){
+  if(!REQUEST_DATA){
+    alert("Charge d’abord un dossier.");
+    return;
+  }
+  const clientEmail = String(REQUEST_DATA.contact_email || "").trim();
+  if(!clientEmail){
+    alert("Email client introuvable.");
+    return;
+  }
+  const subject = `Offre MF Auto Sud – ${REQUEST_DATA.client_name || "Client"}`;
+  const intro = `Bonjour ${REQUEST_DATA.client_name || ""},\n\nVoici les informations concernant votre demande :\n`;
+  const summary = formatClientSummary(REQUEST_DATA);
+  const thread = formatThreadForClient(THREAD_CACHE);
+  const threadSection = thread ? `\nÉchanges :\n${thread}` : "\nÉchanges :\nAucun échange pour le moment.\n";
+  const body = `${intro}${summary}${threadSection}\nCordialement,\nMF Auto Sud`;
+  const mailto = `mailto:${encodeURIComponent(clientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+}
+
 async function loadThread(){
   if(!RID || !CODE) return;
 
@@ -1302,6 +1189,8 @@ async function loadThread(){
   }
 
   const responses = Array.isArray(data?.responses) ? data.responses : [];
+  THREAD_CACHE = responses;
+  REQUEST_DATA = data?.request || null;
   const latest = responses.length ? new Date(responses[responses.length-1].created_at).getTime() : 0;
 
   const providerVisible = $("providerUI") && $("providerUI").style.display !== "none";
@@ -1417,6 +1306,7 @@ async function loadThread(){
 
   $("refreshThreadBtn")?.addEventListener("click", loadThread);
   $("markReadBtn")?.addEventListener("click", ()=>markSeen("prescriber"));
+  $("sendClientBtn")?.addEventListener("click", sendToClientEmail);
 
   $("prescReplyBtn")?.addEventListener("click", prescriberReply);
 
