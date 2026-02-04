@@ -668,14 +668,58 @@ async function uploadFiles(requestId, fileInput){
 }
 
 /* ========================= PROVIDERS localStorage ========================= */
+function toBool(value){
+  if(typeof value === "string"){
+    const v = value.trim().toLowerCase();
+    if(["true","1","yes","y","oui"].includes(v)) return true;
+    if(["false","0","no","n","non"].includes(v)) return false;
+  }
+  if(typeof value === "number") return value === 1;
+  return !!value;
+}
+
+function normalizeProvider(raw){
+  if(typeof raw === "string"){
+    const email = normalizeEmail(raw);
+    return { email, name: "", is_sales_manager: false, is_vendor: false };
+  }
+  const email = normalizeEmail(
+    raw?.email ||
+    raw?.provider_email ||
+    raw?.providerEmail ||
+    raw?.mail ||
+    raw?.e_mail ||
+    raw?.value ||
+    raw?.id ||
+    ""
+  );
+  const name = String(
+    raw?.name ||
+    raw?.provider_name ||
+    raw?.providerName ||
+    raw?.display_name ||
+    raw?.label ||
+    ""
+  ).trim();
+  const fallbackEmail = (!email && emailLooksValid(name)) ? normalizeEmail(name) : email;
+  const is_sales_manager = toBool(raw?.is_sales_manager ?? raw?.is_manager ?? raw?.isManager ?? raw?.sales_manager);
+  const is_vendor = toBool(raw?.is_vendor ?? raw?.isVendor ?? raw?.vendor);
+  return { email: fallbackEmail, name, is_sales_manager, is_vendor };
+}
+
 function loadProviders(){
   try{
     const raw = localStorage.getItem(PROVIDERS_KEY);
     const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
+    if(!Array.isArray(arr)) return [];
+    const normalized = arr.map(normalizeProvider);
+    return normalized;
   }catch{ return []; }
 }
-function saveProviders(arr){ localStorage.setItem(PROVIDERS_KEY, JSON.stringify(arr)); }
+function saveProviders(arr){
+  const normalized = Array.isArray(arr) ? arr.map(normalizeProvider) : [];
+  localStorage.setItem(PROVIDERS_KEY, JSON.stringify(normalized));
+}
 
 function removeProvider(index){
   const providers = loadProviders();
@@ -697,6 +741,7 @@ function renderProviders(){
   listEl.innerHTML = providers.map((p, idx) => {
     const email = normalizeEmail(p.email || "");
     const name  = String(p.name || "").trim();
+    const primary = email || name || "Email manquant";
     const tags = [
       p.is_sales_manager ? "Chef des ventes" : "",
       p.is_vendor ? "Vendeur" : ""
@@ -706,8 +751,8 @@ function renderProviders(){
       <div class="providerRow">
         <input type="checkbox" class="providerCheck" data-email="${escHtml(email)}" aria-label="Sélection prestataire">
         <div class="txt">
-          <span class="main">${escHtml(email)}</span>
-          ${name ? `<span class="sub">${escHtml(name)}</span>` : ""}
+          <span class="main">${escHtml(primary)}</span>
+          ${email && name ? `<span class="sub">${escHtml(name)}</span>` : ""}
           ${tags ? `<span class="sub">${escHtml(tags)}</span>` : ""}
         </div>
         <button class="small secondary" type="button" onclick="removeProvider(${idx})">Suppr.</button>
@@ -1045,6 +1090,7 @@ async function sendToSelected(){
 
     provider_roles.push({
       email,
+      provider_email: email,
       name: String(p?.name || "").trim() || null,
       is_sales_manager,
       is_vendor,
@@ -1442,7 +1488,6 @@ function renderMessageFiles(rawFiles){
   }).join("");
 }
 
-
 /* ========================= THREAD ========================= */
 async function loadThread(){
   if(!RID || !CODE) return;
@@ -1553,123 +1598,3 @@ async function loadThread(){
           <div class="kv"><b>Assigné à</b><div>${escHtml(r.assigned_to_email || "-")}</div></div>
         </div>
       </div>
-    `;
-
-    const portalHint = $("portalLinksHint");
-    if(portalHint){
-      portalHint.textContent =
-        `RID: ${RID}\nCODE: ${CODE}\nPE: ${PROVIDER_EMAIL}\n` +
-        `Lien Chef (test): ${buildManagerLink(PROVIDER_EMAIL)}\n` +
-        `Lien Vendeur (test): ${buildVendorLink(PROVIDER_EMAIL)}`;
-    }
-  }
-}
-
-/* ========================= INIT ========================= */
-(async function init(){
-  const { rid, code, pe, debug } = getAllParams();
-  DEBUG_ON = String(debug) === "1";
-  debugShow(DEBUG_ON);
-  if($("debugClearBtn")) $("debugClearBtn").addEventListener("click", debugClear);
-
-  // binds prescriber
-  $("createBtn")?.addEventListener("click", createRequest);
-  $("copyLinkBtn")?.addEventListener("click", copyThreadLink);
-  $("copyLinkBtn2")?.addEventListener("click", copyThreadLink);
-  $("copyLinkBtn3")?.addEventListener("click", copyThreadLink);
-
-  $("addProviderBtn")?.addEventListener("click", addProvider);
-  $("importProvidersBtn")?.addEventListener("click", importProviders);
-  $("checkAllBtn")?.addEventListener("click", ()=>checkAll(true));
-  $("uncheckAllBtn")?.addEventListener("click", ()=>checkAll(false));
-  $("exportProvidersBtn")?.addEventListener("click", exportProviders);
-  $("clearProvidersBtn")?.addEventListener("click", clearProviders);
-  $("sendBtn")?.addEventListener("click", sendToSelected);
-
-  $("refreshThreadBtn")?.addEventListener("click", loadThread);
-  $("markReadBtn")?.addEventListener("click", ()=>markSeen("prescriber"));
-
-  $("prescReplyBtn")?.addEventListener("click", prescriberReply);
-
-  // binds provider
-  $("refreshThreadProviderBtn")?.addEventListener("click", loadThread);
-  $("markReadProviderBtn")?.addEventListener("click", ()=>markSeen("provider"));
-  $("providerReplyBtn")?.addEventListener("click", providerReply);
-
-  // manager buttons
-  $("assignBtn")?.addEventListener("click", assignRequestToSelectedVendor);
-  $("refreshVendorsBtn")?.addEventListener("click", async ()=>{
-    const role = await managerLoadVendors();
-    if(role.is_manager) renderAssignList(role.vendors);
-  });
-  $("mgrAddVendorBtn")?.addEventListener("click", managerAddVendor);
-  $("mgrRemoveVendorBtn")?.addEventListener("click", managerRemoveVendor);
-
-  // portal link buttons
-  $("copyManagerLinkBtn")?.addEventListener("click", async ()=>{
-    if(!RID || !CODE || !PROVIDER_EMAIL) return alert("Lien indisponible.");
-    await navigator.clipboard.writeText(buildManagerLink(PROVIDER_EMAIL));
-    alert("Lien portail Chef copié.");
-  });
-  $("copyVendorLinkBtn")?.addEventListener("click", async ()=>{
-    if(!RID || !CODE || !PROVIDER_EMAIL) return alert("Lien indisponible.");
-    await navigator.clipboard.writeText(buildVendorLink(PROVIDER_EMAIL));
-    alert("Lien portail Vendeur copié.");
-  });
-
-  renderProviders();
-
-  // Provider mode
-  if (rid && code && pe && String(pe).trim()) {
-    RID = String(rid);
-    CODE = String(code);
-    PROVIDER_EMAIL = decodeURIComponent(String(pe)).trim().toLowerCase();
-
-    $("prescriberUI").style.display = "none";
-    $("providerUI").style.display = "block";
-    setModeChip("Prestataire");
-
-    await loadThread();
-
-    // ✅ manager detection via vendor-manage(list)
-    const role = await managerLoadVendors();
-    if(role.is_manager){
-      showAssignBox(true);
-      renderAssignList(role.vendors);
-      $("mgrVendorStatus").textContent = "";
-      $("assignStatus").textContent = "";
-    }else{
-      showAssignBox(false);
-    }
-
-    return;
-  }
-
-  // Prescriber dossier mode
-  if (rid && code) {
-    RID = String(rid);
-    CODE = String(code);
-
-    $("prescriberUI").style.display = "block";
-    $("providerUI").style.display = "none";
-
-    $("sendBox").style.display = "block";
-    $("prescriberReplyBox").style.display = "block";
-    setModeChip("Prescripteur (dossier)");
-
-    renderProviders();
-    await loadThread();
-    return;
-  }
-
-  // Prescriber home
-  $("prescriberUI").style.display = "block";
-  $("providerUI").style.display = "none";
-  $("sendBox").style.display = "none";
-  $("prescriberReplyBox").style.display = "none";
-  setModeChip("Prescripteur");
-})();
-</script>
-
-</body>
-</html>
