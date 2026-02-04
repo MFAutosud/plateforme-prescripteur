@@ -79,7 +79,7 @@
     h2{margin:0 0 10px;font-size:16px}
     h3{margin:10px 0 8px;font-size:14px}
     label{display:block;margin-top:10px;font-size:13px;color:var(--muted)}
-    input,textarea{
+    input,textarea,select{
       width:100%; padding:10px 12px; border-radius:12px;
       border:1px solid var(--fieldBorder); background:var(--fieldBg); color:var(--text); outline:none;
     }
@@ -179,7 +179,7 @@
 }
 
 .msgRow.you .bubble{ border-bottom-right-radius: 8px; }
-msgRow.them .bubble{ border-bottom-left-radius: 8px; }
+.msgRow.them .bubble{ border-bottom-left-radius: 8px; }
 
 .bubbleHead{
   display:flex;
@@ -281,7 +281,7 @@ msgRow.them .bubble{ border-bottom-left-radius: 8px; }
     <textarea id="respMsg" style="height:120px" placeholder="Votre message…"></textarea>
 
     <label>Documents (PDF, images…)</label>
-<input type="file" id="respFiles" multiple accept="application/pdf,image/*">
+    <input type="file" id="respFiles" multiple accept="application/pdf,image/*">
     <div class="row">
       <button id="sendMsgBtn" type="button">Envoyer</button>
     </div>
@@ -337,10 +337,9 @@ function normalizeEmail(email){ return (email || "").trim().toLowerCase(); }
 function emailLooksValid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim().toLowerCase()); }
 function baseUrl(){ return window.location.origin + window.location.pathname; }
 
-  function currentTheme(){
+function currentTheme(){
   return document.documentElement.getAttribute("data-theme") || "dark";
 }
-
 function hashHue(str){
   const s = String(str || "");
   let h = 0;
@@ -352,7 +351,7 @@ function hashHue(str){
 
 function bubbleStyleForSender(senderEmail, isYou){
   if(isYou){
-    return `background: linear-gradient(180deg, var(--brand2), var(--brand)); color: #fff; border-color: rgba(255,255,255,.18);`;
+    return `background: linear-gradient(180deg, var(--brand), var(--brand)); color: #fff; border-color: rgba(255,255,255,.18);`;
   }
 
   const hue = hashHue(senderEmail || "unknown");
@@ -588,81 +587,72 @@ function renderRequestCard(r){
 async function loadThread(){
   if(!RID || !CODE) return;
 
- const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
-  method: "POST",
-  headers: {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: "Bearer " + SUPABASE_ANON_KEY,
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    request_id: RID,
-    access_code: CODE,
-    provider_email: PROVIDER_EMAIL, // ✅
-    role: "manager"                 // ✅
-  })
-});
+  const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/get-thread`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      request_id: RID,
+      access_code: CODE,
+      provider_email: PROVIDER_EMAIL,
+      role: "manager"
+    })
+  });
 
-// ✅ Debug seulement si erreur OU si debug=1 dans l’URL
-if (!res.ok || DEBUG_ON) {
-  $("accessErr").style.display = "";
-  $("accessErr").textContent =
-    "DEBUG get-thread:\nHTTP " + res.status + "\n\n" +
-    JSON.stringify(data, null, 2);
-}
+  if (!res.ok || DEBUG_ON) {
+    $("accessErr").style.display = "";
+    $("accessErr").textContent =
+      "DEBUG get-thread:\nHTTP " + res.status + "\n\n" +
+      JSON.stringify(data, null, 2);
+  }
 
-// ✅ Si erreur → on stoppe ici (et on garde le debug visible)
-if (!res.ok) {
-  $("requestInfo").textContent = "";
-  return;
-}
-
-// ✅ Sinon on cache accessErr
-$("accessErr").style.display = "none";
+  if (!res.ok) {
+    $("requestInfo").textContent = "";
+    return;
+  }
 
   $("accessErr").style.display = "none";
 
   if(data?.request){
-  $("requestInfo").innerHTML = renderRequestCard(data.request);
-}else{
-  $("requestInfo").innerHTML = `
-    <div class="hint">
-      ⚠️ Informations du dossier indisponibles.<br>
-      (droits ou réponse get-thread incomplète)
-    </div>
-  `;
-}
+    $("requestInfo").innerHTML = renderRequestCard(data.request);
+  }else{
+    $("requestInfo").innerHTML = `
+      <div class="hint">
+        ⚠️ Informations du dossier indisponibles.<br>
+        (droits ou réponse get-thread incomplète)
+      </div>
+    `;
+  }
 
   const responses = Array.isArray(data?.responses) ? data.responses : [];
   const thread = $("thread");
   thread.innerHTML = "";
 
   responses.forEach(x=>{
-  const from = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
+    const from = x.responder_email ? String(x.responder_email) : "MF Auto Sud";
+    const isYou = !!x.responder_email && normalizeEmail(from) === normalizeEmail(PROVIDER_EMAIL);
+    const style = bubbleStyleForSender(from, isYou);
 
-  // isYou = message envoyé par le prestataire connecté (chef des ventes)
-  const isYou = !!x.responder_email && normalizeEmail(from) === normalizeEmail(PROVIDER_EMAIL);
-
-  // couleur : bleu pour toi, couleur unique pour chaque interlocuteur sinon
-  const style = bubbleStyleForSender(from, isYou);
-
-  thread.innerHTML += `
-    <div class="msg">
-      <div class="msgRow ${isYou ? "you" : "them"}">
-        <div class="bubble" style="${style}">
-          <div class="bubbleHead">
-            <div class="bubbleWho">${escHtml(isYou ? "Vous" : from)}</div>
-            <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
-          </div>
-          <div class="bubbleBody">
-            ${escHtml(x.message || "").replaceAll("\n","<br>")}
-            ${renderMessageFiles(x.files)}
+    thread.innerHTML += `
+      <div class="msg">
+        <div class="msgRow ${isYou ? "you" : "them"}">
+          <div class="bubble" style="${style}">
+            <div class="bubbleHead">
+              <div class="bubbleWho">${escHtml(isYou ? "Vous" : from)}</div>
+              <div class="bubbleMeta">${new Date(x.created_at).toLocaleString("fr-FR")}</div>
+            </div>
+            <div class="bubbleBody">
+              ${escHtml(x.message || "").replaceAll("\n","<br>")}
+              ${renderMessageFiles(x.files)}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  `;
-});
+    `;
+  });
 
   const latest = responses.length ? new Date(responses[responses.length-1].created_at).getTime() : 0;
   updateNewBadge(latest > getSeen());
@@ -751,7 +741,7 @@ function renderAssignList(vendors){
     return;
   }
   $("assignHint").textContent = "Choisis un vendeur :";
-  el.innerHTML = vendors.map((v,i)=>{
+  const options = vendors.map((v, i)=>{
     const vendorObj = (v && typeof v === "object") ? v : {};
     const email = normalizeEmail(
       (typeof v === "string" ? v : "") ||
@@ -767,25 +757,23 @@ function renderAssignList(vendors){
       ""
     ).trim();
     const label = name ? `${name} — ${email}` : email;
-    return `
-      <div class="providerRow">
-        <input type="radio" name="assignVendor" value="${escHtml(email)}" ${i===0 ? "checked" : ""}>
-        <div class="txt">
-          <span class="main">${escHtml(label)}</span>
-          <span class="sub">Attribuer ce dossier à ce vendeur</span>
-        </div>
-      </div>
-    `;
+    return `<option value="${escHtml(email)}" ${i===0 ? "selected" : ""}>${escHtml(label)}</option>`;
   }).join("");
+
+  el.innerHTML = `
+    <label for="assignVendorSelect" class="hint">Liste des vendeurs</label>
+    <select id="assignVendorSelect">${options}</select>
+  `;
 }
 
 async function assignRequestToSelectedVendor(){
-  const picked = document.querySelector('input[name="assignVendor"]:checked');
+  const select = $("assignVendorSelect");
+  const picked = select ? select.value : "";
   if(!picked){
     $("assignStatus").textContent = "❌ Sélectionne un vendeur.";
     return;
   }
-  const vendor_email = normalizeEmail(picked.value);
+  const vendor_email = normalizeEmail(picked);
   $("assignStatus").textContent = "Attribution en cours…";
 
   const { res, data } = await fetchJson(`${SUPABASE_URL}/functions/v1/request-assign`, {
@@ -897,7 +885,6 @@ async function copyThreadLink(){
 
   await loadThread();
 
-  // Vérifie manager via vendor-manage
   const r = await managerLoadVendors();
   if(r.ok){
     $("assignBox").style.display = "";
